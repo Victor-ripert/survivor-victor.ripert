@@ -1,0 +1,22 @@
+{
+  "name": "@profils-actifs/db",
+  "version": "1.0.0",
+  "description": "ProfilsActifs Database - Prisma migrations and schema",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "prisma migrate deploy",
+    "db:seed": "tsx src/seed.ts",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.7.0",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "@types/node": "^20.10.6"
+  }
+}

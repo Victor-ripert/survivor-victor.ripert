@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USERS & AUTHENTICATION
+// ============================================================================
+
+enum UserRole {
+  APPLICANT
+  RECRUITER
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole
+
+  // Relations
+  profile     Profile?
+  recruiterProfile RecruiterProfile?
+  notifications Notification[]
+  interactions Interaction[] @relation("InteractionCreatedBy")
+  contactedApplicants Interaction[] @relation("InteractionRecipient")
+  answers     Answer[]
+  attempts    CertificationAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([email])
+}
+
+// ============================================================================
+// APPLICANT PROFILES
+// ============================================================================
+
+model Profile {
+  id          String @id @default(cuid())
+  userId      String @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Basic info
+  headline    String?
+  bio         String?
+  location    String
+  sector      String
+
+  // Media
+  videos      Video[]
+  skills      ProfileSkill[]
+
+  // Certification status
+  certificationStatus CertificationStatus @default(PENDING)
+  certificationScore  Int? // 0-100
+  certificationBadge  String? // URL to badge image
+  certificationDate   DateTime?
+
+  // Metadata
+  isModerated Boolean @default(false)
+  moderationNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([certificationStatus])
+  @@index([sector])
+  @@index([location])
+}
+
+enum CertificationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model Video {
+  id          String @id @default(cuid())
+  profileId   String
+  profile     Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  // Video metadata
+  title       String
+  description String?
+  type        VideoType @default(EXTERNAL_LINK)
+  url         String // YouTube/Vimeo URL or upload path
+  duration    Int? // seconds
+  thumbnail   String?
+
+  // Moderation
+  isModerated Boolean @default(false)
+  moderationNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+}
+
+enum VideoType {
+  EXTERNAL_LINK
+  UPLOAD
+}
+
+model Skill {
+  id   String @id @default(cuid())
+  name String @unique
+  description String?
+
+  profiles ProfileSkill[]
+
+  @@index([name])
+}
+
+model ProfileSkill {
+  id        String @id @default(cuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skillId   String
+  skill     Skill @relation(fields: [skillId], references: [id])
+
+  level     SkillLevel @default(INTERMEDIATE)
+
+  @@unique([profileId, skillId])
+  @@index([profileId])
+  @@index([skillId])
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+// ============================================================================
+// CERTIFICATION QUESTIONNAIRE
+// ============================================================================
+
+model CertificationQuestion {
+  id   String @id @default(cuid())
+  order Int // display order
+  type QuestionType @default(MULTIPLE_CHOICE)
+  text String
+  description String?
+
+  // Scoring
+  weight Int @default(1) // affects score calculation
+  maxPoints Int @default(10)
+
+  // Options for multiple choice/checkbox questions
+  options CertificationOption[]
+  answers Answer[]
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+  @@index([isActive])
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  SHORT_TEXT
+  CHECKBOX
+  LIKERT_SCALE
+}
+
+model CertificationOption {
+  id         String @id @default(cuid())
+  questionId String
+  question   CertificationQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  points     Int @default(0) // points awarded if selected
+  order      Int
+
+  answers Answer[]
+
+  @@unique([questionId, order])
+  @@index([questionId])
+}
+
+model Answer {
+  id        String @id @default(cuid())
+  attemptId String
+  attempt   CertificationAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   CertificationQuestion @relation(fields: [questionId], references: [id])
+
+  optionId   String? // for multiple choice / checkbox
+  option     CertificationOption? @relation(fields: [optionId], references: [id])
+
+  textAnswer String? // for short text questions
+  numericAnswer Int? // for likert scale
+
+  pointsEarned Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([attemptId])
+  @@index([questionId])
+}
+
+model CertificationAttempt {
+  id        String @id @default(cuid())
+  userId    String
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  answers   Answer[]
+
+  status    AttemptStatus @default(IN_PROGRESS)
+  score     Int? // calculated after completion
+
+  startedAt DateTime @default(now())
+  completedAt DateTime?
+  expiresAt DateTime? // for timeout handling
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  EXPIRED
+}
+
+// ============================================================================
+// RECRUITER FEATURES
+// ============================================================================
+
+model RecruiterProfile {
+  id      String @id @default(cuid())
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyName String
+  companyWebsite String?
+  jobTitle    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Interaction {
+  id          String @id @default(cuid())
+
+  recipientId String // applicant being contacted
+  recipient   User @relation("InteractionRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  createdById String // recruiter / admin contacting
+  createdBy   User @relation("InteractionCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  type        InteractionType
+  message     String?
+
+  isViewed    Boolean @default(false)
+  isFavorite  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([recipientId])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+enum InteractionType {
+  VIEW
+  CONTACT
+  FAVORITE
+  MESSAGE
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id      String @id @default(cuid())
+  userId  String
+  user    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String
+
+  relatedEntityId String? // interaction ID, etc
+  relatedEntityType String? // "interaction", etc
+
+  isRead  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  NEW_RECRUITER_CONTACT
+  NEW_FAVORITE
+  PROFILE_VIEWED
+  CERTIFICATION_COMPLETED
+  CERTIFICATION_REJECTED
+  ADMIN_MESSAGE
+}
+
+// ============================================================================
+// MODERATION & AUDIT
+// ============================================================================
+
+model ModerationLog {
+  id        String @id @default(cuid())
+  adminId   String
+  action    ModerationAction
+  entityType String // "profile", "video", etc
+  entityId   String
+  reason     String?
+  notes      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
+}
+
+enum ModerationAction {
+  APPROVE
+  REJECT
+  FLAG
+  REQUIRE_CHANGES
+}

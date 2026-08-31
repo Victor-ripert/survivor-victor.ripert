@@ -1,0 +1,856 @@
+openapi: 3.0.0
+info:
+  title: ProfilsActifs API
+  version: 1.0.0
+  description: Plateforme JEB de valorisation des compétences
+servers:
+  - url: http://localhost:3000/api
+    description: Development
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [APPLICANT, RECRUITER, ADMIN]
+      required: [id, email, role]
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        headline:
+          type: string
+        bio:
+          type: string
+        location:
+          type: string
+        sector:
+          type: string
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileSkill'
+        videos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Video'
+        certificationStatus:
+          type: string
+          enum: [PENDING, IN_PROGRESS, COMPLETED, REJECTED]
+        certificationScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        certificationBadge:
+          type: string
+      required: [id, userId, location, sector, certificationStatus]
+
+    Video:
+      type: object
+      properties:
+        id:
+          type: string
+        profileId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [EXTERNAL_LINK, UPLOAD]
+        url:
+          type: string
+        duration:
+          type: integer
+      required: [id, profileId, title, type, url]
+
+    ProfileSkill:
+      type: object
+      properties:
+        id:
+          type: string
+        skillId:
+          type: string
+        skillName:
+          type: string
+        level:
+          type: string
+          enum: [BEGINNER, INTERMEDIATE, ADVANCED, EXPERT]
+      required: [id, skillId, level]
+
+    CertificationQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+        order:
+          type: integer
+        type:
+          type: string
+          enum: [MULTIPLE_CHOICE, SHORT_TEXT, CHECKBOX, LIKERT_SCALE]
+        text:
+          type: string
+        description:
+          type: string
+        weight:
+          type: integer
+        maxPoints:
+          type: integer
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/CertificationOption'
+      required: [id, order, type, text]
+
+    CertificationOption:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        points:
+          type: integer
+        order:
+          type: integer
+      required: [id, text, order]
+
+    CertificationAttempt:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Answer'
+        status:
+          type: string
+          enum: [IN_PROGRESS, COMPLETED, ABANDONED, EXPIRED]
+        score:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+      required: [id, userId, status, startedAt]
+
+    Answer:
+      type: object
+      properties:
+        id:
+          type: string
+        attemptId:
+          type: string
+        questionId:
+          type: string
+        optionId:
+          type: string
+        textAnswer:
+          type: string
+        numericAnswer:
+          type: integer
+        pointsEarned:
+          type: integer
+      required: [id, attemptId, questionId]
+
+    Interaction:
+      type: object
+      properties:
+        id:
+          type: string
+        recipientId:
+          type: string
+        createdById:
+          type: string
+        type:
+          type: string
+          enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
+        message:
+          type: string
+        isViewed:
+          type: boolean
+        isFavorite:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, recipientId, createdById, type, createdAt]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==========================================================================
+  # AUTHENTICATION (Domain A)
+  # ==========================================================================
+
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                role:
+                  type: string
+                  enum: [APPLICANT, RECRUITER, ADMIN]
+              required: [email, password, firstName, lastName, role]
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required: [email, password]
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+
+  # ==========================================================================
+  # PROFILES (Domain B)
+  # ==========================================================================
+
+  /profiles:
+    get:
+      tags: [Profiles]
+      summary: List all profiles (paginated, public)
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sector
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: certificationStatus
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, IN_PROGRESS, COMPLETED, REJECTED]
+      responses:
+        '200':
+          description: List of profiles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Profile'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+
+  /profiles/{id}:
+    get:
+      tags: [Profiles]
+      summary: Get profile by ID (public)
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Profile details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '404':
+          description: Profile not found
+
+  /profiles/me:
+    get:
+      tags: [Profiles]
+      summary: Get my profile (applicant only)
+      responses:
+        '200':
+          description: My profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '404':
+          description: Profile not found
+
+    post:
+      tags: [Profiles]
+      summary: Create or update my profile (applicant only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                headline:
+                  type: string
+                bio:
+                  type: string
+                location:
+                  type: string
+                sector:
+                  type: string
+              required: [location, sector]
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+
+  # ==========================================================================
+  # VIDEOS (Domain B)
+  # ==========================================================================
+
+  /profiles/{profileId}/videos:
+    get:
+      tags: [Videos]
+      summary: Get videos for a profile
+      security: []
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of videos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Video'
+
+    post:
+      tags: [Videos]
+      summary: Add video to profile (applicant only)
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [EXTERNAL_LINK, UPLOAD]
+                url:
+                  type: string
+                duration:
+                  type: integer
+              required: [title, type, url]
+      responses:
+        '201':
+          description: Video created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Video'
+
+  /videos/{videoId}:
+    delete:
+      tags: [Videos]
+      summary: Delete video (applicant only)
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Video deleted
+
+  # ==========================================================================
+  # CERTIFICATION (Domain C)
+  # ==========================================================================
+
+  /certification/questions:
+    get:
+      tags: [Certification]
+      summary: Get all certification questions (public)
+      security: []
+      responses:
+        '200':
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CertificationQuestion'
+
+    post:
+      tags: [Certification]
+      summary: Create certification question (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order:
+                  type: integer
+                type:
+                  type: string
+                  enum: [MULTIPLE_CHOICE, SHORT_TEXT, CHECKBOX, LIKERT_SCALE]
+                text:
+                  type: string
+                description:
+                  type: string
+                weight:
+                  type: integer
+                maxPoints:
+                  type: integer
+                options:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      text:
+                        type: string
+                      points:
+                        type: integer
+              required: [order, type, text]
+      responses:
+        '201':
+          description: Question created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationQuestion'
+
+  /certification/attempt:
+    post:
+      tags: [Certification]
+      summary: Start certification attempt (applicant only)
+      responses:
+        '201':
+          description: Attempt created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationAttempt'
+
+  /certification/attempt/{attemptId}:
+    get:
+      tags: [Certification]
+      summary: Get certification attempt
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attempt details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationAttempt'
+
+  /certification/attempt/{attemptId}/answer:
+    post:
+      tags: [Certification]
+      summary: Submit answer to question (applicant only, can save in progress)
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                questionId:
+                  type: string
+                optionId:
+                  type: string
+                textAnswer:
+                  type: string
+                numericAnswer:
+                  type: integer
+              required: [questionId]
+      responses:
+        '201':
+          description: Answer saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Answer'
+
+  /certification/attempt/{attemptId}/submit:
+    post:
+      tags: [Certification]
+      summary: Submit certification attempt for scoring (applicant only)
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attempt submitted and scored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationAttempt'
+
+  # ==========================================================================
+  # INTERACTIONS & RECRUITER (Domain D)
+  # ==========================================================================
+
+  /interactions:
+    get:
+      tags: [Interactions]
+      summary: Get my interactions (recruiter views sent, applicant views received)
+      responses:
+        '200':
+          description: List of interactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Interaction'
+                  received:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Interaction'
+
+  /interactions/{recipientId}:
+    post:
+      tags: [Interactions]
+      summary: Create interaction with applicant (recruiter/admin)
+      parameters:
+        - name: recipientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
+                message:
+                  type: string
+              required: [type]
+      responses:
+        '201':
+          description: Interaction created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+
+  /interactions/{interactionId}:
+    patch:
+      tags: [Interactions]
+      summary: Update interaction (mark as viewed, favorite, etc)
+      parameters:
+        - name: interactionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isViewed:
+                  type: boolean
+                isFavorite:
+                  type: boolean
+      responses:
+        '200':
+          description: Interaction updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+
+  # ==========================================================================
+  # NOTIFICATIONS (Domain A)
+  # ==========================================================================
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get my notifications
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: string
+                    title:
+                      type: string
+                    message:
+                      type: string
+                    isRead:
+                      type: boolean
+                    createdAt:
+                      type: string
+                      format: date-time
+
+  /notifications/{notificationId}/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification marked as read
+
+  # ==========================================================================
+  # ADMINISTRATION
+  # ==========================================================================
+
+  /admin/dashboard:
+    get:
+      tags: [Administration]
+      summary: Get admin dashboard stats (admin only)
+      responses:
+        '200':
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalProfiles:
+                    type: integer
+                  certificationRate:
+                    type: number
+                  totalInteractions:
+                    type: integer
+                  activeApplicants:
+                    type: integer
+
+  /admin/moderation/profiles:
+    get:
+      tags: [Administration]
+      summary: Get profiles pending moderation (admin only)
+      responses:
+        '200':
+          description: List of profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Profile'
+
+  /admin/profiles/{profileId}/moderate:
+    post:
+      tags: [Administration]
+      summary: Moderate a profile (admin only)
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [APPROVE, REJECT, FLAG, REQUIRE_CHANGES]
+                reason:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Profile moderated

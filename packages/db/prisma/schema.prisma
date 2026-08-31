@@ -14,11 +14,310 @@ enum UserRole {
 }
 
 model User {
-  id String @id @default(cuid())
-  email String @unique
-  password String
-  role UserRole
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole
+  isActive     Boolean  @default(true)
+
+  profile               Profile?
+  attempts              CertificationAttempt[]
+  notifications         Notification[]
+  moderationLogs        ModerationLog[]
+  interactionsCreated   Interaction[]          @relation("InteractionCreatedBy")
+  interactionsReceived  Interaction[]          @relation("InteractionRecipient")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@map("users")
+
+  @@index([role])
+}
+
+enum NotificationType {
+  NEW_INTERACTION_RECEIVED
+  CERTIFICATION_BADGE_EARNED
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String
+
+  // Optional deep link to the interaction that triggered this notification.
+  interactionId String?
+  interaction   Interaction? @relation(fields: [interactionId], references: [id], onDelete: SetNull)
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model Skill {
+  id   String @id @default(cuid())
+  name String @unique
+
+  profiles ProfileSkill[]
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+model ProfileSkill {
+  id String @id @default(cuid())
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skillId   String
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  level SkillLevel @default(INTERMEDIATE)
+
+  @@unique([profileId, skillId])
+  @@index([skillId])
+}
+
+enum CertificationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Profile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  headline String?
+  bio      String?
+  location String
+  sector   String
+
+  skills ProfileSkill[]
+  videos Video[]
+
+  certificationStatus CertificationStatus @default(PENDING)
+  certificationScore  Int? // 0-100, set when an attempt completes
+  certificationBadge  String? // resolved from CertificationLevel at scoring time
+
+  // Not yet surfaced by the Profile schema in openapi.yaml (contract gap vs
+  // brief §2.1 "Modération des profils") — kept here because the admin
+  // moderation endpoints need something to filter/act on.
+  moderationStatus ModerationStatus @default(PENDING)
+  moderationLogs   ModerationLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sector])
+  @@index([location])
+  @@index([certificationStatus])
+  @@index([moderationStatus])
+}
+
+enum VideoType {
+  EXTERNAL_LINK
+  UPLOAD
+}
+
+model Video {
+  id        String  @id @default(cuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  type        VideoType
+  url         String // external link (YouTube/Vimeo) or storage path, depending on type
+  duration    Int? // seconds
+
+  fileSizeBytes Int? // set for UPLOAD only; app layer enforces the 100MB cap (brief §3.2)
+
+  // Same contract-gap note as Profile.moderationStatus.
+  moderationStatus ModerationStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId])
+}
+
+// Mirrors the POST /admin/profiles/{id}/moderate payload (action/reason/notes)
+// from openapi.yaml — one row per moderation decision, so status changes stay
+// auditable instead of just overwriting Profile.moderationStatus in place.
+enum ModerationAction {
+  APPROVE
+  REJECT
+  FLAG
+  REQUIRE_CHANGES
+}
+
+model ModerationLog {
+  id String @id @default(cuid())
+
+  adminId String
+  admin   User   @relation(fields: [adminId], references: [id])
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  action ModerationAction
+  reason String?
+  notes  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId])
+  @@index([adminId])
+}
+
+// Score-range lookup for badge tiers — see design-rules note at top of file.
+model CertificationLevel {
+  id           String  @id @default(cuid())
+  name         String  @unique // e.g. "Certifié JEB"
+  minScore     Int // inclusive lower bound, 0-100 scale
+  maxScore     Int // inclusive upper bound, 0-100 scale
+  badgeIconUrl String?
+  order        Int     @default(0)
+  isActive     Boolean @default(true)
+
+  @@index([minScore, maxScore])
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  SHORT_TEXT
+  CHECKBOX
+  LIKERT_SCALE
+}
+
+model CertificationQuestion {
+  id          String       @id @default(cuid())
+  order       Int
+  type        QuestionType
+  text        String
+  description String?
+  weight      Int          @default(1) // multiplier applied to earned points
+  maxPoints   Int          @default(10)
+  isActive    Boolean      @default(true)
+
+  options CertificationOption[]
+  answers Answer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, order])
+}
+
+// Used for MULTIPLE_CHOICE/CHECKBOX questions; each option's `points` is the
+// admin-editable "pondération" the brief asks for.
+model CertificationOption {
+  id         String                @id @default(cuid())
+  questionId String
+  question   CertificationQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  text   String
+  points Int    @default(0)
+  order  Int    @default(0)
+
+  answers Answer[]
+
+  @@index([questionId])
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  EXPIRED
+}
+
+model CertificationAttempt {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status AttemptStatus @default(IN_PROGRESS)
+  score  Int? // computed on completion, 0-100 scale
+
+  answers Answer[]
+
+  startedAt      DateTime  @default(now())
+  lastActivityAt DateTime  @updatedAt // drives save/resume and EXPIRED transitions
+  expiresAt      DateTime?
+  completedAt    DateTime?
+
+  // App layer enforces at most one IN_PROGRESS attempt per user, so a
+  // candidate always resumes the same attempt rather than starting a new one.
+  @@index([userId, status])
+}
+
+// One row per submitted answer. CHECKBOX questions produce multiple rows
+// (one per selected option) sharing the same attemptId/questionId, which is
+// why this isn't uniquely keyed on that pair.
+model Answer {
+  id        String               @id @default(cuid())
+  attemptId String
+  attempt   CertificationAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   CertificationQuestion @relation(fields: [questionId], references: [id])
+
+  optionId String? // MULTIPLE_CHOICE / CHECKBOX
+  option   CertificationOption? @relation(fields: [optionId], references: [id])
+
+  textAnswer    String? // SHORT_TEXT
+  numericAnswer Int? // LIKERT_SCALE
+
+  pointsEarned Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([attemptId, questionId])
+}
+
+enum InteractionType {
+  VIEW
+  CONTACT
+  FAVORITE
+  MESSAGE
+}
+
+model Interaction {
+  id String @id @default(cuid())
+
+  recipientId String // applicant being contacted
+  recipient   User   @relation("InteractionRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  createdById String // recruiter / admin acting
+  createdBy   User   @relation("InteractionCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  type       InteractionType
+  message    String? // set for CONTACT/MESSAGE
+  isViewed   Boolean @default(false)
+  isFavorite Boolean @default(false)
+
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+
+  @@index([recipientId, type])
+  @@index([createdById, type, createdAt])
 }

@@ -47,6 +47,8 @@ npm run db:studio -w @profils-actifs/db   # browse/edit rows in the browser
 
 `.env.local` is required before the API boots — `packages/api/src/services/jwt.ts` throws at import time if `JWT_SECRET` is missing. Copy `.env.example` as a starting point.
 
+**API Documentation:** Once the API is running, view the OpenAPI spec and interactive Swagger UI at `http://localhost:3000/api/docs`.
+
 ## Architecture
 
 ### Monorepo layout
@@ -93,11 +95,27 @@ Where the database and the contract disagree, `schema.prisma` carries an inline 
 
 JWT bearer tokens, stateless. `packages/api/src/services/jwt.ts` signs/verifies `{ id, email, role }`; `packages/api/src/middleware/auth.ts` exposes `requireAuth` and the variadic `requireRole(...roles)`. `req.user` is typed globally via `packages/api/src/types/express.d.ts`.
 
-Public-by-design endpoints (no `requireAuth`): the profile feed and individual profile pages — the brief requires profiles to be viewable without a recruiter account.
-
 Passwords: bcrypt, 12 salt rounds, via `services/password.ts`. The column is `User.passwordHash` and must never be selected into an API response.
 
+**Public endpoints:** The profile feed and individual profile pages are intentionally public (no `requireAuth`) — the brief requires job-seekers' profiles to be discoverable without login.
+
+### Security & rate-limiting
+
+- **Rate limiting:** 100 requests per 15 minutes per IP
+- **Helmet headers:** Security headers (CSP, X-Frame-Options, etc.) are enabled
+- **CORS:** Controlled via `CORS_ORIGIN` env var, restrictive by default
+- **Input validation:** Zod validates all request payloads; Prisma ORM prevents SQL injection
+- **XSS protection:** Helmet headers and React's default escaping
+
+### Data model notes
+
+- `ModerationLog` is an audit trail — every moderation status change must write a log entry alongside updating `Profile.moderationStatus`
+- Foreign keys use `onDelete: Cascade` for safe cascading deletions
+- All tables have `createdAt` and `updatedAt` timestamps
+
 ## Conventions
+
+### Module system
 
 **ESM with explicit extensions.** Every package is `"type": "module"`, so relative imports inside `api` need the `.js` suffix even though the source is `.ts`:
 
@@ -105,13 +123,37 @@ Passwords: bcrypt, 12 salt rounds, via `services/password.ts`. The column is `Us
 import { verifyToken } from '../services/jwt.js';
 ```
 
-**Uniform error shape.** Every non-2xx response is `{ error, message, statusCode }`, where `error` is a snake_case code (`unauthorized`, `forbidden`, `validation_error`). Match this in new handlers — the frontend branches on it.
+### TypeScript
 
-**Paginated list shape.** `{ data: [...], pagination: { page, limit, total, pages } }`.
+- Strict mode is enabled (`"strict": true`)
+- Avoid `any` (use `unknown` if absolutely necessary)
+- Domain types are imported from `@prisma/client`, not redeclared (e.g. `UserRole`, `CertificationStatus`)
+- Explicitly type function parameters and return types
 
-**Validation.** Zod, in `api/src/validators/`. Backend validates independently of the frontend.
+### Naming conventions
 
-**Commits.** `<type>(<domain>): <description>` — types `feat`/`fix`/`refactor`/`test`/`docs`/`chore`; domains `auth`, `profiles`, `videos`, `certification`, `recruiter`, `notifications`, `admin`, `db`.
+- **Routes**: kebab-case (`/auth/register`, `/profiles/{id}/videos`)
+- **Variables, functions**: camelCase
+- **Database fields**: snake_case (Prisma converts automatically)
+- **Enums**: PascalCase with ALL_CAPS values
+
+### API responses
+
+**Uniform error shape:** Every non-2xx response is `{ error, message, statusCode }`, where `error` is a snake_case code (`unauthorized`, `forbidden`, `validation_error`). Match this in new handlers — the frontend branches on it.
+
+**Paginated lists:** `{ data: [...], pagination: { page, limit, total, pages } }`.
+
+### Validation
+
+Input validation uses Zod in `api/src/validators/`. Backend validates independently of the frontend.
+
+### Data lifecycle
+
+**Soft deletes:** Use `isModerated` flag for profiles instead of deletion, enabling audit trails and recovery. Always write a `ModerationLog` entry when moderation status changes.
+
+### Commits
+
+`<type>(<domain>): <description>` — types `feat`/`fix`/`refactor`/`test`/`docs`/`chore`; domains `auth`, `profiles`, `videos`, `certification`, `recruiter`, `notifications`, `admin`, `db`.
 
 Empty scaffolded directories are held by `.gitkeep`; delete it once real files land there.
 

@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "ProfilsActifs - Plateforme JEB de valorisation des compétences",
+  "packageManager": "npm@12.0.2",
   "scripts": {
+    "postinstall": "npm run generate -w @profils-actifs/db",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",

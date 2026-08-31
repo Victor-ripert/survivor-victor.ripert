@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
+    "module": "NodeNext",
     "lib": ["ES2020"],
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
+    "isolatedModules": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -23,9 +24,8 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
-      "@profils-actifs/shared/*": ["packages/shared/src/*"]
+      "@profils-actifs/shared/*": ["./packages/shared/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", "build", ".turbo"]

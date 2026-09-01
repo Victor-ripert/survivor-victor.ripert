@@ -1,11 +1,20 @@
 import { Router } from 'express';
-import { getQuestions, getAdminQuestions, postQuestion, patchQuestion } from '../controllers/certification.controller.js';
+import {
+  getQuestions,
+  getAdminQuestions,
+  postQuestion,
+  patchQuestion,
+  postAttempt,
+  getAttempt,
+} from '../controllers/certification.controller.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 
 // Mounted at /certification — candidate-facing, no scoring data exposed.
 export const certificationRouter = Router();
 
 certificationRouter.get('/questions', getQuestions);
+certificationRouter.post('/attempt', requireAuth, requireRole('APPLICANT'), postAttempt);
+certificationRouter.get('/attempt/:attemptId', requireAuth, requireRole('APPLICANT'), getAttempt);
 
 // Mounted at /admin — alongside the other domains' admin routes, so the
 // full path ends up /admin/certification/questions.

@@ -712,19 +712,44 @@ paths:
   /certification/attempt:
     post:
       tags: [Certification]
-      summary: Start certification attempt (applicant only)
+      summary: Start or resume the caller's certification attempt (applicant only)
+      description: >-
+        At most one IN_PROGRESS attempt exists per user. If one is already
+        open, it is returned as-is (200) instead of creating a new one (201)
+        — this is what makes save/resume work.
       responses:
-        '201':
-          description: Attempt created
+        '200':
+          description: An IN_PROGRESS attempt already existed and was returned
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CertificationAttempt'
+        '201':
+          description: A new attempt was created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationAttempt'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user is not an APPLICANT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /certification/attempt/{attemptId}:
     get:
       tags: [Certification]
-      summary: Get certification attempt
+      summary: Get a certification attempt (applicant only, own attempt)
+      description: >-
+        While the attempt is IN_PROGRESS, each answer's `pointsEarned` is
+        omitted — scoring is never revealed before submission.
       parameters:
         - name: attemptId
           in: path
@@ -738,6 +763,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CertificationAttempt'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: This attempt does not belong to the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Attempt not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /certification/attempt/{attemptId}/answer:
     post:

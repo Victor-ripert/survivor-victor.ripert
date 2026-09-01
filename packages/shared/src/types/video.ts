@@ -1,12 +1,19 @@
 /**
  * Mirrors `schema.prisma`'s `VideoType` enum and `openapi.yaml`'s `Video`
- * schema as a plain string-literal union. `packages/api` types its Prisma
- * queries with the real `VideoType` from `@prisma/client` — this local
- * mirror exists because `web` can't (and shouldn't) depend on the
- * server-only generated Prisma client. Keep the literal values identical to
- * the Prisma enum; that's what makes it a mirror instead of a fork.
+ * schema. `packages/api` types its Prisma queries with the real `VideoType`
+ * from `@prisma/client` — this local mirror exists because `web` can't (and
+ * shouldn't) depend on the server-only generated Prisma client. Keep the
+ * literal values identical to the Prisma enum; that's what makes it a
+ * mirror instead of a fork.
+ *
+ * Declared as a runtime array (not just a `type`) so it can double as the
+ * single source of truth for Zod validators too — e.g.
+ * `z.enum(VIDEO_TYPES)` in `api/src/validators/video.ts` — instead of the
+ * same three literal strings being retyped in a second place that can
+ * silently drift out of sync.
  */
-export type VideoType = 'EXTERNAL_LINK' | 'UPLOAD';
+export const VIDEO_TYPES = ['EXTERNAL_LINK', 'UPLOAD'] as const;
+export type VideoType = (typeof VIDEO_TYPES)[number];
 
 /** A video as returned by the API. */
 export interface Video {

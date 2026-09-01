@@ -1,18 +1,26 @@
 import type { Video } from './video.js';
 
-/** Mirrors `schema.prisma`'s `CertificationStatus` enum — see the note in `video.ts` on why this is a local literal union rather than a `@prisma/client` import. */
-export type CertificationStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'REJECTED';
+/**
+ * Mirrors `schema.prisma`'s `CertificationStatus` enum — see the note in
+ * `video.ts` on why this is a local mirror rather than a `@prisma/client`
+ * import, and why it's a runtime array rather than just a `type` (Zod
+ * validators build `z.enum(...)` straight from these arrays).
+ */
+export const CERTIFICATION_STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'] as const;
+export type CertificationStatus = (typeof CERTIFICATION_STATUSES)[number];
 
 /** Mirrors `schema.prisma`'s `SkillLevel` enum. */
-export type SkillLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+export const SKILL_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'] as const;
+export type SkillLevel = (typeof SKILL_LEVELS)[number];
 
 /**
  * Mirrors `schema.prisma`'s `ModerationStatus` enum. Not yet on the
  * `Profile` schema in `openapi.yaml` (tracked as issue #7, "close contract
- * gaps") — kept optional here so this type doesn't need reshaping once that
- * lands, only the `?` dropped.
+ * gaps") — the `Profile.moderationStatus` field below is kept optional so
+ * it doesn't need reshaping once that lands, only the `?` dropped.
  */
-export type ModerationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export const MODERATION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
+export type ModerationStatus = (typeof MODERATION_STATUSES)[number];
 
 /** A skill from the shared catalog (`Skill` in `schema.prisma`). */
 export interface Skill {

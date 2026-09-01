@@ -1,14 +1,14 @@
 import rateLimit, { ipKeyGenerator, type Options } from 'express-rate-limit';
-import type { Request, Response } from 'express';
-import type { ApiErrorResponse } from '@profils-actifs/shared';
+import type { NextFunction, Request, Response } from 'express';
 import { env } from '../config/env.js';
+import { tooManyRequests } from '../utils/http-error.js';
 
+/** Handed to the error middleware like any other failure, so a throttled
+ *  request answers in exactly the same shape as every other error. */
 const rejection =
   (message: string) =>
-  (_req: Request, res: Response): void => {
-    const body: ApiErrorResponse = { error: 'too_many_requests', message, statusCode: 429 };
-    res.status(429).json(body);
-  };
+  (_req: Request, _res: Response, next: NextFunction): void =>
+    next(tooManyRequests(message));
 
 /** Authenticated callers are limited per account so that several colleagues
  *  behind one office IP do not consume each other's quota; anonymous traffic

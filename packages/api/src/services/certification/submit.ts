@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma.js';
 import { scoreAttempt, type ScoringQuestion, type ScoringAnswer } from './scoring.js';
 import { resolveBadgeLevel, isBadgeEarned } from './badge.js';
+import { notifyBadgeEarned } from '../notifications.js';
 import { attemptForbidden, attemptNotFound } from './attempts.js';
 import { attemptNotInProgress } from './answers.js';
 
@@ -81,18 +82,9 @@ export const submitAttempt = async (attemptId: string, userId: string) => {
       },
     });
 
-    // TODO(Domain A): route this through a shared notification service once
-    // one exists — created directly here for now since nothing else does.
-    if (earned) {
-      await tx.notification.create({
-        data: {
-          userId,
-          type: 'CERTIFICATION_BADGE_EARNED',
-          title: 'Badge de certification obtenu',
-          message: `Vous avez obtenu le badge "${badgeLevel.name}" avec un score de ${totalScore}/100.`,
-        },
-      });
-    }
+    // In the same transaction as the score, so a failed write never leaves
+    // someone congratulated for a badge they were not awarded.
+    if (earned) await notifyBadgeEarned(userId, badgeLevel.name, totalScore, tx);
 
     return { attempt: updatedAttempt, score: totalScore, badge: badgeLevel };
   });

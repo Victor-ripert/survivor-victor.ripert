@@ -165,7 +165,16 @@ There is a single error path, and handlers never build an error body by hand:
 - **`middleware/error-handler.ts`** turns `HttpError`, `ZodError`, Prisma's known request errors and malformed JSON into the uniform shape. Express 5 forwards rejected promises to it on its own, so handlers need no try/catch.
 - Anything unrecognised becomes an opaque 500; the cause is logged server-side only, never described to the client.
 
-Adding a per-domain error class re-introduces a second path — don't.
+Adding a per-domain error class re-introduces a second path — don't. Middleware
+(`auth.ts`, `rate-limit.ts`) forwards with `next(httpError)` for the same reason.
+
+### One way to notify someone
+
+`services/notifications.ts` owns every write to the `Notification` table —
+`notifyNewInteraction` for a recruiter's message, `notifyBadgeEarned` for a
+certification result. Both accept an optional transaction client so the
+notification lives or dies with the write that triggered it; never call
+`prisma.notification.create` from a domain service.
 
 ### Validation
 

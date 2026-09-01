@@ -1,4 +1,4 @@
-import { InteractionType, NotificationType, Prisma, UserRole } from '@prisma/client';
+import { InteractionType, Prisma, UserRole } from '@prisma/client';
 import {
   buildPaginationMeta,
   CONTACT_LIMIT_PER_APPLICANT_PER_DAY,
@@ -10,6 +10,7 @@ import {
 } from '@profils-actifs/shared';
 import { prisma } from '../config/prisma.js';
 import { badRequest, forbidden, notFound, tooManyRequests } from '../utils/http-error.js';
+import { notifyNewInteraction } from './notifications.js';
 
 const MESSAGE_TYPES = [InteractionType.CONTACT, InteractionType.MESSAGE];
 
@@ -175,15 +176,9 @@ export const recordInteraction = async ({
       select: interactionSelect,
     });
 
-    await tx.notification.create({
-      data: {
-        userId: applicant.id,
-        type: NotificationType.NEW_INTERACTION_RECEIVED,
-        title: 'Nouveau message de recruteur',
-        message: `${actor.firstName} ${actor.lastName} souhaite échanger avec vous.`,
-        interactionId: interaction.id,
-      },
-    });
+    // Same transaction as the interaction: a rolled-back contact must never
+    // leave the applicant with a notification about it.
+    await notifyNewInteraction(applicant.id, interaction.id, actor, tx);
 
     return interaction;
   });

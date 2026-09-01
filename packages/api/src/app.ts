@@ -13,6 +13,7 @@ import { authRouter } from './routes/auth.js';
 import { certificationAdminRouter, certificationRouter } from './routes/certification.js';
 import { healthRouter } from './routes/health.js';
 import { interactionsRouter } from './routes/interactions.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { recruiterRouter } from './routes/recruiter.js';
 
 const JSON_BODY_LIMIT = '64kb';
@@ -32,6 +33,7 @@ export const createApp = (): Express => {
   app.use('/api/auth', authRouter);
   app.use('/api/certification', certificationRouter);
   app.use('/api/interactions', interactionsRouter);
+  app.use('/api/notifications', notificationsRouter);
   app.use('/api/recruiter', recruiterRouter);
 
   // The certification admin routes guard themselves, so they are mounted

@@ -16,6 +16,7 @@ describe('domain D access control', () => {
     ['/api/recruiter/dashboard'],
     ['/api/admin/dashboard'],
     ['/api/interactions'],
+    ['/api/notifications'],
   ])('answers 401 on %s without a token', async (path) => {
     const response = await request(app).get(path);
 

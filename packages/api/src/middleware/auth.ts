@@ -1,42 +1,33 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import type { UserRole } from '@prisma/client';
 import { verifyToken } from '../services/jwt.js';
+import { forbidden, unauthorized } from '../utils/http-error.js';
 
-export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(' ')[1];
+export const requireAuth = (req: Request, _res: Response, next: NextFunction): void => {
+  const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
-    res.status(401).json({
-      error: 'unauthorized',
-      message: 'No token provided',
-      statusCode: 401,
-    });
+    next(unauthorized('Aucun jeton fourni'));
     return;
   }
 
   try {
     req.user = verifyToken(token);
-    next();
   } catch {
-    res.status(401).json({
-      error: 'unauthorized',
-      message: 'Invalid or expired token',
-      statusCode: 401,
-    });
+    next(unauthorized('Jeton invalide ou expiré'));
+    return;
   }
+
+  next();
 };
 
 export const requireRole = (...allowedRoles: UserRole[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
-      res.status(403).json({
-        error: 'forbidden',
-        message: 'Insufficient permissions',
-        statusCode: 403,
-      });
+      next(forbidden());
       return;
     }
+
     next();
   };
 };

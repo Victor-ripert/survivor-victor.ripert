@@ -441,6 +441,39 @@ components:
           nullable: true
       required: [id, firstName, lastName, role]
 
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [NEW_INTERACTION_RECEIVED, CERTIFICATION_BADGE_EARNED]
+        title:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: boolean
+        interactionId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, type, title, message, isRead, createdAt]
+
+    NotificationPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      required: [data, pagination]
+
     InteractionPage:
       type: object
       properties:
@@ -1609,35 +1642,39 @@ paths:
   /notifications:
     get:
       tags: [Notifications]
-      summary: Get my notifications
+      summary: List my notifications
+      description: >
+        Newest first, paginated like every other list. `unread` is returned
+        alongside the page so a badge count does not cost a second request.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
-          description: List of notifications
+          description: A page of notifications
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    type:
-                      type: string
-                    title:
-                      type: string
-                    message:
-                      type: string
-                    isRead:
-                      type: boolean
-                    createdAt:
-                      type: string
-                      format: date-time
+                allOf:
+                  - $ref: '#/components/schemas/NotificationPage'
+                  - type: object
+                    properties:
+                      unread:
+                        type: integer
+                        description: Total unread notifications, not just on this page.
+                    required: [unread]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /notifications/{notificationId}/read:
     patch:
       tags: [Notifications]
-      summary: Mark notification as read
+      summary: Mark one of my notifications as read
+      description: >
+        Answers 404 for a notification belonging to someone else, so the route
+        cannot be used to discover that one exists.
       parameters:
         - name: notificationId
           in: path
@@ -1647,6 +1684,14 @@ paths:
       responses:
         '200':
           description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ==========================================================================
   # ADMINISTRATION

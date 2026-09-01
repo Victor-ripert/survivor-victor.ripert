@@ -1,4 +1,11 @@
+import { config } from 'dotenv';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'prisma/config';
+
+// Prisma's config-file system (unlike the old schema-based one) loads no
+// .env file on its own — the repo's env vars live in the root .env.local,
+// two levels up from this package.
+config({ path: fileURLToPath(new URL('../../.env.local', import.meta.url)) });
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',

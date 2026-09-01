@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "node ../../scripts/tsc-native.js && vite build",
     "preview": "vite preview",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
@@ -21,7 +21,8 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-native": "npm:typescript@^7.0.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@types/node": "^26.4.0",

@@ -1,13 +1,12 @@
-import express from 'express';
 import request from 'supertest';
-import { certificationRouter, certificationAdminRouter } from '../src/routes/certification.js';
+import { createApp } from '../src/app.js';
 import { signToken } from '../src/services/jwt.js';
 import { prisma } from '../src/config/prisma.js';
 
-const app = express();
-app.use(express.json());
-app.use('/certification', certificationRouter);
-app.use('/admin', certificationAdminRouter);
+// The real application, so these exercise the same middleware chain the
+// server runs — error mapping included — instead of a stand-in that can
+// drift from it.
+const app = createApp();
 
 // CertificationAttempt.userId is a real FK to User, so these need matching
 // rows in the DB — not just a JWT with a made-up id.
@@ -42,25 +41,25 @@ afterAll(async () => {
 
 describe('POST /certification/attempt', () => {
   it('rejects unauthenticated requests', async () => {
-    const res = await request(app).post('/certification/attempt');
+    const res = await request(app).post('/api/certification/attempt');
     expect(res.status).toBe(401);
   });
 
   it('rejects non-applicant roles', async () => {
-    const res = await request(app).post('/certification/attempt').set('Authorization', `Bearer ${recruiterToken}`);
+    const res = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${recruiterToken}`);
     expect(res.status).toBe(403);
   });
 
   it('creates a new attempt on first call (201)', async () => {
-    const res = await request(app).post('/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
+    const res = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
     expect(res.status).toBe(201);
     expect(res.body.status).toBe('IN_PROGRESS');
     expect(res.body.userId).toBe(applicantId);
   });
 
   it('resumes the same attempt on a second call (200, same id)', async () => {
-    const first = await request(app).post('/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
-    const second = await request(app).post('/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
+    const first = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
+    const second = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
 
     expect(first.status).toBe(201);
     expect(second.status).toBe(200);
@@ -72,8 +71,8 @@ describe('POST /certification/attempt', () => {
 
   it('never creates two IN_PROGRESS attempts under concurrent requests', async () => {
     const [first, second] = await Promise.all([
-      request(app).post('/certification/attempt').set('Authorization', `Bearer ${applicantToken}`),
-      request(app).post('/certification/attempt').set('Authorization', `Bearer ${applicantToken}`),
+      request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`),
+      request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`),
     ]);
 
     expect([first.status, second.status].sort()).toEqual([200, 201]);
@@ -87,25 +86,25 @@ describe('POST /certification/attempt', () => {
 describe('GET /certification/attempt/:attemptId', () => {
   it('returns 404 for an unknown attempt', async () => {
     const res = await request(app)
-      .get('/certification/attempt/does-not-exist')
+      .get('/api/certification/attempt/does-not-exist')
       .set('Authorization', `Bearer ${applicantToken}`);
     expect(res.status).toBe(404);
   });
 
   it('returns 403 when the attempt belongs to someone else', async () => {
-    const created = await request(app).post('/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
+    const created = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
 
     const res = await request(app)
-      .get(`/certification/attempt/${created.body.id}`)
+      .get(`/api/certification/attempt/${created.body.id}`)
       .set('Authorization', `Bearer ${otherApplicantToken}`);
     expect(res.status).toBe(403);
   });
 
   it('returns the attempt with no pointsEarned on answers while IN_PROGRESS', async () => {
-    const created = await request(app).post('/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
+    const created = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
 
     const res = await request(app)
-      .get(`/certification/attempt/${created.body.id}`)
+      .get(`/api/certification/attempt/${created.body.id}`)
       .set('Authorization', `Bearer ${applicantToken}`);
 
     expect(res.status).toBe(200);

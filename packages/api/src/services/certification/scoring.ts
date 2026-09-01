@@ -41,7 +41,8 @@ export interface ScoringResult {
   questionScores: QuestionScore[];
 }
 
-const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max);
 
 const computeRawPoints = (question: ScoringQuestion, answers: ScoringAnswer[]): number => {
   switch (question.type) {
@@ -55,7 +56,9 @@ const computeRawPoints = (question: ScoringQuestion, answers: ScoringAnswer[]): 
       return question.options.find((option) => option.id === optionId)?.points ?? 0;
     }
     case 'CHECKBOX': {
-      const selectedIds = new Set(answers.map((answer) => answer.optionId).filter((id): id is string => Boolean(id)));
+      const selectedIds = new Set(
+        answers.map((answer) => answer.optionId).filter((id): id is string => Boolean(id)),
+      );
       const raw = question.options
         .filter((option) => selectedIds.has(option.id))
         .reduce((sum, option) => sum + option.points, 0);
@@ -73,7 +76,10 @@ const computeRawPoints = (question: ScoringQuestion, answers: ScoringAnswer[]): 
   }
 };
 
-export const scoreAttempt = (questions: ScoringQuestion[], answers: ScoringAnswer[]): ScoringResult => {
+export const scoreAttempt = (
+  questions: ScoringQuestion[],
+  answers: ScoringAnswer[],
+): ScoringResult => {
   const answersByQuestion = new Map<string, ScoringAnswer[]>();
   for (const answer of answers) {
     const list = answersByQuestion.get(answer.questionId) ?? [];
@@ -87,7 +93,12 @@ export const scoreAttempt = (questions: ScoringQuestion[], answers: ScoringAnswe
 
   for (const question of questions) {
     if (question.type === 'SHORT_TEXT') {
-      questionScores.push({ questionId: question.id, scored: false, pointsEarned: 0, weightedPoints: 0 });
+      questionScores.push({
+        questionId: question.id,
+        scored: false,
+        pointsEarned: 0,
+        weightedPoints: 0,
+      });
       continue;
     }
 
@@ -102,7 +113,8 @@ export const scoreAttempt = (questions: ScoringQuestion[], answers: ScoringAnswe
     weightedMaxTotal += question.maxPoints * question.weight;
   }
 
-  const totalScore = weightedMaxTotal === 0 ? 0 : Math.round((weightedEarnedTotal / weightedMaxTotal) * 100);
+  const totalScore =
+    weightedMaxTotal === 0 ? 0 : Math.round((weightedEarnedTotal / weightedMaxTotal) * 100);
 
   return { totalScore: clamp(totalScore, 0, 100), questionScores };
 };

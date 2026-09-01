@@ -1,14 +1,13 @@
-import express from 'express';
 import request from 'supertest';
+import { createApp } from '../src/app.js';
 import type { CertificationQuestion, CertificationOption } from '@prisma/client';
-import { certificationRouter, certificationAdminRouter } from '../src/routes/certification.js';
 import { signToken } from '../src/services/jwt.js';
 import { prisma } from '../src/config/prisma.js';
 
-const app = express();
-app.use(express.json());
-app.use('/certification', certificationRouter);
-app.use('/admin', certificationAdminRouter);
+// The real application, so these exercise the same middleware chain the
+// server runs — error mapping included — instead of a stand-in that can
+// drift from it.
+const app = createApp();
 
 const applicantId = 'test-applicant-submit';
 const applicantToken = signToken({ id: applicantId, email: 'applicant-submit@test.local', role: 'APPLICANT' });
@@ -71,7 +70,7 @@ const answerAllActiveQuestionsOptimally = async (attemptId: string) => {
 describe('POST /certification/attempt/:attemptId/submit — auth & lifecycle', () => {
   it('returns 404 for an unknown attempt', async () => {
     const res = await request(app)
-      .post('/certification/attempt/does-not-exist/submit')
+      .post('/api/certification/attempt/does-not-exist/submit')
       .set('Authorization', `Bearer ${applicantToken}`);
     expect(res.status).toBe(404);
   });
@@ -82,7 +81,7 @@ describe('POST /certification/attempt/:attemptId/submit — auth & lifecycle', (
     });
 
     const res = await request(app)
-      .post(`/certification/attempt/${attempt.id}/submit`)
+      .post(`/api/certification/attempt/${attempt.id}/submit`)
       .set('Authorization', `Bearer ${applicantToken}`);
     expect(res.status).toBe(409);
 
@@ -96,7 +95,7 @@ describe('POST /certification/attempt/:attemptId/submit — scoring outcomes', (
     await answerAllActiveQuestionsOptimally(attempt.id);
 
     const res = await request(app)
-      .post(`/certification/attempt/${attempt.id}/submit`)
+      .post(`/api/certification/attempt/${attempt.id}/submit`)
       .set('Authorization', `Bearer ${applicantToken}`);
 
     expect(res.status).toBe(200);
@@ -124,7 +123,7 @@ describe('POST /certification/attempt/:attemptId/submit — scoring outcomes', (
     const attempt = await prisma.certificationAttempt.create({ data: { userId: applicantId } });
 
     const res = await request(app)
-      .post(`/certification/attempt/${attempt.id}/submit`)
+      .post(`/api/certification/attempt/${attempt.id}/submit`)
       .set('Authorization', `Bearer ${applicantToken}`);
 
     expect(res.status).toBe(200);
@@ -146,12 +145,12 @@ describe('POST /certification/attempt/:attemptId/submit — scoring outcomes', (
     await answerAllActiveQuestionsOptimally(attempt.id);
 
     const first = await request(app)
-      .post(`/certification/attempt/${attempt.id}/submit`)
+      .post(`/api/certification/attempt/${attempt.id}/submit`)
       .set('Authorization', `Bearer ${applicantToken}`);
     expect(first.status).toBe(200);
 
     const second = await request(app)
-      .post(`/certification/attempt/${attempt.id}/submit`)
+      .post(`/api/certification/attempt/${attempt.id}/submit`)
       .set('Authorization', `Bearer ${applicantToken}`);
     expect(second.status).toBe(409);
   });
@@ -169,7 +168,7 @@ describe('POST /certification/attempt/:attemptId/submit — scoring outcomes', (
       data: positive.map((o) => ({ attemptId: attempt.id, questionId: checkboxQuestion.id, optionId: o.id })),
     });
 
-    await request(app).post(`/certification/attempt/${attempt.id}/submit`).set('Authorization', `Bearer ${applicantToken}`);
+    await request(app).post(`/api/certification/attempt/${attempt.id}/submit`).set('Authorization', `Bearer ${applicantToken}`);
 
     const rows = await prisma.answer.findMany({ where: { attemptId: attempt.id, questionId: checkboxQuestion.id } });
     const sum = rows.reduce((total, row) => total + row.pointsEarned, 0);

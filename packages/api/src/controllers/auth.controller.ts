@@ -4,6 +4,8 @@ import { prisma } from '../config/prisma.js';
 import { registerSchema, loginSchema } from '../validators/auth.js';
 import { hashPassword, verifyPassword } from '../services/password.js';
 import { signToken } from '../services/jwt.js';
+import { currentUser } from '../utils/current-user.js';
+import { conflict, forbidden, unauthorized } from '../utils/http-error.js';
 
 const toPublicUser = (user: User) => ({
   id: user.id,
@@ -14,27 +16,10 @@ const toPublicUser = (user: User) => ({
 });
 
 export const register = async (req: Request, res: Response): Promise<void> => {
-  const parsed = registerSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({
-      error: 'validation_error',
-      message: parsed.error.issues[0]?.message ?? 'Invalid input',
-      statusCode: 400,
-    });
-    return;
-  }
-
-  const { email, password, firstName, lastName, role } = parsed.data;
+  const { email, password, firstName, lastName, role } = registerSchema.parse(req.body);
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
-    res.status(409).json({
-      error: 'conflict',
-      message: 'Email already in use',
-      statusCode: 409,
-    });
-    return;
-  }
+  if (existingUser) throw conflict('Cette adresse e-mail est déjà utilisée');
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
@@ -46,58 +31,24 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 };
 
 export const login = async (req: Request, res: Response): Promise<void> => {
-  const parsed = loginSchema.safeParse(req.body);
-
-  if (!parsed.success) {
-    res.status(400).json({
-      error: 'validation_error',
-      message: parsed.error.issues[0]?.message ?? 'Invalid input',
-      statusCode: 400,
-    });
-    return;
-  }
-  const { email, password } = parsed.data;
+  const { email, password } = loginSchema.parse(req.body);
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    res.status(401).json({
-      error: 'unauthorized',
-      message: 'Invalid credentials',
-      statusCode: 401,
-    });
-    return;
-  }
-  const isValidPassword = await verifyPassword(password, user.passwordHash);
-  if (!isValidPassword) {
-    res.status(401).json({
-      error: 'unauthorized',
-      message: 'Invalid credentials',
-      statusCode: 401,
-    });
-    return;
-  }
-  if (!user.isActive) {
-    res.status(403).json({
-      error: 'forbidden',
-      message: 'Account is deactivated',
-      statusCode: 403,
-    });
-    return;
-  }
+
+  // An unknown address and a wrong password answer identically, so the
+  // endpoint cannot be used to find out who holds an account.
+  const isValidPassword = user ? await verifyPassword(password, user.passwordHash) : false;
+  if (!user || !isValidPassword) throw unauthorized('Identifiants invalides');
+
+  if (!user.isActive) throw forbidden('Ce compte est désactivé');
 
   const token = signToken({ id: user.id, email: user.email, role: user.role });
   res.status(200).json({ token, user: toPublicUser(user) });
 };
 
 export const me = async (req: Request, res: Response): Promise<void> => {
-  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  const user = await prisma.user.findUnique({ where: { id: currentUser(req).id } });
 
-  if (!user || !user.isActive) {
-    res.status(401).json({
-      error: 'unauthorized',
-      message: 'User not found or inactive',
-      statusCode: 401,
-    });
-    return;
-  }
+  if (!user || !user.isActive) throw unauthorized('Compte introuvable ou désactivé');
+
   res.status(200).json(toPublicUser(user));
 };

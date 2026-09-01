@@ -1,29 +1,9 @@
-import tsParser from '@typescript-eslint/parser';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
+import { ignores, typescript } from '../../eslint.base.mjs';
 
 export default [
-  {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
-  },
-  {
+  ignores,
+  typescript({
     files: ['src/**/*.ts'],
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-      globals: {
-        process: 'readonly',
-        console: 'readonly',
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-    },
-    rules: {
-      ...tsPlugin.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-    },
-  },
+    globals: { process: 'readonly', console: 'readonly' },
+  }),
 ];

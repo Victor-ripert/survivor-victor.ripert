@@ -152,13 +152,36 @@ import { verifyToken } from '../services/jwt.js';
 
 ### API responses
 
-**Uniform error shape:** Every non-2xx response is `{ error, message, statusCode }`, where `error` is a snake_case code (`unauthorized`, `forbidden`, `validation_error`). Match this in new handlers — the frontend branches on it.
+**Uniform error shape:** Every non-2xx response is `{ error, message, statusCode }`, where `error` is a snake_case code (`unauthorized`, `forbidden`, `validation_error`). The codes are the `ApiErrorCode` union in `@profils-actifs/shared` — the frontend branches on them, so do not invent new ones inline.
 
-**Paginated lists:** `{ data: [...], pagination: { page, limit, total, pages } }`.
+**Paginated lists:** `{ data: [...], pagination: { page, limit, total, pages } }`, built with `buildPaginationMeta`/`resolvePageRequest` from `@profils-actifs/shared`. `resolvePageRequest` is what enforces the 20-per-page cap; never re-implement the clamp.
+
+### One way to fail a request
+
+There is a single error path, and handlers never build an error body by hand:
+
+- **Services throw** `HttpError` via the helpers in `api/src/utils/http-error.ts` (`notFound`, `forbidden`, `conflict`, `tooManyRequests`, `badRequest`, `internalError`).
+- **Controllers parse** with `schema.parse(...)` and let the `ZodError` propagate — no `safeParse` + hand-written 400.
+- **`middleware/error-handler.ts`** turns `HttpError`, `ZodError`, Prisma's known request errors and malformed JSON into the uniform shape. Express 5 forwards rejected promises to it on its own, so handlers need no try/catch.
+- Anything unrecognised becomes an opaque 500; the cause is logged server-side only, never described to the client.
+
+Adding a per-domain error class re-introduces a second path — don't.
 
 ### Validation
 
 Input validation uses Zod in `api/src/validators/`. Backend validates independently of the frontend.
+
+- Shared primitives live in `validators/common.ts`: `idSchema`/`parseId` for path parameters, `printableText` for free text, `booleanQueryParam` and `listQueryParam` for query strings, `paginationQuerySchema` for paging. Build on them instead of re-declaring.
+- Path parameters go through `parseId(req.params.x)` — never an `as string` cast.
+- The authenticated caller comes from `currentUser(req)` (`utils/current-user.ts`), never `req.user!`.
+
+### Where shared code lives
+
+- `@profils-actifs/shared` — types, constants and pure helpers imported by **both** `api` and `web`. It must stay browser-safe: no `node:` imports, no `@prisma/client`.
+- `@profils-actifs/shared/node` — node-only helpers (currently `loadRepoEnv`), kept off the main entry point so the web bundle never pulls `node:` built-ins through the barrel. Every entry point that needs the repo-root `.env` files uses it: the API config, the Prisma CLI config, the seed and the Jest setup.
+- `jest.preset.mjs` and `eslint.base.mjs` at the repo root hold the tooling defaults; package configs only state their differences.
+
+`api/src/config/prisma.ts` and `db/src/client.ts` each construct their own `PrismaClient` on purpose — one is a long-lived server pool, the other a one-shot script — but both read `DATABASE_URL` through the shared loader.
 
 ### Data lifecycle
 

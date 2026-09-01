@@ -1,18 +1,16 @@
 import { prisma } from '../../config/prisma.js';
 import { scoreAttempt, type ScoringQuestion, type ScoringAnswer } from './scoring.js';
 import { resolveBadgeLevel, isBadgeEarned } from './badge.js';
-import { AttemptNotFoundError, AttemptForbiddenError } from './attempts.js';
-import { AttemptNotInProgressError } from './answers.js';
-
-export { AttemptNotFoundError, AttemptForbiddenError, AttemptNotInProgressError };
+import { attemptForbidden, attemptNotFound } from './attempts.js';
+import { attemptNotInProgress } from './answers.js';
 
 export const submitAttempt = async (attemptId: string, userId: string) => {
   const attempt = await prisma.certificationAttempt.findUnique({ where: { id: attemptId } });
-  if (!attempt) throw new AttemptNotFoundError();
-  if (attempt.userId !== userId) throw new AttemptForbiddenError();
+  if (!attempt) throw attemptNotFound();
+  if (attempt.userId !== userId) throw attemptForbidden();
   // Also blocks a double-submit: once COMPLETED, this throws instead of
   // recomputing — re-submitting never silently overwrites an existing score.
-  if (attempt.status !== 'IN_PROGRESS') throw new AttemptNotInProgressError();
+  if (attempt.status !== 'IN_PROGRESS') throw attemptNotInProgress();
 
   // Only active questions count — mirrors the public GET and the CHOICE
   // question validation in answers.ts, so a question deactivated mid-attempt

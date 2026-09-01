@@ -1,19 +1,11 @@
 import { Prisma, type CertificationAttempt } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
+import { forbidden, notFound } from '../../utils/http-error.js';
 
-export class AttemptNotFoundError extends Error {
-  constructor() {
-    super('Certification attempt not found');
-    this.name = 'AttemptNotFoundError';
-  }
-}
-
-export class AttemptForbiddenError extends Error {
-  constructor() {
-    super('This attempt does not belong to you');
-    this.name = 'AttemptForbiddenError';
-  }
-}
+/** Shared by every route that loads an attempt, so "unknown attempt" and
+ *  "someone else's attempt" always read the same way. */
+export const attemptNotFound = () => notFound('Tentative de certification introuvable');
+export const attemptForbidden = () => forbidden('Cette tentative ne vous appartient pas');
 
 const MAX_SERIALIZATION_RETRIES = 3;
 
@@ -43,7 +35,8 @@ export const startOrResumeAttempt = async (
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
     } catch (error) {
-      const isSerializationFailure = error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
+      const isSerializationFailure =
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
       if (!isSerializationFailure || retry === MAX_SERIALIZATION_RETRIES - 1) throw error;
     }
   }
@@ -56,13 +49,16 @@ export const getAttemptForUser = async (attemptId: string, userId: string) => {
     where: { id: attemptId },
     include: { answers: { orderBy: { createdAt: 'asc' } } },
   });
-  if (!attempt) throw new AttemptNotFoundError();
-  if (attempt.userId !== userId) throw new AttemptForbiddenError();
+  if (!attempt) throw attemptNotFound();
+  if (attempt.userId !== userId) throw attemptForbidden();
 
   // Never reveal points while the candidate could still be answering — see
   // the same rule applied to options in services/certification/questions.ts.
   if (attempt.status === 'IN_PROGRESS') {
-    return { ...attempt, answers: attempt.answers.map(({ pointsEarned: _pointsEarned, ...rest }) => rest) };
+    return {
+      ...attempt,
+      answers: attempt.answers.map(({ pointsEarned: _pointsEarned, ...rest }) => rest),
+    };
   }
   return attempt;
 };

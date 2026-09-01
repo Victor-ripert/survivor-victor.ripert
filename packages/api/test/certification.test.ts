@@ -1,23 +1,19 @@
-import express from 'express';
 import request from 'supertest';
-import { certificationRouter, certificationAdminRouter } from '../src/routes/certification.js';
+import { createApp } from '../src/app.js';
 import { signToken } from '../src/services/jwt.js';
 import { prisma } from '../src/config/prisma.js';
 
-// Mirrors how these two routers are meant to be mounted once index.ts exists
-// (see routes/certification.ts) — /certification is candidate-facing,
-// /admin/certification/* is admin-only.
-const app = express();
-app.use(express.json());
-app.use('/certification', certificationRouter);
-app.use('/admin', certificationAdminRouter);
+// The real application, so these exercise the same middleware chain the
+// server runs — error mapping included — instead of a stand-in that can
+// drift from it.
+const app = createApp();
 
 const adminToken = signToken({ id: 'test-admin', email: 'admin@test.local', role: 'ADMIN' });
 const applicantToken = signToken({ id: 'test-applicant', email: 'applicant@test.local', role: 'APPLICANT' });
 
 describe('GET /certification/questions (public)', () => {
   it('returns questions without exposing points/weight/maxPoints', async () => {
-    const res = await request(app).get('/certification/questions');
+    const res = await request(app).get('/api/certification/questions');
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
@@ -38,7 +34,7 @@ describe('GET /certification/questions (public)', () => {
       data: { order: 999, type: 'SHORT_TEXT', text: 'inactive test question', weight: 1, maxPoints: 5, isActive: false },
     });
 
-    const res = await request(app).get('/certification/questions');
+    const res = await request(app).get('/api/certification/questions');
     expect(res.body.some((q: { id: string }) => q.id === inactive.id)).toBe(false);
 
     await prisma.certificationQuestion.delete({ where: { id: inactive.id } });
@@ -47,20 +43,20 @@ describe('GET /certification/questions (public)', () => {
 
 describe('GET /admin/certification/questions', () => {
   it('rejects unauthenticated requests', async () => {
-    const res = await request(app).get('/admin/certification/questions');
+    const res = await request(app).get('/api/admin/certification/questions');
     expect(res.status).toBe(401);
   });
 
   it('rejects non-admin roles', async () => {
     const res = await request(app)
-      .get('/admin/certification/questions')
+      .get('/api/admin/certification/questions')
       .set('Authorization', `Bearer ${applicantToken}`);
     expect(res.status).toBe(403);
   });
 
   it('returns full detail including points for admins', async () => {
     const res = await request(app)
-      .get('/admin/certification/questions')
+      .get('/api/admin/certification/questions')
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
@@ -78,7 +74,7 @@ describe('POST /admin/certification/questions', () => {
 
   it('creates a MULTIPLE_CHOICE question with its options', async () => {
     const res = await request(app)
-      .post('/admin/certification/questions')
+      .post('/api/admin/certification/questions')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         order: 998,
@@ -99,7 +95,7 @@ describe('POST /admin/certification/questions', () => {
 
   it('rejects a MULTIPLE_CHOICE question with fewer than 2 options', async () => {
     const res = await request(app)
-      .post('/admin/certification/questions')
+      .post('/api/admin/certification/questions')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         order: 997,
@@ -129,7 +125,7 @@ describe('PATCH /admin/certification/questions/:id', () => {
 
   it('updates the weight (pondération)', async () => {
     const res = await request(app)
-      .patch(`/admin/certification/questions/${questionId}`)
+      .patch(`/api/admin/certification/questions/${questionId}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ weight: 3 });
 
@@ -139,7 +135,7 @@ describe('PATCH /admin/certification/questions/:id', () => {
 
   it('returns 404 for an unknown question', async () => {
     const res = await request(app)
-      .patch('/admin/certification/questions/does-not-exist')
+      .patch('/api/admin/certification/questions/does-not-exist')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ weight: 5 });
 

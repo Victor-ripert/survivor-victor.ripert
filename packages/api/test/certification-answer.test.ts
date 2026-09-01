@@ -1,13 +1,12 @@
-import express from 'express';
 import request from 'supertest';
-import { certificationRouter, certificationAdminRouter } from '../src/routes/certification.js';
+import { createApp } from '../src/app.js';
 import { signToken } from '../src/services/jwt.js';
 import { prisma } from '../src/config/prisma.js';
 
-const app = express();
-app.use(express.json());
-app.use('/certification', certificationRouter);
-app.use('/admin', certificationAdminRouter);
+// The real application, so these exercise the same middleware chain the
+// server runs — error mapping included — instead of a stand-in that can
+// drift from it.
+const app = createApp();
 
 const applicantId = 'test-applicant-answer';
 const otherApplicantId = 'test-applicant-answer-2';
@@ -106,7 +105,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-const answerUrl = () => `/certification/attempt/${attemptId}/answer`;
+const answerUrl = () => `/api/certification/attempt/${attemptId}/answer`;
 
 describe('POST /certification/attempt/:attemptId/answer — auth & ownership', () => {
   it('rejects unauthenticated requests', async () => {
@@ -124,7 +123,7 @@ describe('POST /certification/attempt/:attemptId/answer — auth & ownership', (
 
   it('returns 404 for an unknown attempt', async () => {
     const res = await request(app)
-      .post('/certification/attempt/does-not-exist/answer')
+      .post('/api/certification/attempt/does-not-exist/answer')
       .set('Authorization', `Bearer ${applicantToken}`)
       .send({ questionId: mcQuestionId, optionId: mcOptionAId });
     expect(res.status).toBe(404);

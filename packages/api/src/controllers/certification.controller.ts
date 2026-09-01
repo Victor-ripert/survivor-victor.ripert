@@ -1,166 +1,69 @@
 import type { Request, Response } from 'express';
-import { createQuestionSchema, updateQuestionSchema, submitAnswerSchema } from '../validators/certification.js';
+import { saveAnswer } from '../services/certification/answers.js';
+import { getAttemptForUser, startOrResumeAttempt } from '../services/certification/attempts.js';
 import {
-  listPublicQuestions,
-  listAdminQuestions,
   createQuestion,
+  listAdminQuestions,
+  listPublicQuestions,
   updateQuestion,
-  InvalidOptionsError,
-  OptionsInUseError,
 } from '../services/certification/questions.js';
-import {
-  startOrResumeAttempt,
-  getAttemptForUser,
-  AttemptNotFoundError,
-  AttemptForbiddenError,
-} from '../services/certification/attempts.js';
-import {
-  saveAnswer,
-  AttemptNotInProgressError,
-  QuestionNotFoundError,
-  InvalidAnswerError,
-} from '../services/certification/answers.js';
 import { submitAttempt } from '../services/certification/submit.js';
-import { NoBadgeLevelConfiguredError } from '../services/certification/badge.js';
+import { currentUser } from '../utils/current-user.js';
+import { notFound } from '../utils/http-error.js';
+import {
+  createQuestionSchema,
+  submitAnswerSchema,
+  updateQuestionSchema,
+} from '../validators/certification.js';
+import { parseId } from '../validators/common.js';
+
+// Services throw HttpError and Zod throws ZodError; both are turned into the
+// uniform error body by middleware/error-handler.ts, so handlers only ever
+// describe the success path.
 
 export const getQuestions = async (_req: Request, res: Response): Promise<void> => {
-  const questions = await listPublicQuestions();
-  res.status(200).json(questions);
+  res.status(200).json(await listPublicQuestions());
 };
 
 export const getAdminQuestions = async (_req: Request, res: Response): Promise<void> => {
-  const questions = await listAdminQuestions();
-  res.status(200).json(questions);
+  res.status(200).json(await listAdminQuestions());
 };
 
 export const postQuestion = async (req: Request, res: Response): Promise<void> => {
-  const parsed = createQuestionSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({
-      error: 'validation_error',
-      message: parsed.error.issues[0]?.message ?? 'Invalid input',
-      statusCode: 400,
-    });
-    return;
-  }
-
-  const question = await createQuestion(parsed.data);
-  res.status(201).json(question);
+  res.status(201).json(await createQuestion(createQuestionSchema.parse(req.body)));
 };
 
 export const patchQuestion = async (req: Request, res: Response): Promise<void> => {
-  const parsed = updateQuestionSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({
-      error: 'validation_error',
-      message: parsed.error.issues[0]?.message ?? 'Invalid input',
-      statusCode: 400,
-    });
-    return;
-  }
+  const question = await updateQuestion(
+    parseId(req.params.id),
+    updateQuestionSchema.parse(req.body),
+  );
 
-  try {
-    const question = await updateQuestion(req.params.id as string, parsed.data);
-    if (!question) {
-      res.status(404).json({
-        error: 'not_found',
-        message: 'Certification question not found',
-        statusCode: 404,
-      });
-      return;
-    }
-    res.status(200).json(question);
-  } catch (error) {
-    if (error instanceof InvalidOptionsError) {
-      res.status(400).json({ error: 'validation_error', message: error.message, statusCode: 400 });
-      return;
-    }
-    if (error instanceof OptionsInUseError) {
-      res.status(409).json({ error: 'conflict', message: error.message, statusCode: 409 });
-      return;
-    }
-    throw error;
-  }
+  if (!question) throw notFound('Question de certification introuvable');
+
+  res.status(200).json(question);
 };
 
 export const postAttempt = async (req: Request, res: Response): Promise<void> => {
-  const { attempt, created } = await startOrResumeAttempt(req.user!.id);
+  const { attempt, created } = await startOrResumeAttempt(currentUser(req).id);
+
   res.status(created ? 201 : 200).json(attempt);
 };
 
 export const getAttempt = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const attempt = await getAttemptForUser(req.params.attemptId as string, req.user!.id);
-    res.status(200).json(attempt);
-  } catch (error) {
-    if (error instanceof AttemptNotFoundError) {
-      res.status(404).json({ error: 'not_found', message: error.message, statusCode: 404 });
-      return;
-    }
-    if (error instanceof AttemptForbiddenError) {
-      res.status(403).json({ error: 'forbidden', message: error.message, statusCode: 403 });
-      return;
-    }
-    throw error;
-  }
+  res.status(200).json(await getAttemptForUser(parseId(req.params.attemptId), currentUser(req).id));
 };
 
 export const postAnswer = async (req: Request, res: Response): Promise<void> => {
-  const parsed = submitAnswerSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({
-      error: 'validation_error',
-      message: parsed.error.issues[0]?.message ?? 'Invalid input',
-      statusCode: 400,
-    });
-    return;
-  }
+  const answers = await saveAnswer(
+    parseId(req.params.attemptId),
+    currentUser(req).id,
+    submitAnswerSchema.parse(req.body),
+  );
 
-  try {
-    const answers = await saveAnswer(req.params.attemptId as string, req.user!.id, parsed.data);
-    res.status(201).json(answers);
-  } catch (error) {
-    if (error instanceof AttemptNotFoundError || error instanceof QuestionNotFoundError) {
-      res.status(404).json({ error: 'not_found', message: error.message, statusCode: 404 });
-      return;
-    }
-    if (error instanceof AttemptForbiddenError) {
-      res.status(403).json({ error: 'forbidden', message: error.message, statusCode: 403 });
-      return;
-    }
-    if (error instanceof AttemptNotInProgressError) {
-      res.status(409).json({ error: 'conflict', message: error.message, statusCode: 409 });
-      return;
-    }
-    if (error instanceof InvalidAnswerError) {
-      res.status(400).json({ error: 'validation_error', message: error.message, statusCode: 400 });
-      return;
-    }
-    throw error;
-  }
+  res.status(201).json(answers);
 };
 
 export const postSubmit = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const result = await submitAttempt(req.params.attemptId as string, req.user!.id);
-    res.status(200).json(result);
-  } catch (error) {
-    if (error instanceof AttemptNotFoundError) {
-      res.status(404).json({ error: 'not_found', message: error.message, statusCode: 404 });
-      return;
-    }
-    if (error instanceof AttemptForbiddenError) {
-      res.status(403).json({ error: 'forbidden', message: error.message, statusCode: 403 });
-      return;
-    }
-    if (error instanceof AttemptNotInProgressError) {
-      res.status(409).json({ error: 'conflict', message: error.message, statusCode: 409 });
-      return;
-    }
-    if (error instanceof NoBadgeLevelConfiguredError) {
-      res.status(500).json({ error: 'server_error', message: error.message, statusCode: 500 });
-      return;
-    }
-    throw error;
-  }
+  res.status(200).json(await submitAttempt(parseId(req.params.attemptId), currentUser(req).id));
 };

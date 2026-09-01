@@ -1,22 +1,16 @@
 import type { CertificationLevel } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
-
-// A gap in the CertificationLevel bands (see the seed's "must be contiguous
-// 0-100" comment) is a configuration error, not a valid "no badge" outcome —
-// surfacing it loudly beats silently certifying nobody.
-export class NoBadgeLevelConfiguredError extends Error {
-  constructor(score: number) {
-    super(`No CertificationLevel configured for score ${score}`);
-    this.name = 'NoBadgeLevelConfiguredError';
-  }
-}
+import { internalError } from '../../utils/http-error.js';
 
 export const resolveBadgeLevel = async (score: number): Promise<CertificationLevel> => {
   const level = await prisma.certificationLevel.findFirst({
     where: { isActive: true, minScore: { lte: score }, maxScore: { gte: score } },
     orderBy: { order: 'asc' },
   });
-  if (!level) throw new NoBadgeLevelConfiguredError(score);
+  // A gap in the CertificationLevel bands (see the seed's "must be contiguous
+  // 0-100" comment) is a configuration error, not a valid "no badge" outcome —
+  // surfacing it loudly beats silently certifying nobody.
+  if (!level) throw internalError(`Aucun niveau de certification configuré pour le score ${score}`);
   return level;
 };
 

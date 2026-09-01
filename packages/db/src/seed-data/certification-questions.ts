@@ -32,15 +32,30 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
     weight: 2,
     maxPoints: 10,
     options: [
-      { id: 'q-comm-mc-1-opt-1', text: 'Je répète la même consigne, plus fort', points: 2, order: 1 },
-      { id: 'q-comm-mc-1-opt-2', text: "Je le laisse se débrouiller, ce n'est pas mon rôle", points: 0, order: 2 },
+      {
+        id: 'q-comm-mc-1-opt-1',
+        text: 'Je répète la même consigne, plus fort',
+        points: 2,
+        order: 1,
+      },
+      {
+        id: 'q-comm-mc-1-opt-2',
+        text: "Je le laisse se débrouiller, ce n'est pas mon rôle",
+        points: 0,
+        order: 2,
+      },
       {
         id: 'q-comm-mc-1-opt-3',
         text: 'Je reformule avec un exemple concret et je vérifie sa compréhension',
         points: 10,
         order: 3,
       },
-      { id: 'q-comm-mc-1-opt-4', text: 'Je lui demande de se référer à la documentation', points: 5, order: 4 },
+      {
+        id: 'q-comm-mc-1-opt-4',
+        text: 'Je lui demande de se référer à la documentation',
+        points: 5,
+        order: 4,
+      },
     ],
   },
   {
@@ -69,7 +84,12 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
         points: 0,
         order: 3,
       },
-      { id: 'q-comm-mc-2-opt-4', text: "J'applique la décision sans donner mon avis", points: 4, order: 4 },
+      {
+        id: 'q-comm-mc-2-opt-4',
+        text: "J'applique la décision sans donner mon avis",
+        points: 4,
+        order: 4,
+      },
     ],
   },
   {
@@ -80,10 +100,30 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
     weight: 2,
     maxPoints: 10,
     options: [
-      { id: 'q-comm-checkbox-1-opt-1', text: 'Je reformule ce que l’on me répond pour vérifier', points: 4, order: 1 },
-      { id: 'q-comm-checkbox-1-opt-2', text: 'Je pose des questions ouvertes', points: 3, order: 2 },
-      { id: 'q-comm-checkbox-1-opt-3', text: "Je varie mon vocabulaire selon mon interlocuteur", points: 3, order: 3 },
-      { id: 'q-comm-checkbox-1-opt-4', text: 'Je parle plus fort si on ne comprend pas', points: 0, order: 4 },
+      {
+        id: 'q-comm-checkbox-1-opt-1',
+        text: 'Je reformule ce que l’on me répond pour vérifier',
+        points: 4,
+        order: 1,
+      },
+      {
+        id: 'q-comm-checkbox-1-opt-2',
+        text: 'Je pose des questions ouvertes',
+        points: 3,
+        order: 2,
+      },
+      {
+        id: 'q-comm-checkbox-1-opt-3',
+        text: 'Je varie mon vocabulaire selon mon interlocuteur',
+        points: 3,
+        order: 3,
+      },
+      {
+        id: 'q-comm-checkbox-1-opt-4',
+        text: 'Je parle plus fort si on ne comprend pas',
+        points: 0,
+        order: 4,
+      },
     ],
   },
   {
@@ -113,15 +153,30 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
     weight: 2,
     maxPoints: 10,
     options: [
-      { id: 'q-org-mc-1-opt-1', text: 'Je les traite dans l’ordre où elles sont arrivées', points: 3, order: 1 },
-      { id: 'q-org-mc-1-opt-2', text: 'Je panique et je commence plusieurs tâches en même temps', points: 0, order: 2 },
+      {
+        id: 'q-org-mc-1-opt-1',
+        text: 'Je les traite dans l’ordre où elles sont arrivées',
+        points: 3,
+        order: 1,
+      },
+      {
+        id: 'q-org-mc-1-opt-2',
+        text: 'Je panique et je commence plusieurs tâches en même temps',
+        points: 0,
+        order: 2,
+      },
       {
         id: 'q-org-mc-1-opt-3',
         text: "J'évalue l'impact et le délai de chacune puis je priorise",
         points: 10,
         order: 3,
       },
-      { id: 'q-org-mc-1-opt-4', text: 'Je demande à quelqu’un d’autre de choisir pour moi', points: 1, order: 4 },
+      {
+        id: 'q-org-mc-1-opt-4',
+        text: 'Je demande à quelqu’un d’autre de choisir pour moi',
+        points: 1,
+        order: 4,
+      },
     ],
   },
   {
@@ -132,7 +187,12 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
     weight: 1,
     maxPoints: 10,
     options: [
-      { id: 'q-org-mc-2-opt-1', text: 'Je continue sans rien dire, en espérant rattraper le retard', points: 1, order: 1 },
+      {
+        id: 'q-org-mc-2-opt-1',
+        text: 'Je continue sans rien dire, en espérant rattraper le retard',
+        points: 1,
+        order: 1,
+      },
       {
         id: 'q-org-mc-2-opt-2',
         text: "J'informe les parties concernées le plus tôt possible avec un nouveau délai réaliste",
@@ -145,7 +205,12 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
         points: 0,
         order: 3,
       },
-      { id: 'q-org-mc-2-opt-4', text: "J'attends la deadline pour voir si ça passe", points: 2, order: 4 },
+      {
+        id: 'q-org-mc-2-opt-4',
+        text: "J'attends la deadline pour voir si ça passe",
+        points: 2,
+        order: 4,
+      },
     ],
   },
   {
@@ -157,9 +222,24 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
     maxPoints: 10,
     options: [
       { id: 'q-org-checkbox-1-opt-1', text: 'Une liste de tâches priorisée', points: 4, order: 1 },
-      { id: 'q-org-checkbox-1-opt-2', text: 'Un agenda ou calendrier partagé', points: 3, order: 2 },
-      { id: 'q-org-checkbox-1-opt-3', text: 'Des rappels informels dans ma tête', points: 0, order: 3 },
-      { id: 'q-org-checkbox-1-opt-4', text: 'Un découpage en petites étapes mesurables', points: 3, order: 4 },
+      {
+        id: 'q-org-checkbox-1-opt-2',
+        text: 'Un agenda ou calendrier partagé',
+        points: 3,
+        order: 2,
+      },
+      {
+        id: 'q-org-checkbox-1-opt-3',
+        text: 'Des rappels informels dans ma tête',
+        points: 0,
+        order: 3,
+      },
+      {
+        id: 'q-org-checkbox-1-opt-4',
+        text: 'Un découpage en petites étapes mesurables',
+        points: 3,
+        order: 4,
+      },
     ],
   },
   {
@@ -189,14 +269,24 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
     weight: 2,
     maxPoints: 10,
     options: [
-      { id: 'q-adapt-mc-1-opt-1', text: 'Je refuse le changement, le plan initial était validé', points: 0, order: 1 },
+      {
+        id: 'q-adapt-mc-1-opt-1',
+        text: 'Je refuse le changement, le plan initial était validé',
+        points: 0,
+        order: 1,
+      },
       {
         id: 'q-adapt-mc-1-opt-2',
         text: "Je m'adapte en identifiant ce qui reste utilisable du travail déjà fait",
         points: 10,
         order: 2,
       },
-      { id: 'q-adapt-mc-1-opt-3', text: 'Je suis le changement sans poser de questions', points: 4, order: 3 },
+      {
+        id: 'q-adapt-mc-1-opt-3',
+        text: 'Je suis le changement sans poser de questions',
+        points: 4,
+        order: 3,
+      },
       { id: 'q-adapt-mc-1-opt-4', text: 'Je repousse la décision au maximum', points: 1, order: 4 },
     ],
   },
@@ -215,19 +305,34 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
         points: 10,
         order: 2,
       },
-      { id: 'q-adapt-mc-2-opt-3', text: "J'accepte mais je fais le strict minimum", points: 3, order: 3 },
-      { id: 'q-adapt-mc-2-opt-4', text: 'Je délègue systématiquement à quelqu’un d’autre', points: 2, order: 4 },
+      {
+        id: 'q-adapt-mc-2-opt-3',
+        text: "J'accepte mais je fais le strict minimum",
+        points: 3,
+        order: 3,
+      },
+      {
+        id: 'q-adapt-mc-2-opt-4',
+        text: 'Je délègue systématiquement à quelqu’un d’autre',
+        points: 2,
+        order: 4,
+      },
     ],
   },
   {
     id: 'q-adapt-checkbox-1',
     order: 13,
     type: 'CHECKBOX',
-    text: "Face à un changement inattendu dans votre environnement de travail, lesquelles de ces attitudes vous ressemblent ?",
+    text: 'Face à un changement inattendu dans votre environnement de travail, lesquelles de ces attitudes vous ressemblent ?',
     weight: 2,
     maxPoints: 10,
     options: [
-      { id: 'q-adapt-checkbox-1-opt-1', text: 'Je cherche à comprendre les raisons du changement', points: 3, order: 1 },
+      {
+        id: 'q-adapt-checkbox-1-opt-1',
+        text: 'Je cherche à comprendre les raisons du changement',
+        points: 3,
+        order: 1,
+      },
       {
         id: 'q-adapt-checkbox-1-opt-2',
         text: 'Je m’informe rapidement sur les nouveaux outils ou process',
@@ -240,7 +345,12 @@ export const certificationQuestions: CertificationQuestionSeed[] = [
         points: 3,
         order: 3,
       },
-      { id: 'q-adapt-checkbox-1-opt-4', text: "Je considère que ce n'est pas mon problème", points: 0, order: 4 },
+      {
+        id: 'q-adapt-checkbox-1-opt-4',
+        text: "Je considère que ce n'est pas mon problème",
+        points: 0,
+        order: 4,
+      },
     ],
   },
   {

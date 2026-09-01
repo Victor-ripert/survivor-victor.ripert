@@ -1,13 +1,7 @@
-/** @type {import('jest').Config} */
-export default {
-  preset: 'ts-jest/presets/default-esm',
+import { createJestConfig } from '../../jest.preset.mjs';
+
+export default createJestConfig({
   testEnvironment: 'jsdom',
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
-  },
-  transform: {
-    '^.+\\.tsx?$': ['ts-jest', { useESM: true }],
-  },
   setupFilesAfterEnv: ['@testing-library/jest-dom'],
-};
+});

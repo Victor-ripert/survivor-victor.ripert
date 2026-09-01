@@ -20,6 +20,8 @@ import {
   QuestionNotFoundError,
   InvalidAnswerError,
 } from '../services/certification/answers.js';
+import { submitAttempt } from '../services/certification/submit.js';
+import { NoBadgeLevelConfiguredError } from '../services/certification/badge.js';
 
 export const getQuestions = async (_req: Request, res: Response): Promise<void> => {
   const questions = await listPublicQuestions();
@@ -132,6 +134,31 @@ export const postAnswer = async (req: Request, res: Response): Promise<void> => 
     }
     if (error instanceof InvalidAnswerError) {
       res.status(400).json({ error: 'validation_error', message: error.message, statusCode: 400 });
+      return;
+    }
+    throw error;
+  }
+};
+
+export const postSubmit = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await submitAttempt(req.params.attemptId as string, req.user!.id);
+    res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof AttemptNotFoundError) {
+      res.status(404).json({ error: 'not_found', message: error.message, statusCode: 404 });
+      return;
+    }
+    if (error instanceof AttemptForbiddenError) {
+      res.status(403).json({ error: 'forbidden', message: error.message, statusCode: 403 });
+      return;
+    }
+    if (error instanceof AttemptNotInProgressError) {
+      res.status(409).json({ error: 'conflict', message: error.message, statusCode: 409 });
+      return;
+    }
+    if (error instanceof NoBadgeLevelConfiguredError) {
+      res.status(500).json({ error: 'server_error', message: error.message, statusCode: 500 });
       return;
     }
     throw error;

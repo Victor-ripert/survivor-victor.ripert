@@ -7,6 +7,7 @@ import {
   postAttempt,
   getAttempt,
   postAnswer,
+  postSubmit,
 } from '../controllers/certification.controller.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 
@@ -17,6 +18,7 @@ certificationRouter.get('/questions', getQuestions);
 certificationRouter.post('/attempt', requireAuth, requireRole('APPLICANT'), postAttempt);
 certificationRouter.get('/attempt/:attemptId', requireAuth, requireRole('APPLICANT'), getAttempt);
 certificationRouter.post('/attempt/:attemptId/answer', requireAuth, requireRole('APPLICANT'), postAnswer);
+certificationRouter.post('/attempt/:attemptId/submit', requireAuth, requireRole('APPLICANT'), postSubmit);
 
 // Mounted at /admin — alongside the other domains' admin routes, so the
 // full path ends up /admin/certification/questions.

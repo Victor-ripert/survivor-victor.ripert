@@ -215,6 +215,38 @@ components:
           type: integer
       required: [id, attemptId, questionId]
 
+    CertificationLevel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        minScore:
+          type: integer
+        maxScore:
+          type: integer
+        badgeIconUrl:
+          type: string
+          nullable: true
+          description: null for the lowest tier — that's what marks it as "no badge earned"
+        order:
+          type: integer
+      required: [id, name, minScore, maxScore, order]
+
+    CertificationSubmitResult:
+      type: object
+      properties:
+        attempt:
+          $ref: '#/components/schemas/CertificationAttempt'
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        badge:
+          $ref: '#/components/schemas/CertificationLevel'
+      required: [attempt, score, badge]
+
     Interaction:
       type: object
       properties:
@@ -864,7 +896,14 @@ paths:
   /certification/attempt/{attemptId}/submit:
     post:
       tags: [Certification]
-      summary: Submit certification attempt for scoring (applicant only)
+      summary: Score and close an in-progress attempt (applicant only)
+      description: >-
+        Computes the final score, resolves the badge tier, writes both onto
+        the applicant's Profile, and sends a notification if a badge tier
+        was actually earned (the lowest tier has no badge). Idempotent in
+        the sense that submitting an already-COMPLETED attempt is rejected
+        (409) rather than recomputing — the recorded score never changes
+        after the fact.
       parameters:
         - name: attemptId
           in: path
@@ -873,11 +912,29 @@ paths:
             type: string
       responses:
         '200':
-          description: Attempt submitted and scored
+          description: Attempt scored and closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CertificationAttempt'
+                $ref: '#/components/schemas/CertificationSubmitResult'
+        '403':
+          description: This attempt does not belong to the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Attempt not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The attempt is not IN_PROGRESS (already submitted, abandoned, or expired)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ==========================================================================
   # INTERACTIONS & RECRUITER (Domain D)

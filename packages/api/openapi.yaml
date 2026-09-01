@@ -193,6 +193,7 @@ components:
           enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
         message:
           type: string
+          nullable: true
         isViewed:
           type: boolean
         isFavorite:
@@ -200,7 +201,9 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, recipientId, createdById, type, createdAt]
+        counterpart:
+          $ref: '#/components/schemas/InteractionCounterpart'
+      required: [id, recipientId, createdById, type, createdAt, counterpart]
 
     ErrorResponse:
       type: object
@@ -211,6 +214,350 @@ components:
           type: string
         statusCode:
           type: integer
+
+    PaginationMeta:
+      type: object
+      description: '`pages` is 0 when nothing matched, so "no result" reads differently from "one page of results".'
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+      required: [page, limit, total, pages]
+
+    CatalogueSkill:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        level:
+          type: string
+          enum: [BEGINNER, INTERMEDIATE, ADVANCED, EXPERT]
+      required: [id, name, level]
+
+    CataloguePreviewVideo:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+      required: [id, title, url]
+
+    CatalogueProfile:
+      type: object
+      description: One catalogue row, seen through the eyes of the calling recruiter.
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+          description: Target of POST /interactions and of the favourites routes.
+        firstName:
+          type: string
+        lastName:
+          type: string
+        headline:
+          type: string
+          nullable: true
+        location:
+          type: string
+        sector:
+          type: string
+        certificationStatus:
+          type: string
+          enum: [PENDING, IN_PROGRESS, COMPLETED, REJECTED]
+        certificationScore:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+        certificationBadge:
+          type: string
+          nullable: true
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogueSkill'
+        videoCount:
+          type: integer
+        previewVideo:
+          allOf:
+            - $ref: '#/components/schemas/CataloguePreviewVideo'
+          nullable: true
+        isFavorite:
+          type: boolean
+          description: Whether the calling recruiter shortlisted this applicant.
+        lastContactedAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        [
+          id,
+          userId,
+          firstName,
+          lastName,
+          location,
+          sector,
+          certificationStatus,
+          skills,
+          videoCount,
+          isFavorite,
+          updatedAt,
+        ]
+
+    CatalogueProfilePage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogueProfile'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      required: [data, pagination]
+
+    FacetValue:
+      type: object
+      properties:
+        value:
+          type: string
+        count:
+          type: integer
+      required: [value, count]
+
+    CatalogueFacets:
+      type: object
+      properties:
+        sectors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetValue'
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetValue'
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetValue'
+      required: [sectors, locations, skills]
+
+    InteractionCounterpart:
+      type: object
+      description: The other party, from the point of view of the caller.
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [APPLICANT, RECRUITER, ADMIN]
+        profileId:
+          type: string
+          nullable: true
+      required: [id, firstName, lastName, role]
+
+    InteractionPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Interaction'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      required: [data, pagination]
+
+    DailyCount:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        count:
+          type: integer
+      required: [date, count]
+
+    LabelledCount:
+      type: object
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+      required: [label, count]
+
+    RecruiterDashboard:
+      type: object
+      properties:
+        totals:
+          type: object
+          properties:
+            profilesViewed:
+              type: integer
+              description: Distinct applicants viewed, not page loads.
+            contactsSent:
+              type: integer
+            favorites:
+              type: integer
+            applicantsReached:
+              type: integer
+          required: [profilesViewed, contactsSent, favorites, applicantsReached]
+        certifiedShare:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Share of contacted applicants holding a completed certification.
+        activityLast30Days:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyCount'
+        interactionsByType:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        topSectorsReached:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        recentContacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Interaction'
+      required:
+        [
+          totals,
+          certifiedShare,
+          activityLast30Days,
+          interactionsByType,
+          topSectorsReached,
+          recentContacts,
+        ]
+
+    AdminDashboard:
+      type: object
+      properties:
+        totals:
+          type: object
+          properties:
+            totalProfiles:
+              type: integer
+            activeApplicants:
+              type: integer
+            totalRecruiters:
+              type: integer
+            totalInteractions:
+              type: integer
+            pendingModeration:
+              type: integer
+          required:
+            [totalProfiles, activeApplicants, totalRecruiters, totalInteractions, pendingModeration]
+        certificationRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        usersByRole:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        profilesByCertificationStatus:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        interactionsByType:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        topSectors:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        signupsLast30Days:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyCount'
+        interactionsLast30Days:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyCount'
+      required:
+        [
+          totals,
+          certificationRate,
+          usersByRole,
+          profilesByCertificationStatus,
+          interactionsByType,
+          topSectors,
+          signupsLast30Days,
+          interactionsLast30Days,
+        ]
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: 1-based page number. A page beyond the last one returns an empty list, not an error.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Page size, capped server-side at 20.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 20
+        default: 20
+
+  responses:
+    BadRequest:
+      description: The request failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: The caller's role does not allow this
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: The resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Rate limit reached
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
 security:
   - bearerAuth: []
@@ -659,36 +1006,292 @@ paths:
                 $ref: '#/components/schemas/CertificationAttempt'
 
   # ==========================================================================
-  # INTERACTIONS & RECRUITER (Domain D)
+  # RECRUITER SPACE & INTERACTIONS (Domain D)
   # ==========================================================================
+
+  /recruiter/catalogue:
+    get:
+      tags: [Recruiter]
+      summary: Browse the applicant catalogue (recruiter/admin only)
+      description: >
+        Paginated, filtered list of job-seeker profiles. Profiles rejected by
+        moderation and profiles owned by a deactivated account are never
+        returned; profiles still awaiting review are, so that a moderation
+        backlog does not hide job-seekers from recruiters.
+        Rows deliberately carry no email address — a recruiter reaches an
+        applicant through `POST /interactions`, which keeps the contact
+        auditable and notifies the applicant.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: q
+          in: query
+          description: Free-text search over headline, bio, sector, location, name and skills.
+          schema:
+            type: string
+            maxLength: 100
+        - name: sector
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: skills
+          in: query
+          description: >
+            Skill names, repeated or comma-separated. A profile must carry
+            every requested skill, not just one of them.
+          schema:
+            type: array
+            maxItems: 10
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: certifiedOnly
+          in: query
+          schema:
+            type: boolean
+        - name: minScore
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+        - name: hasVideo
+          in: query
+          schema:
+            type: boolean
+        - name: favoritesOnly
+          in: query
+          description: Restricts the result to the caller's shortlist.
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, score, name]
+            default: recent
+      responses:
+        '200':
+          description: A page of catalogue profiles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogueProfilePage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /recruiter/catalogue/facets:
+    get:
+      tags: [Recruiter]
+      summary: List filter values that match at least one visible profile
+      description: >
+        Lets the catalogue UI offer only filters that return results. Counts
+        follow the same visibility rules as the catalogue itself.
+      responses:
+        '200':
+          description: Available filter values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogueFacets'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /recruiter/favorites:
+    get:
+      tags: [Recruiter]
+      summary: List the caller's shortlisted applicants
+      description: The catalogue narrowed to favourites; accepts the same filters.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, score, name]
+            default: recent
+      responses:
+        '200':
+          description: A page of shortlisted profiles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogueProfilePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /recruiter/favorites/{applicantId}:
+    put:
+      tags: [Recruiter]
+      summary: Add an applicant to the caller's shortlist (idempotent)
+      parameters:
+        - name: applicantId
+          in: path
+          required: true
+          description: User id of the applicant, not the profile id.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The applicant was already shortlisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+        '201':
+          description: The applicant was added to the shortlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Recruiter]
+      summary: Remove an applicant from the caller's shortlist (idempotent)
+      description: >
+        Clears the favourite flag and keeps the interaction row, so the
+        history of who was shortlisted stays auditable.
+      parameters:
+        - name: applicantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: The applicant is not shortlisted any more
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /recruiter/dashboard:
+    get:
+      tags: [Recruiter]
+      summary: Activity summary for the calling recruiter
+      responses:
+        '200':
+          description: Recruiter dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterDashboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /interactions:
     get:
       tags: [Interactions]
-      summary: Get my interactions (recruiter views sent, applicant views received)
+      summary: List my interactions
+      description: >
+        Defaults to what the caller sent, or to what they received when the
+        caller is a job-seeker; `direction` overrides that.
+      parameters:
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [sent, received]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
-          description: List of interactions
+          description: A page of interactions
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  sent:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Interaction'
-                  received:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Interaction'
+                $ref: '#/components/schemas/InteractionPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
-  /interactions/{recipientId}:
     post:
       tags: [Interactions]
-      summary: Create interaction with applicant (recruiter/admin)
+      summary: Record an interaction with an applicant (recruiter/admin)
+      description: >
+        `message` is required for CONTACT and MESSAGE and rejected for the
+        other types. A repeated VIEW within 24h collapses onto the existing
+        one and answers 200 instead of 201. Only CONTACT and MESSAGE notify
+        the applicant, and they are capped at 5 per applicant per 24h.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipientId:
+                  type: string
+                  description: User id of the applicant.
+                type:
+                  type: string
+                  enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
+                message:
+                  type: string
+                  minLength: 10
+                  maxLength: 2000
+              required: [recipientId, type]
+      responses:
+        '200':
+          description: An equivalent interaction already existed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+        '201':
+          description: Interaction recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /interactions/{interactionId}:
+    patch:
+      tags: [Interactions]
+      summary: Update an interaction flag
+      description: >
+        `isViewed` may only be written by the applicant who received the
+        interaction, `isFavorite` only by the recruiter who created it.
       parameters:
-        - name: recipientId
+        - name: interactionId
           in: path
           required: true
           schema:
@@ -699,36 +1302,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties:
-                type:
-                  type: string
-                  enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
-                message:
-                  type: string
-              required: [type]
-      responses:
-        '201':
-          description: Interaction created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Interaction'
-
-  /interactions/{interactionId}:
-    patch:
-      tags: [Interactions]
-      summary: Update interaction (mark as viewed, favorite, etc)
-      parameters:
-        - name: interactionId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
+              minProperties: 1
               properties:
                 isViewed:
                   type: boolean
@@ -741,6 +1315,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ==========================================================================
   # NOTIFICATIONS (Domain A)
@@ -795,23 +1377,19 @@ paths:
   /admin/dashboard:
     get:
       tags: [Administration]
-      summary: Get admin dashboard stats (admin only)
+      summary: Platform-wide statistics (admin only)
       responses:
         '200':
-          description: Dashboard stats
+          description: Administration dashboard
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  totalProfiles:
-                    type: integer
-                  certificationRate:
-                    type: number
-                  totalInteractions:
-                    type: integer
-                  activeApplicants:
-                    type: integer
+                $ref: '#/components/schemas/AdminDashboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
 
   /admin/moderation/profiles:
     get:

@@ -3,18 +3,34 @@
   "tasks": {
     "dev": {
       "cache": false,
-      "interactive": true,
-      "dependsOn": ["^build"]
+      "dependsOn": [
+        "^build"
+      ],
+      "persistent": true
     },
     "build": {
-      "outputs": ["dist/**", ".next/**"],
+      "outputs": [
+        "dist/**",
+        ".next/**"
+      ],
       "cache": true,
-      "dependsOn": ["^build"]
+      "dependsOn": [
+        "^build"
+      ]
     },
     "test": {
-      "outputs": ["coverage/**"],
+      "outputs": [
+        "coverage/**"
+      ],
       "cache": true,
-      "inputs": ["src/**", "test/**", "package.json"]
+      "inputs": [
+        "src/**",
+        "test/**",
+        "package.json"
+      ],
+      "dependsOn": [
+        "^build"
+      ]
     },
     "lint": {
       "outputs": [],
@@ -22,13 +38,20 @@
     },
     "db:migrate": {
       "cache": false,
-      "inputs": ["prisma/**"],
+      "inputs": [
+        "prisma/**"
+      ],
       "dependsOn": []
     },
     "db:seed": {
       "cache": false,
-      "dependsOn": ["db:migrate"]
+      "dependsOn": [
+        "db:migrate"
+      ]
     }
   },
-  "globalDependencies": [".env.local", ".env"]
+  "globalDependencies": [
+    ".env.local",
+    ".env"
+  ]
 }

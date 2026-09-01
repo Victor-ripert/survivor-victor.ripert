@@ -9,4 +9,5 @@ export default {
   transform: {
     '^.+\\.ts$': ['ts-jest', { useESM: true }],
   },
+  setupFiles: ['<rootDir>/test/setup-env.ts'],
 };

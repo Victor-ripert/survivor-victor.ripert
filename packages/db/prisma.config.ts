@@ -1,4 +1,7 @@
 import { defineConfig } from 'prisma/config';
+import { loadRepoEnv } from './src/load-env.js';
+
+loadRepoEnv();
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',

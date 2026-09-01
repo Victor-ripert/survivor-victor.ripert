@@ -19,3 +19,4 @@ coverage/
 *.swo
 *.iml
 .turbo
+package-lock.json

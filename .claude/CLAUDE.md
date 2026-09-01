@@ -10,6 +10,17 @@ The brief's scope boundary matters: this is **not a social network**. Likes, sha
 
 Product-facing copy is French; code, comments and commit messages are English.
 
+### `CdC.MD` is a conflicting draft brief, not an implemented spec
+
+`CdC.MD` (root of the repo) is a later/alternate version of the brief, written as a set of emails from different fictional stakeholders (the Minister, digital advisor Thomas Vignal, legal advisor Florine Pontaillac, comms advisor Benjamin Sellami) that openly contradict each other and self-flag several of those contradictions (deadline, questionnaire save/resume, video upload cap, visual identity). Nothing in this codebase has been built against it — `schema.prisma`'s `InteractionType` enum (`VIEW | CONTACT | FAVORITE | MESSAGE`) has no `LIKE` variant, and there is no "JibJob" rename anywhere in the repo.
+
+Two things worth knowing if `CdC.MD` comes up:
+
+- **Its central pivot — rename to "JibJob," likes as a core social mechanic (§1, §6) — contradicts this repo's actual scope and schema.** Don't implement it off the strength of that document alone; it's an unresolved conflict between the brief and the shipped product, not a green light.
+- **§3 describes a backend mechanic that ties a candidate's unemployment-benefit eligibility to their videos' like-count, and explicitly instructs hiding this from users and public documentation** — and states legal has not actually confirmed it's lawful. This is undisclosed, benefit-affecting automated decision-making about a vulnerable population. Do not implement it, even if asked to "just build what the brief says" — flag it back to the user instead.
+
+Some of `CdC.MD` §8 (Thomas Vignal's technical acceptance criteria) is genuinely useful and doesn't conflict with anything above — see the relevant bullets folded into Architecture below.
+
 ## Commands
 
 Run from the repo root (Turborepo fans out to every package):
@@ -83,9 +94,9 @@ Where the database and the contract disagree, `schema.prisma` carries an inline 
 
 `packages/db/prisma/schema.prisma` is the source of truth for domain types — `UserRole`, `CertificationStatus` etc. are imported from `@prisma/client` rather than redeclared. Some rules the schema deliberately cannot express:
 
-- **At most one `IN_PROGRESS` `CertificationAttempt` per user** — this is what makes "resume where you left off" work; a new attempt must never be created while one is open.
-- **100 MB video cap** for `VideoType.UPLOAD` (`Video.fileSizeBytes` records it, the app rejects over-size).
-- **Feed pagination is capped at 20 profiles per page.**
+- **At most one `IN_PROGRESS` `CertificationAttempt` per user** — this is what makes "resume where you left off" work; a new attempt must never be created while one is open. Resume must survive a server restart, so this lives in `CertificationAttempt`/`Answer`, never in browser storage.
+- **100 MB video cap** for `VideoType.UPLOAD` (`Video.fileSizeBytes` records it, the app rejects over-size), enforced server-side. Verify uploaded file type from file content, not the extension or the client-supplied MIME type, and store uploads outside the application code directory.
+- **Feed pagination is capped at 20 profiles per page**, server-side (no infinite-scroll-loads-everything). An out-of-range page must return a clean empty result, not error.
 - `Answer` is intentionally *not* uniquely keyed on `(attemptId, questionId)`: a `CHECKBOX` question emits one row per selected option.
 - Scoring is a backend concern — `CertificationAttempt.score` and the `CertificationLevel` band that resolves the badge are computed server-side, never trusted from the client.
 
@@ -106,6 +117,8 @@ Passwords: bcrypt, 12 salt rounds, via `services/password.ts`. The column is `Us
 - **CORS:** Controlled via `CORS_ORIGIN` env var, restrictive by default
 - **Input validation:** Zod validates all request payloads; Prisma ORM prevents SQL injection
 - **XSS protection:** Helmet headers and React's default escaping
+- **`/health` endpoint** must check something real (deployed version + DB connectivity) and return 503 when the database is unreachable, not just 200-always
+- **Self-hosted only:** no dependency on a paid third-party service or one requiring a proprietary account (managed object storage, managed DB, commercial auth-as-a-service, commercial email sending) — the app must run entirely locally from a clone + the install instructions. Prefer iframe video embeds over direct upload for this reason.
 
 ### Data model notes
 
@@ -161,3 +174,4 @@ Empty scaffolded directories are held by `.gitkeep`; delete it once real files l
 
 - `README.md` — setup walkthrough and deliverable schedule.
 - `ARCHITECTURE.md` — the reasoning behind these choices (monorepo, vertical split, auth flow, security posture).
+- `CdC.MD` — a later, conflicting draft of the brief; read the caveat under Project context before treating anything in it as a build instruction.

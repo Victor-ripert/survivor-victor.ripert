@@ -785,7 +785,14 @@ paths:
   /certification/attempt/{attemptId}/answer:
     post:
       tags: [Certification]
-      summary: Submit answer to question (applicant only, can save in progress)
+      summary: Save an answer to one question of an in-progress attempt (applicant only)
+      description: >-
+        Re-submitting an answer for the same question REPLACES it, it never
+        accumulates. Exactly one of optionId / optionIds / textAnswer /
+        numericAnswer is required, matching the question's real type in the
+        database — the client's intent is validated against that, not
+        trusted at face value. `pointsEarned` is never included in the
+        response; scoring is computed only on /submit.
       parameters:
         - name: attemptId
           in: path
@@ -803,18 +810,56 @@ paths:
                   type: string
                 optionId:
                   type: string
+                  description: Required for MULTIPLE_CHOICE questions
+                optionIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Required for CHECKBOX questions (one or more selected options)
                 textAnswer:
                   type: string
+                  description: Required for SHORT_TEXT questions
                 numericAnswer:
                   type: integer
+                  minimum: 1
+                  maximum: 5
+                  description: Required for LIKERT_SCALE questions (1 to 5)
               required: [questionId]
       responses:
         '201':
-          description: Answer saved
+          description: >-
+            The saved answer(s) — an array with one item, except for
+            CHECKBOX questions which return one item per selected option
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Answer'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Answer'
+        '400':
+          description: Validation error (missing/invalid field for this question's type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: This attempt does not belong to the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Attempt or question not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The attempt is no longer IN_PROGRESS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /certification/attempt/{attemptId}/submit:
     post:

@@ -6,6 +6,7 @@ import {
   patchQuestion,
   postAttempt,
   getAttempt,
+  postAnswer,
 } from '../controllers/certification.controller.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 
@@ -15,6 +16,7 @@ export const certificationRouter = Router();
 certificationRouter.get('/questions', getQuestions);
 certificationRouter.post('/attempt', requireAuth, requireRole('APPLICANT'), postAttempt);
 certificationRouter.get('/attempt/:attemptId', requireAuth, requireRole('APPLICANT'), getAttempt);
+certificationRouter.post('/attempt/:attemptId/answer', requireAuth, requireRole('APPLICANT'), postAnswer);
 
 // Mounted at /admin — alongside the other domains' admin routes, so the
 // full path ends up /admin/certification/questions.

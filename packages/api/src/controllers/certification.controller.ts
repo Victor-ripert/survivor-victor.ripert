@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { createQuestionSchema, updateQuestionSchema } from '../validators/certification.js';
+import { createQuestionSchema, updateQuestionSchema, submitAnswerSchema } from '../validators/certification.js';
 import {
   listPublicQuestions,
   listAdminQuestions,
@@ -14,6 +14,12 @@ import {
   AttemptNotFoundError,
   AttemptForbiddenError,
 } from '../services/certification/attempts.js';
+import {
+  saveAnswer,
+  AttemptNotInProgressError,
+  QuestionNotFoundError,
+  InvalidAnswerError,
+} from '../services/certification/answers.js';
 
 export const getQuestions = async (_req: Request, res: Response): Promise<void> => {
   const questions = await listPublicQuestions();
@@ -91,6 +97,41 @@ export const getAttempt = async (req: Request, res: Response): Promise<void> => 
     }
     if (error instanceof AttemptForbiddenError) {
       res.status(403).json({ error: 'forbidden', message: error.message, statusCode: 403 });
+      return;
+    }
+    throw error;
+  }
+};
+
+export const postAnswer = async (req: Request, res: Response): Promise<void> => {
+  const parsed = submitAnswerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      error: 'validation_error',
+      message: parsed.error.issues[0]?.message ?? 'Invalid input',
+      statusCode: 400,
+    });
+    return;
+  }
+
+  try {
+    const answers = await saveAnswer(req.params.attemptId as string, req.user!.id, parsed.data);
+    res.status(201).json(answers);
+  } catch (error) {
+    if (error instanceof AttemptNotFoundError || error instanceof QuestionNotFoundError) {
+      res.status(404).json({ error: 'not_found', message: error.message, statusCode: 404 });
+      return;
+    }
+    if (error instanceof AttemptForbiddenError) {
+      res.status(403).json({ error: 'forbidden', message: error.message, statusCode: 403 });
+      return;
+    }
+    if (error instanceof AttemptNotInProgressError) {
+      res.status(409).json({ error: 'conflict', message: error.message, statusCode: 409 });
+      return;
+    }
+    if (error instanceof InvalidAnswerError) {
+      res.status(400).json({ error: 'validation_error', message: error.message, statusCode: 400 });
       return;
     }
     throw error;

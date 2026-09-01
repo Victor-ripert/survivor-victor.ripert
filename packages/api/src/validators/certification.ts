@@ -45,3 +45,21 @@ export const updateQuestionSchema = z.object({
 
 export type CreateQuestionInput = z.infer<typeof createQuestionSchema>;
 export type UpdateQuestionInput = z.infer<typeof updateQuestionSchema>;
+
+// Matches the "1 (pas du tout d'accord) à 5 (tout à fait d'accord)" scale
+// described on every LIKERT_SCALE question in the seed.
+export const LIKERT_MIN = 1;
+export const LIKERT_MAX = 5;
+
+// Shape-only validation — which of these fields is actually required depends
+// on the question's real type in the DB, checked in
+// services/certification/answers.ts (never trust a client-supplied type).
+export const submitAnswerSchema = z.object({
+  questionId: z.string().min(1, { error: 'questionId est requis' }),
+  optionId: z.string().optional(),
+  optionIds: z.array(z.string()).optional(),
+  textAnswer: z.string().optional(),
+  numericAnswer: z.number().int().min(LIKERT_MIN).max(LIKERT_MAX).optional(),
+});
+
+export type SubmitAnswerInput = z.infer<typeof submitAnswerSchema>;

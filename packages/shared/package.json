@@ -7,14 +7,15 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "node ../../scripts/tsc-native.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests"
   },
   "dependencies": {
     "zod": "^4.5.4"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-native": "npm:typescript@^7.0.2",
     "jest": "^30.5.0",
     "@types/jest": "^30.0.0",
     "ts-jest": "^29.4.12"

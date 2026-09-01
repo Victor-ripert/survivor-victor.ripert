@@ -99,6 +99,40 @@ components:
           enum: [BEGINNER, INTERMEDIATE, ADVANCED, EXPERT]
       required: [id, skillId, level]
 
+    # Candidate-facing shape — never carries `points`/`weight`/`maxPoints`, or
+    # the scoring barème leaks to whoever opens the browser network tab.
+    CertificationQuestionPublic:
+      type: object
+      properties:
+        id:
+          type: string
+        order:
+          type: integer
+        type:
+          type: string
+          enum: [MULTIPLE_CHOICE, SHORT_TEXT, CHECKBOX, LIKERT_SCALE]
+        text:
+          type: string
+        description:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/CertificationOptionPublic'
+      required: [id, order, type, text]
+
+    CertificationOptionPublic:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        order:
+          type: integer
+      required: [id, text, order]
+
+    # Admin-facing shape — full detail, used by the back-office question editor.
     CertificationQuestion:
       type: object
       properties:
@@ -117,11 +151,13 @@ components:
           type: integer
         maxPoints:
           type: integer
+        isActive:
+          type: boolean
         options:
           type: array
           items:
             $ref: '#/components/schemas/CertificationOption'
-      required: [id, order, type, text]
+      required: [id, order, type, text, weight, maxPoints, isActive]
 
     CertificationOption:
       type: object
@@ -134,7 +170,7 @@ components:
           type: integer
         order:
           type: integer
-      required: [id, text, order]
+      required: [id, text, points, order]
 
     CertificationAttempt:
       type: object
@@ -523,11 +559,25 @@ paths:
   /certification/questions:
     get:
       tags: [Certification]
-      summary: Get all certification questions (public)
+      summary: Get active certification questions (public, no scoring data)
       security: []
       responses:
         '200':
-          description: List of questions
+          description: List of questions, without points/weight/maxPoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CertificationQuestionPublic'
+
+  /admin/certification/questions:
+    get:
+      tags: [Certification, Administration]
+      summary: Get all certification questions, including inactive ones (admin only)
+      responses:
+        '200':
+          description: Full list of questions with scoring data
           content:
             application/json:
               schema:
@@ -536,7 +586,7 @@ paths:
                   $ref: '#/components/schemas/CertificationQuestion'
 
     post:
-      tags: [Certification]
+      tags: [Certification, Administration]
       summary: Create certification question (admin only)
       requestBody:
         required: true
@@ -556,8 +606,71 @@ paths:
                   type: string
                 weight:
                   type: integer
+                  default: 1
                 maxPoints:
                   type: integer
+                  default: 10
+                options:
+                  type: array
+                  description: Required (min 2) when type is MULTIPLE_CHOICE or CHECKBOX
+                  items:
+                    type: object
+                    properties:
+                      text:
+                        type: string
+                      points:
+                        type: integer
+                      order:
+                        type: integer
+                    required: [text, points, order]
+              required: [order, type, text]
+      responses:
+        '201':
+          description: Question created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationQuestion'
+        '400':
+          description: Validation error (including a choice question with fewer than 2 options)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/certification/questions/{id}:
+    patch:
+      tags: [Certification, Administration]
+      summary: Update a certification question, its weight, or its options (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: All fields optional. Sending `options` replaces the full option set.
+              properties:
+                order:
+                  type: integer
+                type:
+                  type: string
+                  enum: [MULTIPLE_CHOICE, SHORT_TEXT, CHECKBOX, LIKERT_SCALE]
+                text:
+                  type: string
+                description:
+                  type: string
+                weight:
+                  type: integer
+                maxPoints:
+                  type: integer
+                isActive:
+                  type: boolean
                 options:
                   type: array
                   items:
@@ -567,14 +680,34 @@ paths:
                         type: string
                       points:
                         type: integer
-              required: [order, type, text]
+                      order:
+                        type: integer
+                    required: [text, points, order]
       responses:
-        '201':
-          description: Question created
+        '200':
+          description: Question updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CertificationQuestion'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Question not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Cannot replace options for a question that already has recorded answers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /certification/attempt:
     post:

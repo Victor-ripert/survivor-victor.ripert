@@ -1,8 +1,8 @@
 EW-4 — preuves de la sonde de santé (§8.2)
 ProfilsActifs — JEB/DNI/2026-003
 
-date    : 2026-09-02T15:48:13+02:00
-commit  : f29c7a60d48c78094bd50d285ee9223e332ff7c7
+date    : 2026-09-02T16:46:56+02:00
+commit  : 40236e466f87bc9f7e5cb741e5ff2b2ed07feda2
 branche : feat/api-contract-and-deliverables
 API     : http://localhost:3000/api
 
@@ -30,12 +30,12 @@ Vary: Origin
 Access-Control-Allow-Credentials: true
 Content-Type: application/json; charset=utf-8
 Content-Length: 121
-ETag: W/"79-WsUKBsxX0cdL89OnIC8nvEeLJ+g"
-Date: Wed, 02 Sep 2026 13:48:13 GMT
+ETag: W/"79-iiYVo15d64QjUc1xHOGhd+MGyMo"
+Date: Wed, 02 Sep 2026 14:46:56 GMT
 Connection: keep-alive
 Keep-Alive: timeout=5
 
-{"version":"1.0.0","environment":"development","uptimeSeconds":12,"status":"ok","database":{"status":"up","latencyMs":1}}
+{"version":"1.0.0","environment":"development","uptimeSeconds":10,"status":"ok","database":{"status":"up","latencyMs":2}}
 
 ==============================================================================
 2. Coupure de la base
@@ -68,12 +68,12 @@ Vary: Origin
 Access-Control-Allow-Credentials: true
 Content-Type: application/json; charset=utf-8
 Content-Length: 115
-ETag: W/"73-wZiKMqGL64a0dG4DbpTAyvLCJfY"
-Date: Wed, 02 Sep 2026 13:48:13 GMT
+ETag: W/"73-ys4mTJz6lmRrD+5DAgFkUVfq3RE"
+Date: Wed, 02 Sep 2026 14:46:57 GMT
 Connection: keep-alive
 Keep-Alive: timeout=5
 
-{"version":"1.0.0","environment":"development","uptimeSeconds":13,"status":"degraded","database":{"status":"down"}}
+{"version":"1.0.0","environment":"development","uptimeSeconds":10,"status":"degraded","database":{"status":"down"}}
 
 ==============================================================================
 4. Rétablissement de la base
@@ -83,3 +83,34 @@ $ docker compose start postgres
  Container profils-actifs-db  Starting
  Container profils-actifs-db  Started
 
+
+==============================================================================
+5. Retour à la normale, sans redémarrer l'API — attendu 200
+------------------------------------------------------------------------------
+$ curl -i http://localhost:3000/api/health
+
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+Content-Type: application/json; charset=utf-8
+Content-Length: 121
+ETag: W/"79-3Kqv3RFk3SRQee1gXeo09ZH/TD8"
+Date: Wed, 02 Sep 2026 14:46:58 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"version":"1.0.0","environment":"development","uptimeSeconds":11,"status":"ok","database":{"status":"up","latencyMs":2}}
+==============================================================================
+Fin de la transcription — 2026-09-02T16:46:58+02:00

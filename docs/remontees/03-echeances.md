@@ -1,27 +1,42 @@
-# Remontée n° 03 — 12h00 ou 17h00 vendredi ?
+# Remontée n° 03 — Les échéances : trois horaires, un non confirmé
 
-**À** Thomas Vignal · **Copie** Florine Pontaillac
+**À** Thomas Vignal, conseiller au numérique
+**Copie** Florine Pontaillac · Benjamin Sellami
 **De** Équipe ProfilsActifs — Ewan · **Date** mercredi 2 septembre 2026
-**Objet** Contradiction d'échéance sur le dépôt de vendredi
+**Objet** Confirmation d'horaires avant la démonstration de demain
 
-**Statut : nous planifions sur 12h00, confirmation demandée.**
+**Statut : heure de la démonstration à confirmer ce soir. Dépôt légal tenu à 12h00.**
 
 ---
 
-Votre mail annonce _« l'ensemble de vos livrables vendredi à 17h00 »_.
+Trois horaires cohabitent désormais, et l'un d'eux n'est pas confirmé.
 
-Le §7.7 du cahier des charges fixe **vendredi 12h00** pour les quatre pièces du
-dossier juridique : registre de traitement, déclaration d'accessibilité, projet
-de CGU, note sur les critères de filtrage.
+## 1. La démonstration publique — demain, heure inconnue
 
-Les deux ne peuvent pas être vrais en même temps pour ces quatre documents.
+L'addendum de Florine Pontaillac du 2 septembre 15h40 impose des mesures
+« avant toute démonstration publique de la plateforme, **y compris celle de
+demain** ». C'est par cette phrase que nous apprenons qu'une démonstration a
+lieu jeudi 3 septembre.
 
-**Ce que nous faisons en attendant :** nous tenons 12h00. C'est le sens
-prudent — être prêt à midi pour une échéance de 17h00 ne coûte rien, l'inverse
-ne se rattrape pas. Le planning est construit là-dessus, avec une relecture
-croisée du registre et de la CGU entre 11h00 et 11h30.
+L'annotation du Ministre au §5 demande à voir le produit **jeudi matin**. Nous
+planifions là-dessus, faute de mieux, et deux mesures sont traitées ce soir en
+conséquence — le blocage des moins de 16 ans et l'invisibilité des vidéos en
+attente.
 
-**Ce que nous vous demandons :** une confirmation, même d'une ligne. Si les
-deux échéances coexistent réellement — 12h00 pour le dossier juridique, 17h00
-pour le dossier technique — dites-le nous, c'est exactement ainsi que nous
-l'avons compris et nous n'en demandons pas plus.
+**Nous avons besoin de l'heure.** Ce n'est pas une question de confort : ce qui
+est montré demain matin est ce qui aura été fusionné cette nuit, et une
+démonstration en fin de journée nous laisserait y ajouter l'écran de modération.
+
+## 2. Le dépôt légal — vendredi 12h00
+
+Les quatre pièces du §7.7, plus celles qu'ajoute l'addendum. Nous tenons 12h00.
+
+## 3. Le dépôt technique — vendredi 17h00
+
+Votre courriel annonce « l'ensemble de vos livrables vendredi à 17h00 ». Cela ne
+peut pas valoir pour les pièces de Florine Pontaillac, dues à 12h00 chez elle.
+Nous lisons donc : 12h00 pour le dossier juridique, 17h00 pour le dossier
+technique — et nous vous demandons de confirmer cette lecture, même d'une ligne.
+
+Être prêt à midi pour une échéance de 17h00 ne coûte rien. L'inverse ne se
+rattrape pas.

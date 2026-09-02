@@ -26,6 +26,19 @@ Il indique enfin que la légalité du dispositif est _« affirmée conforme aux
 conditions générales, page 47 »_, tout en reconnaissant que **vous ne l'avez
 pas confirmée**.
 
+## Pourquoi nous vous écrivons malgré votre addendum de ce jour
+
+Votre courriel de 15h40 traite de l'**affichage public** des compteurs
+d'engagement, et nous l'appliquons — aucun compteur n'apparaît, ni dans la page
+ni dans la réponse d'API. Il ne dit rien de l'**usage du compte dans un calcul
+d'allocation**, qui est un sujet distinct et, selon toute vraisemblance, un
+sujet dont vous n'avez pas été saisie.
+
+Nous préférons donc poser la question plutôt que de lire votre silence comme un
+accord. Retirer un compteur d'une page et adosser un droit social à ce même
+compteur sont deux choses sans rapport ; la première est faite, la seconde ne
+le sera pas sans vous.
+
 ## Pourquoi nous ne l'implémentons pas
 
 Nous ne demandons pas un délai. Nous demandons un avis, et nous n'avancerons

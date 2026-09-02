@@ -92,10 +92,18 @@ Deux précautions ont changé les résultats et méritent d'être écrites :
 
 | Critère              |    Avant |       Après | Plan retenu après                                   |
 | -------------------- | -------: | ----------: | --------------------------------------------------- |
-| secteur (2,5 %)      |  43,0 ms | **2,05 ms** | parcours ordonné `Profile_updatedAt_idx` + filtre   |
-| localisation (0,5 %) |  37,8 ms | **4,40 ms** | `Profile_location_idx` (trigramme)                  |
-| compétences          |  10,5 ms | **8,22 ms** | `ProfileSkill_skillId_profileId_idx`, en index seul |
-| recherche libre `q`  | 225,7 ms | **18,8 ms** | parcours ordonné + index seul sur les compétences   |
+| secteur (2,5 %)      |  22,1 ms | **1,41 ms** | parcours ordonné `Profile_updatedAt_idx` + filtre   |
+| localisation (0,5 %) |  24,6 ms | **2,53 ms** | `Profile_location_idx` (trigramme)                  |
+| compétences          |  4,98 ms |     5,15 ms | `ProfileSkill_skillId_profileId_idx`, en index seul |
+| recherche libre `q`  | 307,9 ms | **4,15 ms** | parcours ordonné + index seul sur les compétences   |
+
+Un mot sur la ligne « compétences » : elle ne bouge pas, et c'est la lecture
+honnête. Le composite passe bien le sous-select en `Index Only Scan` — visible
+dans la transcription — mais à cette répartition, où chaque compétence est
+portée par 1 % des profils, le coût est ailleurs. L'annexe C montre le cas où
+il paie. Les temps absolus varient d'une exécution à l'autre selon la charge de
+la machine ; ce sont les plans retenus, pas les millisecondes, qui portent la
+conclusion.
 
 Transcription intégrale : `docs/preuves/EW-5-index-catalogue.txt`.
 
@@ -126,14 +134,23 @@ Autrement dit : `updatedAt` sert le cas courant, les trigrammes servent les cas
 où le cas courant ne s'applique plus. Aucun des six index n'est là sans une
 mesure qui le désigne.
 
-**La recherche libre `q` reste le point coûteux.** Elle est passée de 225 ms à
-19 ms, mais elle reste dix fois plus chère que les autres filtres : le `OR` sur
-sept branches n'est servi par aucun index dans son ensemble, et Prisma émet
-trois auto-jointures sur `User` pour l'écrire. La suppression du nom du
-candidat de la recherche (voir `docs/livrables/note-criteres-de-filtrage.md`,
-décidée sur un motif juridique) en retire deux au passage. Si `q` devient un
-usage courant, la suite est une colonne `tsvector` générée sur `Profile`
-agrégeant les champs cherchables — hors périmètre avant le gel de jeudi.
+**La recherche libre `q` est celle qui gagne le plus** : le parcours ordonné et
+l'index seul sur les compétences la font passer sous les 5 ms. La colonne
+« avant » et la colonne « après » mesurent **la même requête**, celle que Prisma
+émet aujourd'hui ; l'écart n'est donc imputable qu'aux index.
+
+À noter séparément, parce que ce n'est pas dans ce tableau : le retrait du nom
+du candidat de la recherche — décidé sur un motif juridique, voir
+`docs/livrables/note-criteres-de-filtrage.md` — a supprimé **deux des trois
+auto-jointures sur `User`** que Prisma émettait pour écrire le `OR`. C'est un
+gain réel, obtenu avant cette mesure, et qu'aucune des deux colonnes ne montre.
+
+Elle reste néanmoins la plus fragile : aucun index ne sert un `OR` de cinq
+branches dans son ensemble, et le plan tient parce que le `LIMIT 20` arrête tôt
+le parcours ordonné. Sur un terme très rare, ce parcours irait jusqu'au bout de
+la table. Si `q` devient un usage courant, la suite est une colonne `tsvector`
+générée sur `Profile` agrégeant les champs cherchables — hors périmètre avant le
+gel de jeudi.
 
 ## Coût
 

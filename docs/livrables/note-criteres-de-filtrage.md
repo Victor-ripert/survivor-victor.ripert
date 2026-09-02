@@ -28,18 +28,18 @@ qui n'est pas un critère de sélection de candidats.
 Un critère par ligne, une phrase de justification professionnelle chacune,
 comme demandé.
 
-| Paramètre       | Ce qu'il filtre                                                                                 | Justification professionnelle                                                                                                                                                                          |
-| --------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `q`             | Recherche libre sur l'intitulé, la présentation, le secteur, la localisation et les compétences | Permet de retrouver une compétence ou un métier exprimé avec d'autres mots que ceux du référentiel, sans ajouter de critère de sélection nouveau : chaque champ couvert est déjà filtrable séparément. |
-| `sector`        | Secteur d'activité visé, déclaré par le candidat                                                | Le secteur est l'objet même du rapprochement entre une offre et une candidature, et il est renseigné par le candidat pour être vu.                                                                     |
-| `location`      | Localisation déclarée par le candidat                                                           | Le lieu de travail est une condition d'exécution du contrat de travail, et le candidat le renseigne pour indiquer où il est disponible.                                                                |
-| `skills`        | Compétences du référentiel portées par le profil                                                | Une compétence professionnelle est le critère de sélection le plus directement lié à l'aptitude à tenir le poste.                                                                                      |
-| `certifiedOnly` | Restreint aux profils dont la certification JEB est achevée                                     | La certification atteste d'une évaluation d'aptitude passée dans les mêmes conditions par tous les candidats, sans intervention du recruteur.                                                          |
-| `minScore`      | Score de certification minimal                                                                  | Même justification, exprimée en seuil plutôt qu'en tout ou rien ; le score est calculé côté serveur à partir d'un barème identique pour tous.                                                          |
-| `hasVideo`      | Restreint aux profils portant au moins une vidéo publiée                                        | Filtre sur la complétude du dossier de candidature — la présence d'une pièce, pas son contenu — et non sur ce que la vidéo montre. **Voir la réserve au §3.**                                          |
-| `favoritesOnly` | Restreint à la liste retenue par le recruteur lui-même                                          | Ne porte sur aucune caractéristique du candidat : c'est le recruteur qui filtre sur ses propres actions passées.                                                                                       |
-| `sort`          | Ordre d'affichage : `recent`, `score`, `name`                                                   | Un ordre d'affichage ne retire aucun profil du résultat ; les trois valeurs portent sur la fraîcheur du profil, le score de certification et l'ordre alphabétique.                                     |
-| `page`, `limit` | Pagination, plafonnée à 20 par page côté serveur                                                | Contrainte technique du §8.6, sans effet de sélection.                                                                                                                                                 |
+| Paramètre       | Ce qu'il filtre                                                                                 | Justification professionnelle                                                                                                                                                                             |
+| --------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `q`             | Recherche libre sur l'intitulé, la présentation, le secteur, la localisation et les compétences | Permet de retrouver une compétence ou un métier exprimé avec d'autres mots que ceux du référentiel, sans ajouter de critère de sélection nouveau : chaque champ couvert est déjà filtrable séparément.    |
+| `sector`        | Secteur d'activité visé, déclaré par le candidat                                                | Le secteur est l'objet même du rapprochement entre une offre et une candidature, et il est renseigné par le candidat pour être vu.                                                                        |
+| `location`      | Localisation déclarée par le candidat                                                           | Le lieu de travail est une condition d'exécution du contrat de travail, et le candidat le renseigne pour indiquer où il est disponible.                                                                   |
+| `skills`        | Compétences du référentiel portées par le profil                                                | Une compétence professionnelle est le critère de sélection le plus directement lié à l'aptitude à tenir le poste.                                                                                         |
+| `certifiedOnly` | Restreint aux profils dont la certification JEB est achevée                                     | La certification atteste d'une évaluation d'aptitude passée dans les mêmes conditions par tous les candidats, sans intervention du recruteur.                                                             |
+| `minScore`      | Score de certification minimal                                                                  | Même justification, exprimée en seuil plutôt qu'en tout ou rien ; le score est calculé côté serveur à partir d'un barème identique pour tous.                                                             |
+| `hasVideo`      | Restreint aux profils portant au moins une vidéo **validée par la modération**                  | Filtre sur la complétude du dossier — la présence d'une pièce validée, pas son contenu — et non sur ce que la vidéo montre. Une vidéo en attente n'y ouvre pas droit (§7.9.2). **Voir la réserve au §3.** |
+| `favoritesOnly` | Restreint à la liste retenue par le recruteur lui-même                                          | Ne porte sur aucune caractéristique du candidat : c'est le recruteur qui filtre sur ses propres actions passées.                                                                                          |
+| `sort`          | Ordre d'affichage : `recent`, `score`, `name`                                                   | Un ordre d'affichage ne retire aucun profil du résultat ; les trois valeurs portent sur la fraîcheur du profil, le score de certification et l'ordre alphabétique.                                        |
+| `page`, `limit` | Pagination, plafonnée à 20 par page côté serveur                                                | Contrainte technique du §8.6, sans effet de sélection.                                                                                                                                                    |
 
 ---
 
@@ -78,17 +78,43 @@ Pour que la lecture soit complète, ces données existent en base ou sont
 envisagées par le cahier des charges, et **ne sont exposées à aucun filtre**
 côté API ni côté interface :
 
-| Donnée                              | Où elle est                    | Pourquoi elle n'est pas filtrable                                                                                  |
-| ----------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| Date de naissance / âge             | à venir, migration AD-1 (§7.3) | Recueillie pour la seule vérification du régime des 16-18 ans ; l'âge n'est pas un critère de sélection (L1132-1). |
-| Sexe, origine, situation de famille | nulle part                     | Non collectées. Le modèle ne porte pas ces colonnes, et ce n'est pas un oubli.                                     |
-| Photographie, apparence             | nulle part                     | Non collectées hors du contenu de la vidéo, que le recruteur regarde mais ne filtre pas.                           |
-| Contenu de la vidéo                 | `Video.url`, `Video.title`     | Aucun filtre ne porte sur ce que la vidéo montre ou dit.                                                           |
-| Nombre de « likes »                 | nulle part                     | Le modèle n'a pas de type d'interaction `LIKE` — voir la remontée n° 01.                                           |
+| Donnée                                       | Où elle est                        | Pourquoi elle n'est pas filtrable                                                                                                                                                                          |
+| -------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date de naissance / âge                      | à venir, migration AD-1 (§7.3)     | Recueillie pour la seule vérification du régime des 16-18 ans ; l'âge n'est pas un critère de sélection (L1132-1).                                                                                         |
+| Sexe, origine, situation de famille          | nulle part                         | Non collectées. Le modèle ne porte pas ces colonnes, et ce n'est pas un oubli.                                                                                                                             |
+| Photographie, apparence                      | nulle part                         | Non collectées hors du contenu de la vidéo, que le recruteur regarde mais ne filtre pas.                                                                                                                   |
+| Contenu de la vidéo                          | `Video.url`, `Video.title`         | Aucun filtre ne porte sur ce que la vidéo montre ou dit.                                                                                                                                                   |
+| Nombre de « likes », compteur de vues public | nulle part                         | Le modèle n'a pas de type d'interaction `LIKE`, et aucune structure renvoyée par l'API ne porte de compteur d'engagement — votre §7.9.3 est satisfait par construction. Voir les remontées n° 01 et n° 02. |
+| Vidéo en attente de validation               | `Video.moderationStatus = PENDING` | Depuis le 2 septembre, une vidéo non validée n'est ni comptée, ni prévisualisée, ni retenue par `hasVideo` (§7.9.2). Preuve : `docs/preuves/SOIR-2-video-en-attente.txt`.                                  |
 
 ---
 
-## 3. Deux réserves que nous portons à votre appréciation
+## 3. Trois réserves que nous portons à votre appréciation
+
+**`minScore` et `sort=score` au regard de votre §7.9.3.** C'est la réserve la
+plus sérieuse, et elle naît de votre propre raisonnement. Vous écrivez qu'un
+compteur public « constitue un classement de personnes fondé sur la popularité,
+ce qui, sur un service de l'emploi, expose votre cabinet à une difficulté ».
+`minScore` filtre les candidats par un seuil de score, `sort=score` les ordonne
+par ce score, et le score comme le badge sont affichés publiquement sur le
+profil. C'est donc bien, littéralement, un classement de personnes.
+
+Nous pensons que la distinction tient, et voici sur quoi elle repose : ce score
+n'est pas un signal social. Il est produit par un questionnaire identique pour
+tous, calculé côté serveur sur un barème fixe, sans intervention du recruteur ni
+du candidat, et il mesure une aptitude professionnelle — exactement ce que
+l'article L1132-1 autorise comme critère de sélection. Un compteur de « j'aime »
+mesure l'audience d'une vidéo ; un score de certification mesure ce que le
+dispositif prétend mesurer. Le premier classe par popularité, le second par
+évaluation.
+
+Nous ajoutons ce qui affaiblit notre propre position, pour que vous en
+disposiez : le §2.1 du cahier des charges rend le badge **obligatoire pour être
+visible des recruteurs premium**, ce qui fait du score une condition d'accès à
+une partie du marché, et non un simple élément d'information. À ce titre, le
+classement produit des effets réels sur les personnes. Nous ne tranchons pas ce
+point à votre place — nous le maintenons en l'état et nous vous demandons de
+confirmer, ou d'infirmer, que le raisonnement du §7.9.3 ne s'y applique pas.
 
 **`hasVideo`.** Nous le justifions comme un filtre de complétude de dossier, et
 nous pensons cette lecture juste. Elle mérite néanmoins d'être signalée plutôt

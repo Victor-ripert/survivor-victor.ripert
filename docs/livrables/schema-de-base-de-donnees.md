@@ -167,10 +167,13 @@ Sur 50 000 profils, requêtes émises par Prisma et non réécrites
 
 | Critère         |    Avant |       Après |
 | --------------- | -------: | ----------: |
-| secteur         |  43,0 ms | **2,05 ms** |
-| localisation    |  37,8 ms | **4,40 ms** |
-| compétences     |  10,5 ms | **8,22 ms** |
-| recherche libre | 225,7 ms | **18,8 ms** |
+| secteur         |  22,1 ms | **1,41 ms** |
+| localisation    |  24,6 ms | **2,53 ms** |
+| compétences     |  4,98 ms |     5,15 ms |
+| recherche libre | 307,9 ms | **4,15 ms** |
+
+Les temps absolus varient d'une exécution à l'autre ; la transcription porte les
+plans d'exécution, qui sont la partie stable de la mesure.
 
 ---
 

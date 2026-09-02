@@ -63,7 +63,15 @@ components:
           maximum: 100
         certificationBadge:
           type: string
-      required: [id, userId, location, sector, certificationStatus]
+        moderationStatus:
+          type: string
+          description: >-
+            Set by an admin via the moderation endpoints, never by the
+            profile's owner. Only an `APPROVED` profile appears in the
+            public feed (`GET /profiles`); a `PENDING`/`REJECTED` one is
+            still visible at `GET /profiles/{id}` to its own owner.
+          enum: [PENDING, APPROVED, REJECTED]
+      required: [id, userId, location, sector, certificationStatus, moderationStatus]
 
     Video:
       type: object
@@ -83,7 +91,15 @@ components:
           type: string
         duration:
           type: integer
-      required: [id, profileId, title, type, url]
+        moderationStatus:
+          type: string
+          description: >-
+            Same purpose as `Profile.moderationStatus` — set by an admin via
+            the video-moderation endpoints. A profile being `APPROVED` does
+            not by itself approve its individual videos; each video carries
+            its own moderation state.
+          enum: [PENDING, APPROVED, REJECTED]
+      required: [id, profileId, title, type, url, moderationStatus]
 
     ProfileSkill:
       type: object
@@ -212,6 +228,65 @@ components:
         statusCode:
           type: integer
 
+  # ==========================================================================
+  # Reusable error-response examples. Every non-2xx response in this file is
+  # `{ error, message, statusCode }` (see CLAUDE.md's "Uniform error shape"),
+  # so the concrete example bodies live once here and get referenced by
+  # `$ref` from each path's `responses` block, instead of the same JSON
+  # being retyped at every route that can fail the same way.
+  # ==========================================================================
+  examples:
+    ValidationError:
+      summary: A request body or query param failed validation
+      value:
+        error: validation_error
+        message: Localisation requise
+        statusCode: 400
+    Unauthorized:
+      summary: No token, or an invalid/expired one
+      value:
+        error: unauthorized
+        message: No token provided
+        statusCode: 401
+    ForbiddenRole:
+      summary: A valid token, but the wrong role for this route
+      value:
+        error: forbidden
+        message: Insufficient permissions
+        statusCode: 403
+    ProfileNotFound:
+      summary: No profile matches the given id
+      value:
+        error: not_found
+        message: Profile not found
+        statusCode: 404
+    VideoNotFound:
+      summary: No video matches the given id (or it belongs to someone else's profile)
+      value:
+        error: not_found
+        message: Video not found
+        statusCode: 404
+    SkillNotFound:
+      summary: Skill not tagged on this profile
+      value:
+        error: not_found
+        message: Skill not found on this profile
+        statusCode: 404
+    UnrecognizedVideoFile:
+      summary: An UPLOAD file's actual content isn't a recognized video format
+      value:
+        error: unprocessable_entity
+        message: >-
+          This file is not a recognized video format (mp4, webm, mov).
+          Renaming a file to a video extension doesn't make it one.
+        statusCode: 422
+    UploadTooLarge:
+      summary: An UPLOAD file exceeds the 100MB server-side cap
+      value:
+        error: payload_too_large
+        message: Video files can't exceed 100MB.
+        statusCode: 413
+
 security:
   - bearerAuth: []
 
@@ -330,6 +405,7 @@ paths:
     get:
       tags: [Profiles]
       summary: List all profiles (paginated, public)
+      description: Only `APPROVED` profiles are ever returned here — see `Profile.moderationStatus`.
       security: []
       parameters:
         - name: page
@@ -342,6 +418,8 @@ paths:
           schema:
             type: integer
             default: 20
+            maximum: 20
+            description: Capped at 20 server-side regardless of the value requested.
         - name: sector
           in: query
           schema:
@@ -378,11 +456,25 @@ paths:
                         type: integer
                       pages:
                         type: integer
+        '400':
+          description: Invalid query parameter (e.g. an unrecognized `certificationStatus`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  $ref: '#/components/examples/ValidationError'
 
   /profiles/{id}:
     get:
       tags: [Profiles]
       summary: Get profile by ID (public)
+      description: >-
+        Public, but the profile's own owner (if authenticated) can also see
+        it while it's still `PENDING`/`REJECTED` — a stranger gets the same
+        404 as a genuinely nonexistent id, either way, so this endpoint
+        never reveals that an unapproved profile exists.
       security: []
       parameters:
         - name: id
@@ -398,7 +490,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/Profile'
         '404':
-          description: Profile not found
+          description: >-
+            No profile with this id, or one exists but isn't `APPROVED` and
+            the caller isn't its owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/ProfileNotFound'
 
   /profiles/me:
     get:
@@ -411,12 +512,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Profile'
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `APPLICANT`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
         '404':
-          description: Profile not found
+          description: This applicant hasn't created a profile yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/ProfileNotFound'
 
     post:
       tags: [Profiles]
       summary: Create or update my profile (applicant only)
+      description: >-
+        Upsert: creates the profile on first call, updates it on every call
+        after. A field omitted from the body leaves its existing value
+        untouched rather than clearing it. `moderationStatus` and
+        `certificationStatus` are never accepted here — both are
+        server-controlled.
       requestBody:
         required: true
         content:
@@ -426,8 +558,10 @@ paths:
               properties:
                 headline:
                   type: string
+                  maxLength: 120
                 bio:
                   type: string
+                  maxLength: 2000
                 location:
                   type: string
                 sector:
@@ -435,11 +569,155 @@ paths:
               required: [location, sector]
       responses:
         '200':
-          description: Profile updated
+          description: Profile created or updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Profile'
+        '400':
+          description: Missing/invalid field (e.g. `location` absent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  $ref: '#/components/examples/ValidationError'
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `APPLICANT`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
+
+  /profiles/me/skills:
+    post:
+      tags: [Profiles]
+      summary: Tag a skill on my profile (applicant only)
+      description: >-
+        Upsert, like `POST /profiles/me`: tagging a skill that's already on
+        the profile updates its `level` rather than erroring or duplicating
+        the entry (`ProfileSkill` is uniquely keyed on `profileId`+`skillId`
+        — see `schema.prisma`). `skillName` is looked up (or created) in the
+        shared `Skill` catalog by name; the client never supplies a
+        `skillId` directly. Not yet implemented server-side — tracked as a
+        follow-up to this contract change, same as the video-moderation
+        endpoints below.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skillName:
+                  type: string
+                level:
+                  type: string
+                  enum: [BEGINNER, INTERMEDIATE, ADVANCED, EXPERT]
+                  default: INTERMEDIATE
+              required: [skillName]
+      responses:
+        '200':
+          description: Skill tagged (or its level updated) — the full updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: Missing/invalid field (e.g. empty `skillName`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  $ref: '#/components/examples/ValidationError'
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `APPLICANT`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
+        '404':
+          description: This applicant hasn't created a profile yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/ProfileNotFound'
+
+  /profiles/me/skills/{skillId}:
+    delete:
+      tags: [Profiles]
+      summary: Remove a skill from my profile (applicant only)
+      description: >-
+        `skillId` identifies the shared `Skill` catalog entry (the same id
+        `POST /profiles/me/skills` resolved `skillName` to), not the
+        `ProfileSkill` join row. Not yet implemented server-side — see the
+        note on `POST /profiles/me/skills`.
+      parameters:
+        - name: skillId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Skill removed from the profile
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `APPLICANT`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
+        '404':
+          description: This skill isn't tagged on the caller's profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/SkillNotFound'
 
   # ==========================================================================
   # VIDEOS (Domain B)
@@ -449,6 +727,11 @@ paths:
     get:
       tags: [Videos]
       summary: Get videos for a profile
+      description: >-
+        Public, but returns an empty array uniformly for a nonexistent
+        profile, a profile the caller can't see (not `APPROVED`, not its
+        owner), and a profile with no videos — never a 404 — so this
+        endpoint doesn't leak which of those three is actually true.
       security: []
       parameters:
         - name: profileId
@@ -458,7 +741,7 @@ paths:
             type: string
       responses:
         '200':
-          description: List of videos
+          description: List of videos (possibly empty — see description)
           content:
             application/json:
               schema:
@@ -469,6 +752,14 @@ paths:
     post:
       tags: [Videos]
       summary: Add video to profile (applicant only)
+      description: >-
+        `EXTERNAL_LINK` (YouTube/Vimeo) is fully supported. `UPLOAD`
+        currently responds `501 not_implemented` — the size/content-type
+        checks below are implemented in `video.service.ts` and covered by
+        tests, but no route parses a real multipart upload into them yet
+        (needs `multer`, not currently a dependency). The `422`/`413`
+        responses describe the contract once that lands, not current
+        reachable behavior.
       parameters:
         - name: profileId
           in: path
@@ -484,15 +775,19 @@ paths:
               properties:
                 title:
                   type: string
+                  maxLength: 120
                 description:
                   type: string
+                  maxLength: 500
                 type:
                   type: string
                   enum: [EXTERNAL_LINK, UPLOAD]
                 url:
                   type: string
+                  format: uri
                 duration:
                   type: integer
+                  description: Seconds
               required: [title, type, url]
       responses:
         '201':
@@ -501,6 +796,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Video'
+        '400':
+          description: Missing/invalid field, or a malformed/non-YouTube/Vimeo `url`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  $ref: '#/components/examples/ValidationError'
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `APPLICANT`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
+        '404':
+          description: No profile with this id, or it isn't the caller's own
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/ProfileNotFound'
+        '413':
+          description: '`type: UPLOAD` only, once wired up — file exceeds the 100MB cap'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                uploadTooLarge:
+                  $ref: '#/components/examples/UploadTooLarge'
+        '422':
+          description: >-
+            `type: UPLOAD` only, once wired up — the file's actual content
+            isn't a recognized video format, checked from the file's bytes,
+            not its extension or client-supplied MIME type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unrecognizedVideoFile:
+                  $ref: '#/components/examples/UnrecognizedVideoFile'
+        '501':
+          description: '`type: UPLOAD` — not implemented yet, use `EXTERNAL_LINK`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /videos/{videoId}:
     delete:
@@ -515,6 +873,33 @@ paths:
       responses:
         '204':
           description: Video deleted
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `APPLICANT`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
+        '404':
+          description: No video with this id, or it isn't on the caller's own profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/VideoNotFound'
 
   # ==========================================================================
   # CERTIFICATION (Domain C)
@@ -817,20 +1202,73 @@ paths:
     get:
       tags: [Administration]
       summary: Get profiles pending moderation (admin only)
+      description: >-
+        The review queue, oldest-submitted-first (the opposite order from
+        the public feed) so nothing gets pushed down by newer submissions.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 20
       responses:
         '200':
-          description: List of profiles
+          description: Paginated list of `PENDING` profiles
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Profile'
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Profile'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `ADMIN`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
 
   /admin/profiles/{profileId}/moderate:
     post:
       tags: [Administration]
       summary: Moderate a profile (admin only)
+      description: >-
+        Atomically updates `Profile.moderationStatus` and appends a
+        `ModerationLog` row — see that model's mapping from `action` to the
+        resulting status in `moderation.service.ts` (`REQUIRE_CHANGES` and
+        `REJECT` both resolve to `REJECTED`; the distinction is preserved in
+        the log's `action`, not in the status field itself).
       parameters:
         - name: profileId
           in: path
@@ -849,8 +1287,199 @@ paths:
                   enum: [APPROVE, REJECT, FLAG, REQUIRE_CHANGES]
                 reason:
                   type: string
+                  maxLength: 500
                 notes:
                   type: string
+                  maxLength: 2000
+              required: [action]
       responses:
         '200':
           description: Profile moderated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Missing/invalid `action`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  $ref: '#/components/examples/ValidationError'
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `ADMIN`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
+        '404':
+          description: No profile with this id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/ProfileNotFound'
+
+  /admin/moderation/videos:
+    get:
+      tags: [Administration]
+      summary: Get videos pending moderation (admin only)
+      description: >-
+        Same shape and ordering as `GET /admin/moderation/profiles`, for
+        `Video.moderationStatus` instead — a profile being `APPROVED`
+        doesn't approve its individual videos, so this queue is reviewed
+        separately. Not yet implemented server-side (tracked as a follow-up
+        to this contract change): `moderation.service.ts`'s
+        `applyModeration` already handles a `'video'` entity type
+        generically, but nothing currently mirrors `listPendingProfiles` for
+        videos or routes these two paths to a controller.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 20
+      responses:
+        '200':
+          description: Paginated list of `PENDING` videos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Video'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `ADMIN`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
+
+  /admin/videos/{videoId}/moderate:
+    post:
+      tags: [Administration]
+      summary: Moderate a video (admin only)
+      description: >-
+        Same semantics as `POST /admin/profiles/{profileId}/moderate`, for
+        `Video.moderationStatus`. Not yet implemented server-side — see the
+        note on `GET /admin/moderation/videos`.
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [APPROVE, REJECT, FLAG, REQUIRE_CHANGES]
+                reason:
+                  type: string
+                  maxLength: 500
+                notes:
+                  type: string
+                  maxLength: 2000
+              required: [action]
+      responses:
+        '200':
+          description: Video moderated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Missing/invalid `action`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  $ref: '#/components/examples/ValidationError'
+        '401':
+          description: No token, or an invalid/expired one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  $ref: '#/components/examples/Unauthorized'
+        '403':
+          description: Authenticated, but not as an `ADMIN`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  $ref: '#/components/examples/ForbiddenRole'
+        '404':
+          description: No video with this id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/VideoNotFound'

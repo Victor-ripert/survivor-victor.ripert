@@ -19,6 +19,7 @@ export function toVideoDto(video: PrismaVideo): Video {
     type: video.type,
     url: video.url,
     duration: video.duration ?? undefined,
+    moderationStatus: video.moderationStatus,
   };
 }
 

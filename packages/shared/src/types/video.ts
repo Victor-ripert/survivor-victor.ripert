@@ -12,6 +12,8 @@
  * same three literal strings being retyped in a second place that can
  * silently drift out of sync.
  */
+import type { ModerationStatus } from './moderation.js';
+
 export const VIDEO_TYPES = ['EXTERNAL_LINK', 'UPLOAD'] as const;
 export type VideoType = (typeof VIDEO_TYPES)[number];
 
@@ -24,6 +26,12 @@ export interface Video {
   type: VideoType;
   url: string;
   duration?: number; // seconds
+  /**
+   * Always set by the API, independently of the parent profile's own
+   * `moderationStatus` — see `ModerationStatus`'s doc comment in
+   * `moderation.ts` for why the two aren't the same field.
+   */
+  moderationStatus: ModerationStatus;
 }
 
 /**

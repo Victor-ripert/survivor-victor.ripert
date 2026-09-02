@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { MODERATION_ACTIONS } from '@profils-actifs/shared';
 
-/** Payload for `POST /admin/profiles/{id}/moderate` (and the video-moderation endpoint, once that contract gap closes). */
+/**
+ * Payload for `POST /admin/profiles/{id}/moderate` and, once its
+ * controller/route land, `POST /admin/videos/{id}/moderate` (both are
+ * documented in `openapi.yaml`; only the profile one is wired up today).
+ */
 export const moderateEntitySchema = z.object({
   action: z.enum(MODERATION_ACTIONS, { error: 'Action de modération invalide' }),
   reason: z

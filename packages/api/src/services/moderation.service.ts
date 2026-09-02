@@ -33,9 +33,10 @@ const MODERATION_STATUS_BY_ACTION: Record<ModerationAction, ModerationStatus> = 
 };
 
 /**
- * `POST /admin/profiles/{id}/moderate` — and, once the video-moderation
- * endpoint closes that contract gap, the identical action for videos. One
- * function for both entity types instead of an `approveProfile`/
+ * `POST /admin/profiles/{id}/moderate` — and, once a controller/route for
+ * `POST /admin/videos/{id}/moderate` exists (that endpoint is documented in
+ * `openapi.yaml` but not yet wired up), the identical action for videos.
+ * One function for both entity types instead of an `approveProfile`/
  * `rejectProfile`/`approveVideo`/`rejectVideo` combinatorial mess.
  *
  * The status update and the `ModerationLog` row are written inside a

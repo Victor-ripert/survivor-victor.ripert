@@ -1,4 +1,5 @@
 import type { Video } from './video.js';
+import type { ModerationStatus } from './moderation.js';
 
 /**
  * Mirrors `schema.prisma`'s `CertificationStatus` enum — see the note in
@@ -12,19 +13,6 @@ export type CertificationStatus = (typeof CERTIFICATION_STATUSES)[number];
 /** Mirrors `schema.prisma`'s `SkillLevel` enum. */
 export const SKILL_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'] as const;
 export type SkillLevel = (typeof SKILL_LEVELS)[number];
-
-/**
- * Mirrors `schema.prisma`'s `ModerationStatus` enum. Not yet on the
- * `Profile` schema in `openapi.yaml` (tracked as issue #7, "close contract
- * gaps") — the `Profile.moderationStatus` field below is kept optional so
- * it doesn't need reshaping once that lands, only the `?` dropped.
- */
-export const MODERATION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
-export type ModerationStatus = (typeof MODERATION_STATUSES)[number];
-
-/** Mirrors `schema.prisma`'s `ModerationAction` enum — what an admin *does*, distinct from `ModerationStatus` (what the target's state *is*). */
-export const MODERATION_ACTIONS = ['APPROVE', 'REJECT', 'FLAG', 'REQUIRE_CHANGES'] as const;
-export type ModerationAction = (typeof MODERATION_ACTIONS)[number];
 
 /** A skill from the shared catalog (`Skill` in `schema.prisma`). */
 export interface Skill {
@@ -53,16 +41,21 @@ export interface Profile {
   certificationStatus: CertificationStatus;
   certificationScore?: number; // 0-100
   certificationBadge?: string;
-  /** See the `ModerationStatus` doc comment above re: the openapi.yaml gap. */
-  moderationStatus?: ModerationStatus;
+  /**
+   * Always set by the API — defaults to `PENDING` at creation and only an
+   * admin can change it (see `ModerationAction`). Never sent by the client
+   * on `POST /profiles/me`; see `ProfileInput` below.
+   */
+  moderationStatus: ModerationStatus;
 }
 
 /**
  * Payload for `POST /profiles/me` (create-or-update). Matches the contract
  * as it stands today — `headline`/`bio` optional, `location`/`sector`
- * required. Skills aren't part of this payload; they get their own
- * endpoint once issue #7 closes that gap, at which point a
- * `ProfileSkillInput` type belongs here alongside this one.
+ * required. Skills aren't part of this payload; `POST`/`DELETE
+ * /profiles/me/skills` (see `openapi.yaml`) have their own request shape,
+ * not yet mirrored here as a type since no service/controller implements
+ * them yet — add a `ProfileSkillInput` type here when that lands.
  */
 export interface ProfileInput {
   headline?: string;

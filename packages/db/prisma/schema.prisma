@@ -117,9 +117,6 @@ model Profile {
   certificationScore  Int? // 0-100, set when an attempt completes
   certificationBadge  String? // resolved from CertificationLevel at scoring time
 
-  // Not yet surfaced by the Profile schema in openapi.yaml (contract gap vs
-  // brief §2.1 "Modération des profils") — kept here because the admin
-  // moderation endpoints need something to filter/act on.
   moderationStatus ModerationStatus @default(PENDING)
   moderationLogs   ModerationLog[]
 
@@ -150,7 +147,6 @@ model Video {
 
   fileSizeBytes Int? // set for UPLOAD only; app layer enforces the 100MB cap (brief §3.2)
 
-  // Same contract-gap note as Profile.moderationStatus.
   moderationStatus ModerationStatus @default(PENDING)
   moderationLogs   ModerationLog[]
 

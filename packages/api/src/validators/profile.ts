@@ -6,10 +6,9 @@ import { paginationQuerySchema } from './pagination.js';
  * Payload for `POST /profiles/me` (create-or-update, applicant only).
  * Matches `openapi.yaml`'s current contract exactly: `location`/`sector`
  * required, `headline`/`bio` optional. Deliberately has no `skills` field —
- * that endpoint doesn't exist yet (tracked as issue #7); adding it here
- * ahead of the contract would let the backend accept a payload the
- * documented API doesn't, which is exactly the kind of drift the
- * contract-first rule in CLAUDE.md exists to prevent.
+ * `openapi.yaml` now documents `POST`/`DELETE /profiles/me/skills` as
+ * their own dedicated endpoints, but no validator/controller/route for
+ * them exists yet. Add one there (not here) once that lands.
  */
 export const upsertProfileSchema = z.object({
   headline: z

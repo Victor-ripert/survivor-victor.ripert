@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import type { CatalogueProfile, CatalogueQuery, PaginatedResponse } from '@profils-actifs/shared';
 import { useAsyncResource } from '../hooks/useAsyncResource.js';
 import { addFavorite, recordProfileView, removeFavorite } from '../services/recruiter.js';
@@ -6,7 +6,7 @@ import { toApiError } from '../services/api.js';
 import { ContactDialog } from './ContactDialog.js';
 import { Pagination } from './Pagination.js';
 import { ProfileCard } from './ProfileCard.js';
-import { EmptyState, ErrorNotice, LoadingRow } from './StatusMessages.js';
+import { EmptyState, ErrorNotice, LoadingRow, Notice } from './StatusMessages.js';
 
 interface ProfileResultsProps {
   query: CatalogueQuery;
@@ -20,7 +20,7 @@ interface ProfileResultsProps {
   /** Favourites disappear from their own list once removed, so that view
    *  refetches instead of keeping a row that no longer belongs to it. */
   reloadOnUnfavorite?: boolean;
-  renderToolbar?: (result: PaginatedResponse<CatalogueProfile>) => React.ReactNode;
+  renderToolbar?: (result: PaginatedResponse<CatalogueProfile>) => ReactNode;
 }
 
 export const ProfileResults = ({
@@ -38,6 +38,7 @@ export const ProfileResults = ({
   const [favoriteOverrides, setFavoriteOverrides] = useState<Record<string, boolean>>({});
   const [pendingFavorite, setPendingFavorite] = useState<string | null>(null);
   const [contactTarget, setContactTarget] = useState<CatalogueProfile | null>(null);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -75,19 +76,15 @@ export const ProfileResults = ({
       {renderToolbar?.(data)}
 
       {actionError && (
-        <p className="alert alert--error" role="alert">
-          {actionError}
-        </p>
+        <Notice tone="error">
+          <p>{actionError}</p>
+        </Notice>
       )}
 
-      <p className="visually-hidden" role="status">
-        {feedback}
-      </p>
-
       {feedback && (
-        <p className="alert alert--success" style={{ marginBottom: 'var(--space-4)' }}>
-          {feedback}
-        </p>
+        <Notice tone="success" className="stack">
+          <p>{feedback}</p>
+        </Notice>
       )}
 
       {data.data.length === 0 ? (
@@ -102,6 +99,8 @@ export const ProfileResults = ({
                 isFavorite: favoriteOverrides[profile.userId] ?? profile.isFavorite,
               }}
               isPending={pendingFavorite === profile.userId}
+              activeVideoId={activeVideoId}
+              onActivateVideo={setActiveVideoId}
               onToggleFavorite={toggleFavorite}
               onContact={setContactTarget}
               onView={registerView}
@@ -114,11 +113,11 @@ export const ProfileResults = ({
 
       {contactTarget && (
         <ContactDialog
-          profile={contactTarget}
+          recipient={contactTarget}
           onClose={() => setContactTarget(null)}
-          onSent={(profile) => {
+          onSent={(recipient) => {
             setContactTarget(null);
-            setFeedback(`Message envoyé à ${profile.firstName} ${profile.lastName}.`);
+            setFeedback(`Message envoyé à ${recipient.firstName} ${recipient.lastName}.`);
             reload();
           }}
         />

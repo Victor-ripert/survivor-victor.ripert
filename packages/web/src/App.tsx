@@ -1,102 +1,123 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ComponentType } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import type { UserRole } from '@profils-actifs/shared';
 import { AppLayout } from './components/AppLayout.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { EmptyState, LoadingRow } from './components/StatusMessages.js';
-import { LoginPage } from './pages/Auth/LoginPage.js';
+import { FeedPage } from './pages/Profile/FeedPage.js';
 
-// One bundle per route: opening the catalogue does not download the
-// dashboards, and a recruiter never downloads the administration screen.
-const AdminDashboardPage = lazy(() =>
-  import('./pages/Admin/AdminDashboardPage.js').then((module) => ({
-    default: module.AdminDashboardPage,
-  })),
+// One bundle per route: opening the feed does not download the dashboards,
+// and a recruiter never downloads the administration screens.
+const lazyPage = <Key extends string>(
+  loader: () => Promise<Record<Key, ComponentType>>,
+  key: Key,
+) => lazy(() => loader().then((module) => ({ default: module[key] })));
+
+const LoginPage = lazyPage(() => import('./pages/Auth/LoginPage.js'), 'LoginPage');
+const RegisterPage = lazyPage(() => import('./pages/Auth/RegisterPage.js'), 'RegisterPage');
+const ProfilePage = lazyPage(() => import('./pages/Profile/ProfilePage.js'), 'ProfilePage');
+const MyProfilePage = lazyPage(() => import('./pages/Profile/MyProfilePage.js'), 'MyProfilePage');
+const CertificationPage = lazyPage(
+  () => import('./pages/Certification/CertificationPage.js'),
+  'CertificationPage',
 );
-const VideoModerationPage = lazy(() =>
-  import('./pages/Admin/VideoModerationPage.js').then((module) => ({
-    default: module.VideoModerationPage,
-  })),
+const NotificationsPage = lazyPage(
+  () => import('./pages/Notifications/NotificationsPage.js'),
+  'NotificationsPage',
 );
-const CataloguePage = lazy(() =>
-  import('./pages/Recruiter/CataloguePage.js').then((module) => ({
-    default: module.CataloguePage,
-  })),
+const RecruiterDashboardPage = lazyPage(
+  () => import('./pages/Recruiter/RecruiterDashboardPage.js'),
+  'RecruiterDashboardPage',
 );
-const ContactsPage = lazy(() =>
-  import('./pages/Recruiter/ContactsPage.js').then((module) => ({
-    default: module.ContactsPage,
-  })),
+const CataloguePage = lazyPage(() => import('./pages/Recruiter/CataloguePage.js'), 'CataloguePage');
+const FavoritesPage = lazyPage(() => import('./pages/Recruiter/FavoritesPage.js'), 'FavoritesPage');
+const ContactsPage = lazyPage(() => import('./pages/Recruiter/ContactsPage.js'), 'ContactsPage');
+const AdminDashboardPage = lazyPage(
+  () => import('./pages/Admin/AdminDashboardPage.js'),
+  'AdminDashboardPage',
 );
-const FavoritesPage = lazy(() =>
-  import('./pages/Recruiter/FavoritesPage.js').then((module) => ({
-    default: module.FavoritesPage,
-  })),
+const ProfileModerationPage = lazyPage(
+  () => import('./pages/Admin/ProfileModerationPage.js'),
+  'ProfileModerationPage',
 );
-const RecruiterDashboardPage = lazy(() =>
-  import('./pages/Recruiter/RecruiterDashboardPage.js').then((module) => ({
-    default: module.RecruiterDashboardPage,
-  })),
+const VideoModerationPage = lazyPage(
+  () => import('./pages/Admin/VideoModerationPage.js'),
+  'VideoModerationPage',
+);
+const QuestionnaireAdminPage = lazyPage(
+  () => import('./pages/Admin/QuestionnaireAdminPage.js'),
+  'QuestionnaireAdminPage',
 );
 
-const RECRUITER_ROLES = ['RECRUITER', 'ADMIN'] as const;
+const APPLICANT: UserRole[] = ['APPLICANT'];
+const RECRUITERS: UserRole[] = ['RECRUITER', 'ADMIN'];
+const ADMIN: UserRole[] = ['ADMIN'];
+const EVERYONE: UserRole[] = ['APPLICANT', 'RECRUITER', 'ADMIN'];
+
+interface GuardedProps {
+  roles: UserRole[];
+  page: ComponentType;
+}
+
+const Guarded = ({ roles, page: Page }: GuardedProps) => (
+  <ProtectedRoute roles={roles}>
+    <Page />
+  </ProtectedRoute>
+);
 
 export const App = () => (
   <Suspense fallback={<LoadingRow />}>
     <Routes>
-      <Route path="/connexion" element={<LoginPage />} />
-
       <Route element={<AppLayout />}>
-        <Route index element={<Navigate to="/recruteur" replace />} />
+        <Route index element={<FeedPage />} />
+        <Route path="/profils/:id" element={<ProfilePage />} />
+        <Route path="/connexion" element={<LoginPage />} />
+        <Route path="/inscription" element={<RegisterPage />} />
+
+        <Route path="/mon-profil" element={<Guarded roles={APPLICANT} page={MyProfilePage} />} />
+        <Route
+          path="/certification"
+          element={<Guarded roles={APPLICANT} page={CertificationPage} />}
+        />
+        <Route
+          path="/notifications"
+          element={<Guarded roles={EVERYONE} page={NotificationsPage} />}
+        />
 
         <Route
           path="/recruteur"
-          element={
-            <ProtectedRoute roles={[...RECRUITER_ROLES]}>
-              <RecruiterDashboardPage />
-            </ProtectedRoute>
-          }
+          element={<Guarded roles={RECRUITERS} page={RecruiterDashboardPage} />}
         />
         <Route
           path="/recruteur/catalogue"
-          element={
-            <ProtectedRoute roles={[...RECRUITER_ROLES]}>
-              <CataloguePage />
-            </ProtectedRoute>
-          }
+          element={<Guarded roles={RECRUITERS} page={CataloguePage} />}
         />
         <Route
           path="/recruteur/favoris"
-          element={
-            <ProtectedRoute roles={[...RECRUITER_ROLES]}>
-              <FavoritesPage />
-            </ProtectedRoute>
-          }
+          element={<Guarded roles={RECRUITERS} page={FavoritesPage} />}
         />
         <Route
           path="/recruteur/interactions"
-          element={
-            <ProtectedRoute roles={[...RECRUITER_ROLES]}>
-              <ContactsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute roles={['ADMIN']}>
-              <AdminDashboardPage />
-            </ProtectedRoute>
-          }
+          element={<Guarded roles={RECRUITERS} page={ContactsPage} />}
         />
 
+        <Route path="/admin" element={<Guarded roles={ADMIN} page={AdminDashboardPage} />} />
+        <Route
+          path="/admin/moderation-profils"
+          element={<Guarded roles={ADMIN} page={ProfileModerationPage} />}
+        />
         <Route
           path="/admin/moderation-videos"
-          element={
-            <ProtectedRoute roles={['ADMIN']}>
-              <VideoModerationPage />
-            </ProtectedRoute>
-          }
+          element={<Guarded roles={ADMIN} page={VideoModerationPage} />}
         />
+        <Route
+          path="/admin/questionnaire"
+          element={<Guarded roles={ADMIN} page={QuestionnaireAdminPage} />}
+        />
+
+        {/* Older links from the first frontend iteration. */}
+        <Route path="/profiles" element={<Navigate to="/" replace />} />
+        <Route path="/profiles/:id" element={<ProfilePage />} />
 
         <Route
           path="*"

@@ -1,14 +1,10 @@
 import type {
-  AdminDashboard,
   CatalogueFacets,
   CatalogueProfile,
   CatalogueQuery,
   InteractionDto,
   PaginatedResponse,
   RecruiterDashboard,
-  VideoModerationInput,
-  VideoModerationItem,
-  VideoModerationQuery,
 } from '@profils-actifs/shared';
 import { api } from './api.js';
 
@@ -69,12 +65,6 @@ export const fetchRecruiterDashboard = async (
   return response.data;
 };
 
-export const fetchAdminDashboard = async (signal?: AbortSignal): Promise<AdminDashboard> => {
-  const response = await api.get<AdminDashboard>('/admin/dashboard', { signal });
-
-  return response.data;
-};
-
 export const fetchSentInteractions = async (
   page: number,
   signal?: AbortSignal,
@@ -103,39 +93,4 @@ export const recordProfileView = async (applicantId: string): Promise<void> => {
 
 export const sendContact = async (applicantId: string, message: string): Promise<void> => {
   await api.post('/interactions', { recipientId: applicantId, type: 'CONTACT', message });
-};
-
-/**
- * Video moderation queue — brief §7.9.2. Contract-first: these two calls are
- * written against `openapi.yaml`, and the routes behind them are the domain B
- * task VI-10. Until it lands, the screen shows the API's own error rather than
- * pretending to have data.
- */
-export const fetchVideoModerationQueue = async (
-  query: VideoModerationQuery,
-  signal?: AbortSignal,
-): Promise<PaginatedResponse<VideoModerationItem>> => {
-  const params: Record<string, string> = {};
-  if (query.page && query.page > 1) params.page = String(query.page);
-  if (query.limit) params.limit = String(query.limit);
-  if (query.status) params.status = query.status;
-
-  const response = await api.get<PaginatedResponse<VideoModerationItem>>(
-    '/admin/moderation/videos',
-    { params, signal },
-  );
-
-  return response.data;
-};
-
-export const moderateVideo = async (
-  videoId: string,
-  decision: VideoModerationInput,
-): Promise<VideoModerationItem> => {
-  const response = await api.post<VideoModerationItem>(
-    `/admin/videos/${encodeURIComponent(videoId)}/moderate`,
-    decision,
-  );
-
-  return response.data;
 };

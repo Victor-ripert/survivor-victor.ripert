@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { CatalogueProfile } from '@profils-actifs/shared';
 import { CertificationBadge } from './CertificationBadge.js';
-import { formatDate } from '../utils/format.js';
-import { isEmbeddableUrl } from '../utils/embed.js';
+import { Icon } from './Icon.js';
+import { VideoPlayer } from './VideoPlayer.js';
+import { formatDate, pluralize } from '../utils/format.js';
 
 const VISIBLE_SKILLS = 6;
 
 interface ProfileCardProps {
   profile: CatalogueProfile;
   isPending: boolean;
+  activeVideoId: string | null;
+  onActivateVideo: (videoId: string) => void;
   onToggleFavorite: (profile: CatalogueProfile) => void;
   onContact: (profile: CatalogueProfile) => void;
   onView: (profile: CatalogueProfile) => void;
@@ -17,18 +20,19 @@ interface ProfileCardProps {
 export const ProfileCard = ({
   profile,
   isPending,
+  activeVideoId,
+  onActivateVideo,
   onToggleFavorite,
   onContact,
   onView,
 }: ProfileCardProps) => {
-  const [isVideoOpen, setIsVideoOpen] = useState(false);
-
   const fullName = `${profile.firstName} ${profile.lastName}`;
   const hiddenSkills = profile.skills.length - VISIBLE_SKILLS;
-  const canEmbed = profile.previewVideo !== null && isEmbeddableUrl(profile.previewVideo.url);
+  const preview = profile.previewVideo;
+  const isPlaying = preview !== null && activeVideoId === preview.id;
 
-  const openVideo = () => {
-    setIsVideoOpen(true);
+  const openVideo = (videoId: string): void => {
+    onActivateVideo(videoId);
     onView(profile);
   };
 
@@ -46,7 +50,7 @@ export const ProfileCard = ({
           disabled={isPending}
           onClick={() => onToggleFavorite(profile)}
         >
-          <span aria-hidden="true">{profile.isFavorite ? '★' : '☆'}</span>
+          <Icon name={profile.isFavorite ? 'star-filled' : 'star'} size={14} />
           <span className="visually-hidden">
             {profile.isFavorite
               ? `Retirer ${fullName} des favoris`
@@ -56,19 +60,17 @@ export const ProfileCard = ({
         </button>
       </div>
 
-      <div className="profile-card__meta">
+      <p className="meta">
         <span>{profile.sector}</span>
         <span aria-hidden="true">·</span>
         <span>{profile.location}</span>
         {profile.videoCount > 0 && (
           <>
             <span aria-hidden="true">·</span>
-            <span>
-              {profile.videoCount} vidéo{profile.videoCount > 1 ? 's' : ''}
-            </span>
+            <span>{pluralize(profile.videoCount, 'vidéo')}</span>
           </>
         )}
-      </div>
+      </p>
 
       <CertificationBadge
         status={profile.certificationStatus}
@@ -77,7 +79,7 @@ export const ProfileCard = ({
       />
 
       {profile.skills.length > 0 && (
-        <ul className="profile-card__skills" aria-label="Compétences">
+        <ul className="chip-list" aria-label="Compétences">
           {profile.skills.slice(0, VISIBLE_SKILLS).map((skill) => (
             <li className="chip" key={skill.id}>
               {skill.name}
@@ -87,24 +89,7 @@ export const ProfileCard = ({
         </ul>
       )}
 
-      {isVideoOpen && profile.previewVideo && canEmbed && (
-        <iframe
-          className="profile-card__video"
-          src={profile.previewVideo.url}
-          title={`Vidéo de présentation de ${fullName} : ${profile.previewVideo.title}`}
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-          // allow-same-origin only ever applies to a third-party player host
-          // (isEmbeddableUrl enforces the allowlist), never to our own origin,
-          // so the frame cannot lift its own sandbox.
-          sandbox="allow-scripts allow-same-origin allow-presentation"
-          allowFullScreen
-        />
-      )}
-
-      {isVideoOpen && !canEmbed && (
-        <p className="profile-card__contacted">Cette vidéo ne peut pas être affichée.</p>
-      )}
+      {preview && isPlaying && <VideoPlayer video={preview} active onActivate={onActivateVideo} />}
 
       {profile.lastContactedAt && (
         <p className="profile-card__contacted">
@@ -113,11 +98,15 @@ export const ProfileCard = ({
       )}
 
       <div className="profile-card__actions">
-        {profile.previewVideo && !isVideoOpen && (
-          <button type="button" className="button" onClick={openVideo}>
+        {preview && !isPlaying && (
+          <button type="button" className="button" onClick={() => openVideo(preview.id)}>
+            <Icon name="play" size={14} />
             Voir la vidéo
           </button>
         )}
+        <Link className="button" to={`/profils/${profile.id}`}>
+          Profil complet
+        </Link>
         <button type="button" className="button button--primary" onClick={() => onContact(profile)}>
           Contacter
         </button>

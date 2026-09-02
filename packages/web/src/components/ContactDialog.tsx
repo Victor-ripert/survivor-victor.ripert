@@ -1,19 +1,22 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import {
-  CONTACT_MESSAGE_MAX_LENGTH,
-  CONTACT_MESSAGE_MIN_LENGTH,
-  type CatalogueProfile,
-} from '@profils-actifs/shared';
+import { CONTACT_MESSAGE_MAX_LENGTH, CONTACT_MESSAGE_MIN_LENGTH } from '@profils-actifs/shared';
 import { toApiError } from '../services/api.js';
 import { sendContact } from '../services/recruiter.js';
+import { Notice } from './StatusMessages.js';
 
-interface ContactDialogProps {
-  profile: CatalogueProfile;
-  onClose: () => void;
-  onSent: (profile: CatalogueProfile) => void;
+export interface ContactRecipient {
+  userId: string;
+  firstName: string;
+  lastName: string;
 }
 
-export const ContactDialog = ({ profile, onClose, onSent }: ContactDialogProps) => {
+interface ContactDialogProps {
+  recipient: ContactRecipient;
+  onClose: () => void;
+  onSent: (recipient: ContactRecipient) => void;
+}
+
+export const ContactDialog = ({ recipient, onClose, onSent }: ContactDialogProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const messageRef = useRef<HTMLTextAreaElement>(null);
   const [message, setMessage] = useState('');
@@ -30,7 +33,7 @@ export const ContactDialog = ({ profile, onClose, onSent }: ContactDialogProps) 
     if (dialog && !dialog.open) dialog.showModal();
   }, []);
 
-  const fullName = `${profile.firstName} ${profile.lastName}`;
+  const fullName = `${recipient.firstName} ${recipient.lastName}`;
 
   // The button stays enabled and says why on submit: a control that is greyed
   // out without explanation leaves the reader guessing what is missing.
@@ -52,8 +55,8 @@ export const ContactDialog = ({ profile, onClose, onSent }: ContactDialogProps) 
     setError(null);
 
     try {
-      await sendContact(profile.userId, trimmed);
-      onSent(profile);
+      await sendContact(recipient.userId, trimmed);
+      onSent(recipient);
     } catch (cause: unknown) {
       setError(toApiError(cause).message);
       messageRef.current?.focus();
@@ -74,9 +77,9 @@ export const ContactDialog = ({ profile, onClose, onSent }: ContactDialogProps) 
         </p>
 
         {error && (
-          <p className="alert alert--error" id="contact-error" role="alert">
-            {error}
-          </p>
+          <Notice tone="error">
+            <p id="contact-error">{error}</p>
+          </Notice>
         )}
 
         <div className="field">

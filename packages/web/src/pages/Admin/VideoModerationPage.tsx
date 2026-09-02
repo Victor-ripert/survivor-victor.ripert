@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   VIDEO_MODERATION_REASON_MAX_LENGTH,
   VIDEO_MODERATION_REASON_MIN_LENGTH,
@@ -6,23 +7,26 @@ import {
   type VideoModerationItem,
   type VideoModerationQueueFilter,
 } from '@profils-actifs/shared';
+import { FormField } from '../../components/FormField.js';
+import { ModerationStatusBadge } from '../../components/ModerationStatusBadge.js';
 import { Pagination } from '../../components/Pagination.js';
-import { EmptyState, ErrorNotice, LoadingRow } from '../../components/StatusMessages.js';
+import { EmptyState, ErrorNotice, LoadingRow, Notice } from '../../components/StatusMessages.js';
+import { VideoPlayer } from '../../components/VideoPlayer.js';
 import { useAsyncResource } from '../../hooks/useAsyncResource.js';
-import { ApiError, toApiError } from '../../services/api.js';
-import { fetchVideoModerationQueue, moderateVideo } from '../../services/recruiter.js';
-import { formatDate } from '../../utils/format.js';
+import { toApiError } from '../../services/api.js';
+import { fetchVideoModerationQueue, moderateVideo } from '../../services/admin.js';
 import { isEmbeddableUrl } from '../../utils/embed.js';
+import { formatDateTime } from '../../utils/format.js';
 
 /**
  * A priori video moderation (brief §7.9.2). Nothing a candidate deposits is
  * visible to a recruiter or to the public until it has been approved here.
  *
- * Two constraints from the legal adviser shape this screen rather than its
- * styling: the reason is mandatory **in both directions**, because it is shown
- * back to the candidate — "a video that disappears without explanation is
- * litigation starting" — and every decision must say who took it and when,
- * which is why the last decision is rendered on each row.
+ * Two constraints from the legal adviser shape this screen: the reason is
+ * mandatory **in both directions**, because it is shown back to the
+ * candidate — "a video that disappears without explanation is litigation
+ * starting" — and every decision must say who took it and when, which is why
+ * the last decision is rendered on each row.
  */
 
 const FILTERS: { value: VideoModerationQueueFilter; label: string }[] = [
@@ -31,12 +35,6 @@ const FILTERS: { value: VideoModerationQueueFilter; label: string }[] = [
   { value: 'REJECTED', label: 'Refusées' },
   { value: 'ALL', label: 'Toutes' },
 ];
-
-const STATUS_LABELS: Record<VideoModerationItem['moderationStatus'], string> = {
-  PENDING: 'En attente',
-  APPROVED: 'Validée',
-  REJECTED: 'Refusée',
-};
 
 interface DecisionFormProps {
   video: VideoModerationItem;
@@ -47,7 +45,7 @@ const DecisionForm = ({ video, onDecided }: DecisionFormProps) => {
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [pending, setPending] = useState<VideoModerationAction | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Derived, not stored: recomputing on each keystroke is cheaper than an
   // effect keeping a boolean in sync with the textarea.
@@ -66,60 +64,58 @@ const DecisionForm = ({ video, onDecided }: DecisionFormProps) => {
       });
       onDecided();
     } catch (cause: unknown) {
-      setError(toApiError(cause));
+      setError(toApiError(cause).message);
     } finally {
       setPending(null);
     }
   };
 
-  const reasonFieldId = `motif-${video.id}`;
-  const notesFieldId = `notes-${video.id}`;
-  const hintId = `motif-aide-${video.id}`;
-
   return (
     <form
-      className="moderation__decision"
-      onSubmit={(event) => {
-        event.preventDefault();
-      }}
+      className="moderation-item__decision"
+      onSubmit={(event) => event.preventDefault()}
+      aria-label={`Décision pour « ${video.title} »`}
     >
-      <div className="field">
-        <label className="field__label" htmlFor={reasonFieldId}>
-          Motif de la décision <span aria-hidden="true">*</span>
-        </label>
+      <FormField
+        id={`motif-${video.id}`}
+        label={
+          <>
+            Motif de la décision <span aria-hidden="true">*</span>
+          </>
+        }
+        hint={`Obligatoire dans les deux cas, validation comprise. Ce texte est affiché au candidat : ${VIDEO_MODERATION_REASON_MIN_LENGTH} caractères minimum.`}
+      >
         <textarea
-          id={reasonFieldId}
           name="reason"
           rows={3}
           required
           value={reason}
           maxLength={VIDEO_MODERATION_REASON_MAX_LENGTH}
-          aria-describedby={hintId}
           onChange={(event) => setReason(event.target.value)}
         />
-        <p className="field__hint" id={hintId}>
-          Obligatoire dans les deux cas, validation comprise. Ce texte est affiché au
-          candidat&nbsp;: {VIDEO_MODERATION_REASON_MIN_LENGTH} caractères minimum.
-        </p>
-      </div>
+      </FormField>
 
-      <div className="field">
-        <label className="field__label" htmlFor={notesFieldId}>
-          Note interne <span className="field__optional">(facultative)</span>
-        </label>
+      <FormField
+        id={`notes-${video.id}`}
+        label="Note interne"
+        hint="Jamais montrée au candidat."
+        optional
+      >
         <textarea
-          id={notesFieldId}
           name="notes"
           rows={2}
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
         />
-        <p className="field__hint">Jamais montrée au candidat.</p>
-      </div>
+      </FormField>
 
-      {error && <ErrorNotice error={error} />}
+      {error && (
+        <Notice tone="error">
+          <p>{error}</p>
+        </Notice>
+      )}
 
-      <div className="moderation__actions">
+      <div className="actions">
         <button
           type="button"
           className="button button--primary"
@@ -141,48 +137,61 @@ const DecisionForm = ({ video, onDecided }: DecisionFormProps) => {
   );
 };
 
-const VideoRow = ({ video, onDecided }: DecisionFormProps) => (
-  <article className="card moderation__item">
-    <header className="moderation__header">
-      <div>
-        <h2 className="moderation__title">{video.title}</h2>
-        <p className="moderation__applicant">
-          {video.applicant.firstName} {video.applicant.lastName}
-          {video.applicant.headline && <span> — {video.applicant.headline}</span>}
-        </p>
-        <p className="moderation__meta">Déposée le {formatDate(video.submittedAt)}</p>
+interface VideoRowProps extends DecisionFormProps {
+  active: boolean;
+  onActivate: (videoId: string) => void;
+}
+
+const VideoRow = ({ video, onDecided, active, onActivate }: VideoRowProps) => (
+  <article className="card moderation-item" aria-label={`Vidéo « ${video.title} »`}>
+    <div className="moderation-item__media">
+      <div className="moderation-item__header">
+        <div>
+          <h2 className="moderation-item__title">{video.title}</h2>
+          <p className="moderation-item__applicant">
+            {video.applicant.firstName} {video.applicant.lastName}
+            {video.applicant.headline && <span> — {video.applicant.headline}</span>}
+          </p>
+          <p className="moderation-item__meta">Déposée le {formatDateTime(video.submittedAt)}</p>
+        </div>
+        <ModerationStatusBadge status={video.moderationStatus} />
       </div>
-      <span className={`badge badge--${video.moderationStatus.toLowerCase()}`}>
-        {STATUS_LABELS[video.moderationStatus]}
-      </span>
-    </header>
 
-    {video.description && <p className="moderation__description">{video.description}</p>}
+      {video.description && <p className="moderation-item__meta">{video.description}</p>}
 
-    {isEmbeddableUrl(video.url) ? (
-      <iframe
-        className="moderation__player"
-        src={video.url}
-        title={`Vidéo de ${video.applicant.firstName} ${video.applicant.lastName} : ${video.title}`}
-        allowFullScreen
-      />
-    ) : (
-      // The allowlist in utils/embed.ts is what keeps an attacker-controlled
-      // page out of an authenticated admin frame. A link that fails it is not
-      // rendered, and it is not turned into a clickable link either.
-      <p className="alert alert--error" role="alert">
-        Cette adresse n’est pas une intégration reconnue et n’est donc pas affichée. À refuser, en
-        indiquant au candidat une plateforme acceptée.
-      </p>
-    )}
+      {isEmbeddableUrl(video.url) ? (
+        <VideoPlayer
+          video={{
+            id: video.id,
+            title: video.title,
+            url: video.url,
+            duration: video.durationSeconds,
+          }}
+          active={active}
+          onActivate={onActivate}
+        />
+      ) : (
+        // The allowlist in utils/embed.ts is what keeps an attacker-controlled
+        // page out of an authenticated admin frame. A link that fails it is
+        // not rendered, and it is not turned into a clickable link either.
+        <Notice tone="error">
+          <p>
+            Cette adresse n’est pas une intégration reconnue et n’est donc pas affichée. À refuser,
+            en indiquant au candidat une plateforme acceptée.
+          </p>
+        </Notice>
+      )}
 
-    {video.lastDecision && (
-      <p className="moderation__history">
-        {video.lastDecision.action === 'APPROVE' ? 'Validée' : 'Refusée'} par{' '}
-        {video.lastDecision.decidedBy.firstName} {video.lastDecision.decidedBy.lastName} le{' '}
-        {formatDate(video.lastDecision.decidedAt)} — «&nbsp;{video.lastDecision.reason}&nbsp;»
-      </p>
-    )}
+      <Link to={`/profils/${video.applicant.profileId}`}>Ouvrir le profil du candidat</Link>
+
+      {video.lastDecision && (
+        <p className="moderation-item__history">
+          {video.lastDecision.action === 'APPROVE' ? 'Validée' : 'Refusée'} par{' '}
+          {video.lastDecision.decidedBy.firstName} {video.lastDecision.decidedBy.lastName} le{' '}
+          {formatDateTime(video.lastDecision.decidedAt)} — «&nbsp;{video.lastDecision.reason}&nbsp;»
+        </p>
+      )}
+    </div>
 
     <DecisionForm video={video} onDecided={onDecided} />
   </article>
@@ -191,6 +200,7 @@ const VideoRow = ({ video, onDecided }: DecisionFormProps) => (
 export const VideoModerationPage = () => {
   const [status, setStatus] = useState<VideoModerationQueueFilter>('PENDING');
   const [page, setPage] = useState(1);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
 
   const load = useCallback(
     (signal: AbortSignal) => fetchVideoModerationQueue({ status, page }, signal),
@@ -204,12 +214,13 @@ export const VideoModerationPage = () => {
   };
 
   return (
-    <>
-      <header className="page-header">
+    <div className="page-reading stack stack--loose">
+      <header className="page-header" style={{ marginBottom: 0 }}>
         <div>
           <h1>Modération des vidéos</h1>
           <p className="page-header__subtitle">
-            Aucune vidéo n’est visible d’un recruteur ou du public avant d’avoir été validée ici.
+            Aucune vidéo n’est visible d’un recruteur ou du public avant d’avoir été validée ici. Le
+            motif est obligatoire et montré au candidat.
           </p>
         </div>
       </header>
@@ -237,14 +248,20 @@ export const VideoModerationPage = () => {
 
       {data && data.data.length > 0 && (
         <>
-          <div className="moderation__list">
+          <div className="moderation-list">
             {data.data.map((video) => (
-              <VideoRow key={video.id} video={video} onDecided={reload} />
+              <VideoRow
+                key={video.id}
+                video={video}
+                onDecided={reload}
+                active={activeVideoId === video.id}
+                onActivate={setActiveVideoId}
+              />
             ))}
           </div>
           <Pagination pagination={data.pagination} onPageChange={setPage} />
         </>
       )}
-    </>
+    </div>
   );
 };

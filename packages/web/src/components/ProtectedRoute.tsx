@@ -1,11 +1,12 @@
+import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import type { UserRole } from '@profils-actifs/shared';
 import { useAuth } from '../hooks/useAuth.js';
 import { LoadingRow } from './StatusMessages.js';
 
 interface ProtectedRouteProps {
-  roles: UserRole[];
-  children: React.ReactNode;
+  roles: readonly UserRole[];
+  children: ReactNode;
 }
 
 /**

@@ -1,7 +1,13 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, setUnauthorizedHandler } from '../services/api.js';
+import type { AuthUser } from '@profils-actifs/shared';
+import { setUnauthorizedHandler } from '../services/api.js';
+import {
+  fetchCurrentUser,
+  login as loginRequest,
+  register as registerRequest,
+} from '../services/auth.js';
+import type { RegisterInput } from '../services/auth.js';
 import { clearToken, readToken, writeToken } from '../services/auth-storage.js';
-import type { AuthUser, LoginResponse } from '../types/auth.js';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
@@ -9,6 +15,7 @@ export interface AuthContextValue {
   user: AuthUser | null;
   status: AuthStatus;
   login: (email: string, password: string) => Promise<AuthUser>;
+  register: (input: RegisterInput) => Promise<AuthUser>;
   logout: () => void;
 }
 
@@ -39,10 +46,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const controller = new AbortController();
 
-    api
-      .get<AuthUser>('/auth/me', { signal: controller.signal })
-      .then((response) => {
-        setUser(response.data);
+    fetchCurrentUser(controller.signal)
+      .then((current) => {
+        setUser(current);
         setStatus('authenticated');
       })
       .catch(() => {
@@ -53,18 +59,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [logout]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
-    const response = await api.post<LoginResponse>('/auth/login', { email, password });
+    const response = await loginRequest(email, password);
 
-    writeToken(response.data.token);
-    setUser(response.data.user);
+    writeToken(response.token);
+    setUser(response.user);
     setStatus('authenticated');
 
-    return response.data.user;
+    return response.user;
+  }, []);
+
+  const register = useCallback(async (input: RegisterInput): Promise<AuthUser> => {
+    const response = await registerRequest(input);
+
+    writeToken(response.token);
+    setUser(response.user);
+    setStatus('authenticated');
+
+    return response.user;
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, login, logout }),
-    [user, status, login, logout],
+    () => ({ user, status, login, register, logout }),
+    [user, status, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

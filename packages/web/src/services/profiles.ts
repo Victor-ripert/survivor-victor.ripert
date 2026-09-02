@@ -1,6 +1,6 @@
 import axios from 'axios';
-import type { CertificationStatus, Paginated, Profile } from '@profils-actifs/shared';
-import { httpClient } from './httpClient.js';
+import type { CertificationStatus, Paginated, Profile, ProfileInput } from '@profils-actifs/shared';
+import { api } from './api.js';
 
 /**
  * Mirrors the API's own `ProfileFeedFilters` (`profile.service.ts`) —
@@ -20,13 +20,13 @@ export interface ProfileFeedParams extends ProfileFeedFilters {
 
 /**
  * `GET /profiles` — the public, paginated feed. A thin wrapper around
- * `httpClient`, kept as its own function (rather than called inline from
+ * `api`, kept as its own function (rather than called inline from
  * `useProfileFeed`) so the hook doesn't need to know anything about HTTP —
  * it depends on "a function that returns a page of profiles," which also
  * makes it trivial to substitute a fake one in tests.
  */
 export async function fetchProfileFeed(params: ProfileFeedParams): Promise<Paginated<Profile>> {
-  const { data } = await httpClient.get<Paginated<Profile>>('/profiles', { params });
+  const { data } = await api.get<Paginated<Profile>>('/profiles', { params });
   return data;
 }
 
@@ -42,7 +42,7 @@ export async function fetchProfileFeed(params: ProfileFeedParams): Promise<Pagin
  */
 export async function getProfileById(id: string): Promise<Profile | null> {
   try {
-    const { data } = await httpClient.get<Profile>(`/profiles/${id}`);
+    const { data } = await api.get<Profile>(`/profiles/${id}`);
     return data;
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.status === 404) {
@@ -50,4 +50,34 @@ export async function getProfileById(id: string): Promise<Profile | null> {
     }
     throw err;
   }
+}
+
+/**
+ * `GET /profiles/me` — the signed-in applicant's own profile, applicant
+ * only. `api`'s request interceptor attaches the bearer token; this
+ * function doesn't need to know that's happening. Returns `null` for a
+ * 404 same as `getProfileById` — for this endpoint that specifically means
+ * "this applicant hasn't created a profile yet," a normal state for
+ * `MyProfilePage` to start a blank form for, not an error.
+ */
+export async function getMyProfile(): Promise<Profile | null> {
+  try {
+    const { data } = await api.get<Profile>('/profiles/me');
+    return data;
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * `POST /profiles/me` — create-or-update, applicant only. Matches the
+ * backend's own upsert semantics: the same call creates the profile the
+ * first time and updates it every time after.
+ */
+export async function upsertMyProfile(input: ProfileInput): Promise<Profile> {
+  const { data } = await api.post<Profile>('/profiles/me', input);
+  return data;
 }

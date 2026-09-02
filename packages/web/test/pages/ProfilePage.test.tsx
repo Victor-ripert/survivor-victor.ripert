@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { jest } from '@jest/globals';
 import type { Profile } from '@profils-actifs/shared';
-import { httpClient } from '../../src/services/httpClient.js';
+import { api } from '../../src/services/api.js';
 import { ProfilePage } from '../../src/pages/Profile/ProfilePage.js';
 
 const fullProfile: Profile = {
@@ -52,7 +52,7 @@ describe('ProfilePage', () => {
   });
 
   it('renders headline, bio, location, sector, skills, video and certification badge', async () => {
-    jest.spyOn(httpClient, 'get').mockResolvedValue({ data: fullProfile });
+    jest.spyOn(api, 'get').mockResolvedValue({ data: fullProfile });
 
     renderAt('/profiles/profile-1');
 
@@ -73,7 +73,7 @@ describe('ProfilePage', () => {
   });
 
   it('shows a real empty state for a 404, not a crash', async () => {
-    jest.spyOn(httpClient, 'get').mockRejectedValue(fakeAxiosError(404));
+    jest.spyOn(api, 'get').mockRejectedValue(fakeAxiosError(404));
 
     renderAt('/profiles/does-not-exist');
 
@@ -87,7 +87,7 @@ describe('ProfilePage', () => {
   });
 
   it('shows a distinct message when the request itself fails', async () => {
-    jest.spyOn(httpClient, 'get').mockRejectedValue(fakeAxiosError(500));
+    jest.spyOn(api, 'get').mockRejectedValue(fakeAxiosError(500));
 
     renderAt('/profiles/profile-1');
 

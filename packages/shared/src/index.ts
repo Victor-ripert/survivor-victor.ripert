@@ -1,4 +1,6 @@
 export * from './constants/age.js';
+
+export * from './constants/consent.js';
 export * from './constants/interactions.js';
 export * from './constants/pagination.js';
 export * from './types/api.js';

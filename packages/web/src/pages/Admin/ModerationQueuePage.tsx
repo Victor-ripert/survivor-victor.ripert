@@ -3,7 +3,7 @@ import type { ChangeEvent, JSX } from 'react';
 import { Link } from 'react-router-dom';
 import type { ModerationAction, PaginationMeta, Profile } from '@profils-actifs/shared';
 import { DEFAULT_PAGE_SIZE } from '@profils-actifs/shared';
-import { getToken } from '../../utils/authStorage.js';
+import { readToken } from '../../services/auth-storage.js';
 import { decodeToken } from '../../utils/jwt.js';
 import { fetchPendingProfiles, moderateProfile } from '../../services/admin.js';
 import { VideoEmbed } from '../../components/VideoEmbed.js';
@@ -28,7 +28,7 @@ const ACTIONS: ReadonlyArray<{ action: ModerationAction; label: string }> = [
  * a raw 403, and looks broken.
  */
 export function ModerationQueuePage(): JSX.Element {
-  const token = getToken();
+  const token = readToken();
   const currentUser = token ? decodeToken(token) : null;
   const isAdmin = currentUser?.role === 'ADMIN';
 
@@ -73,7 +73,7 @@ export function ModerationQueuePage(): JSX.Element {
     return (
       <div className={styles.emptyState}>
         <p>Vous devez être connecté(e) en tant qu’administrateur pour accéder à cette page.</p>
-        <Link to="/login">Se connecter</Link>
+        <Link to="/connexion">Se connecter</Link>
       </div>
     );
   }
@@ -138,7 +138,7 @@ export function ModerationQueuePage(): JSX.Element {
         ))}
       </ul>
 
-      {pagination && <Pagination page={page} totalPages={pagination.pages} onPageChange={setPage} />}
+      {pagination && <Pagination pagination={pagination} onPageChange={setPage} />}
     </div>
   );
 }

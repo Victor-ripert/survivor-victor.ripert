@@ -1,4 +1,10 @@
 import { defineConfig } from 'prisma/config';
+import { loadRepoEnv } from '@profils-actifs/shared/node';
+
+// Prisma's config-file system (unlike the old schema-based one) loads no
+// .env file on its own, and the CLI runs with cwd = packages/db, so the repo's
+// root env files are loaded explicitly here.
+loadRepoEnv();
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',

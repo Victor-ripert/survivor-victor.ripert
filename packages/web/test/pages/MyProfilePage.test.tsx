@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { jest } from '@jest/globals';
 import type { Profile } from '@profils-actifs/shared';
 import { api } from '../../src/services/api.js';
-import { clearToken, setToken } from '../../src/utils/authStorage.js';
+import { clearToken, writeToken } from '../../src/services/auth-storage.js';
 import { MyProfilePage } from '../../src/pages/Profile/MyProfilePage.js';
 
 const existingProfile: Profile = {
@@ -46,12 +46,12 @@ describe('MyProfilePage', () => {
     renderPage();
 
     expect(screen.getByText('Vous devez être connecté(e) pour modifier votre profil.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Se connecter' })).toHaveAttribute('href', '/login');
+    expect(screen.getByRole('link', { name: 'Se connecter' })).toHaveAttribute('href', '/connexion');
     expect(getSpy).not.toHaveBeenCalled();
   });
 
   it('starts with a blank form for a brand-new applicant (404 on /profiles/me)', async () => {
-    setToken('a-token');
+    writeToken('a-token');
     jest.spyOn(api, 'get').mockRejectedValue(fakeAxiosError(404));
 
     renderPage();
@@ -63,7 +63,7 @@ describe('MyProfilePage', () => {
   });
 
   it('pre-fills the form from the existing profile', async () => {
-    setToken('a-token');
+    writeToken('a-token');
     jest.spyOn(api, 'get').mockResolvedValue({ data: existingProfile });
 
     renderPage();
@@ -74,7 +74,7 @@ describe('MyProfilePage', () => {
   });
 
   it('shows a field error and does not submit when a required field is cleared', async () => {
-    setToken('a-token');
+    writeToken('a-token');
     jest.spyOn(api, 'get').mockResolvedValue({ data: existingProfile });
     const postSpy = jest.spyOn(api, 'post');
 
@@ -89,7 +89,7 @@ describe('MyProfilePage', () => {
   });
 
   it('submits the form to POST /profiles/me and shows a confirmation', async () => {
-    setToken('a-token');
+    writeToken('a-token');
     jest.spyOn(api, 'get').mockResolvedValue({ data: existingProfile });
     jest
       .spyOn(api, 'post')
@@ -111,7 +111,7 @@ describe('MyProfilePage', () => {
   });
 
   it('adds a video and shows it in the list', async () => {
-    setToken('a-token');
+    writeToken('a-token');
     jest.spyOn(api, 'get').mockResolvedValue({ data: existingProfile });
     jest.spyOn(api, 'post').mockResolvedValue({
       data: {
@@ -147,7 +147,7 @@ describe('MyProfilePage', () => {
   });
 
   it('deletes a video and removes it from the list', async () => {
-    setToken('a-token');
+    writeToken('a-token');
     const profileWithVideo: Profile = {
       ...existingProfile,
       videos: [

@@ -20,6 +20,7 @@ model User {
   lastName     String
   role         UserRole
   isActive     Boolean  @default(true)
+  birthDate    DateTime?
 
   profile               Profile?
   attempts              CertificationAttempt[]
@@ -150,7 +151,9 @@ model Video {
   moderationStatus ModerationStatus @default(PENDING)
   moderationLogs   ModerationLog[]
 
-  createdAt DateTime @default(now())
+  acceptedAt        DateTime
+  consentTextVersion String
+  revokedAt         DateTime?
 
   @@index([profileId])
 }

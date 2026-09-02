@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { jest } from '@jest/globals';
 import type { Profile } from '@profils-actifs/shared';
 import { api } from '../../src/services/api.js';
-import { clearToken, setToken } from '../../src/utils/authStorage.js';
+import { clearToken, writeToken } from '../../src/services/auth-storage.js';
 import { ModerationQueuePage } from '../../src/pages/Admin/ModerationQueuePage.js';
 
 function makeToken(payload: unknown): string {
@@ -67,7 +67,7 @@ describe('ModerationQueuePage', () => {
   });
 
   it('blocks a non-admin token without fetching, as a frontend-only defense in depth', () => {
-    setToken(applicantToken);
+    writeToken(applicantToken);
     const getSpy = jest.spyOn(api, 'get');
 
     renderPage();
@@ -77,7 +77,7 @@ describe('ModerationQueuePage', () => {
   });
 
   it('lists pending profiles with their video, for an admin', async () => {
-    setToken(adminToken);
+    writeToken(adminToken);
     jest.spyOn(api, 'get').mockResolvedValue({
       data: { data: [pendingProfile], pagination: { page: 1, limit: 20, total: 1, pages: 1 } },
     });
@@ -95,7 +95,7 @@ describe('ModerationQueuePage', () => {
   });
 
   it('approves a profile and removes it from the queue', async () => {
-    setToken(adminToken);
+    writeToken(adminToken);
     jest.spyOn(api, 'get').mockResolvedValue({
       data: { data: [pendingProfile], pagination: { page: 1, limit: 20, total: 1, pages: 1 } },
     });
@@ -119,7 +119,7 @@ describe('ModerationQueuePage', () => {
   });
 
   it('sends a trimmed reason when one is filled in', async () => {
-    setToken(adminToken);
+    writeToken(adminToken);
     jest.spyOn(api, 'get').mockResolvedValue({
       data: { data: [pendingProfile], pagination: { page: 1, limit: 20, total: 1, pages: 1 } },
     });
@@ -145,7 +145,7 @@ describe('ModerationQueuePage', () => {
   });
 
   it('shows an error and keeps the card when the moderation action fails', async () => {
-    setToken(adminToken);
+    writeToken(adminToken);
     jest.spyOn(api, 'get').mockResolvedValue({
       data: { data: [pendingProfile], pagination: { page: 1, limit: 20, total: 1, pages: 1 } },
     });

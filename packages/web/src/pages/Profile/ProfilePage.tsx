@@ -51,7 +51,11 @@ export function ProfilePage(): JSX.Element {
     <article className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.headline}>{profile.headline ?? profile.sector}</h1>
-        <CertificationBadge status={profile.certificationStatus} badge={profile.certificationBadge} />
+        <CertificationBadge
+          status={profile.certificationStatus}
+          badge={profile.certificationBadge ?? null}
+          score={profile.certificationScore ?? null}
+        />
         <p className={styles.meta}>
           {profile.sector} · {profile.location}
         </p>

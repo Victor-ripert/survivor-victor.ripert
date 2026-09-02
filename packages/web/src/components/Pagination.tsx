@@ -1,47 +1,42 @@
-import type { JSX } from 'react';
-import styles from './Pagination.module.css';
+import type { PaginationMeta } from '@profils-actifs/shared';
 
-export interface PaginationProps {
-  page: number;
-  totalPages: number;
+interface PaginationProps {
+  pagination: PaginationMeta;
   onPageChange: (page: number) => void;
 }
 
 /**
- * Purely presentational: `page`/`totalPages` in, `onPageChange` out. Has
- * no idea whether it's paging through the public feed, a future recruiter
- * catalogue, or an admin queue — whoever renders it owns the actual fetch,
- * this only ever asks for "go to page N."
+ * Purely presentational: a `PaginationMeta` in, `onPageChange` out. Takes
+ * the whole `pagination` object rather than separate `page`/`totalPages`
+ * primitives, since every caller already holds exactly that object from
+ * its last fetch — no destructuring needed at the call site.
  */
-export function Pagination({ page, totalPages, onPageChange }: PaginationProps): JSX.Element | null {
-  if (totalPages <= 1) {
-    return null;
-  }
+export const Pagination = ({ pagination, onPageChange }: PaginationProps) => {
+  const { page, pages } = pagination;
 
-  const isFirstPage = page <= 1;
-  const isLastPage = page >= totalPages;
+  if (pages <= 1) return null;
 
   return (
-    <nav className={styles.pagination} aria-label="Pagination">
+    <nav className="pagination" aria-label="Pagination des résultats">
       <button
         type="button"
-        className={styles.button}
+        className="button"
         onClick={() => onPageChange(page - 1)}
-        disabled={isFirstPage}
+        disabled={page <= 1}
       >
         Précédent
       </button>
-      <span className={styles.status} aria-live="polite">
-        Page {page} sur {totalPages}
+      <span aria-live="polite">
+        Page {page} sur {pages}
       </span>
       <button
         type="button"
-        className={styles.button}
+        className="button"
         onClick={() => onPageChange(page + 1)}
-        disabled={isLastPage}
+        disabled={page >= pages}
       >
         Suivant
       </button>
     </nav>
   );
-}
+};

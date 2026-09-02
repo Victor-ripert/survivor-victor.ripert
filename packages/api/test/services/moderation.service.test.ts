@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../src/config/prisma.js';
 import { applyModeration, listPendingProfiles } from '../../src/services/moderation.service.js';
-import { ServiceError } from '../../src/utils/errors.js';
+import { HttpError } from '../../src/utils/http-error.js';
+import { buildVideoConsent } from '../../src/services/video-consent.js';
 
 /**
  * Integration tests — unlike every other test file in this project so far,
@@ -54,6 +55,7 @@ describe('moderation.service', () => {
         title: 'Vidéo de présentation',
         type: 'EXTERNAL_LINK',
         url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        ...buildVideoConsent(),
       },
     });
     videoId = video.id;
@@ -126,7 +128,7 @@ describe('moderation.service', () => {
 
     await expect(
       applyModeration('profile', 'nonexistent-profile-id', adminId, 'APPROVE'),
-    ).rejects.toBeInstanceOf(ServiceError);
+    ).rejects.toBeInstanceOf(HttpError);
 
     const logCountAfter = await prisma.moderationLog.count();
     expect(logCountAfter).toBe(logCountBefore);

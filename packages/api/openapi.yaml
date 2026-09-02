@@ -115,6 +115,40 @@ components:
           enum: [BEGINNER, INTERMEDIATE, ADVANCED, EXPERT]
       required: [id, skillId, level]
 
+    # Candidate-facing shape — never carries `points`/`weight`/`maxPoints`, or
+    # the scoring barème leaks to whoever opens the browser network tab.
+    CertificationQuestionPublic:
+      type: object
+      properties:
+        id:
+          type: string
+        order:
+          type: integer
+        type:
+          type: string
+          enum: [MULTIPLE_CHOICE, SHORT_TEXT, CHECKBOX, LIKERT_SCALE]
+        text:
+          type: string
+        description:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/CertificationOptionPublic'
+      required: [id, order, type, text]
+
+    CertificationOptionPublic:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        order:
+          type: integer
+      required: [id, text, order]
+
+    # Admin-facing shape — full detail, used by the back-office question editor.
     CertificationQuestion:
       type: object
       properties:
@@ -133,11 +167,13 @@ components:
           type: integer
         maxPoints:
           type: integer
+        isActive:
+          type: boolean
         options:
           type: array
           items:
             $ref: '#/components/schemas/CertificationOption'
-      required: [id, order, type, text]
+      required: [id, order, type, text, weight, maxPoints, isActive]
 
     CertificationOption:
       type: object
@@ -150,7 +186,7 @@ components:
           type: integer
         order:
           type: integer
-      required: [id, text, order]
+      required: [id, text, points, order]
 
     CertificationAttempt:
       type: object
@@ -195,6 +231,38 @@ components:
           type: integer
       required: [id, attemptId, questionId]
 
+    CertificationLevel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        minScore:
+          type: integer
+        maxScore:
+          type: integer
+        badgeIconUrl:
+          type: string
+          nullable: true
+          description: null for the lowest tier — that's what marks it as "no badge earned"
+        order:
+          type: integer
+      required: [id, name, minScore, maxScore, order]
+
+    CertificationSubmitResult:
+      type: object
+      properties:
+        attempt:
+          $ref: '#/components/schemas/CertificationAttempt'
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        badge:
+          $ref: '#/components/schemas/CertificationLevel'
+      required: [attempt, score, badge]
+
     Interaction:
       type: object
       properties:
@@ -209,6 +277,7 @@ components:
           enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
         message:
           type: string
+          nullable: true
         isViewed:
           type: boolean
         isFavorite:
@@ -216,7 +285,9 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, recipientId, createdById, type, createdAt]
+        counterpart:
+          $ref: '#/components/schemas/InteractionCounterpart'
+      required: [id, recipientId, createdById, type, createdAt, counterpart]
 
     ErrorResponse:
       type: object
@@ -228,12 +299,393 @@ components:
         statusCode:
           type: integer
 
+    PaginationMeta:
+      type: object
+      description: '`pages` is 0 when nothing matched, so "no result" reads differently from "one page of results".'
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+      required: [page, limit, total, pages]
+
+    CatalogueSkill:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        level:
+          type: string
+          enum: [BEGINNER, INTERMEDIATE, ADVANCED, EXPERT]
+      required: [id, name, level]
+
+    CataloguePreviewVideo:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+      required: [id, title, url]
+
+    CatalogueProfile:
+      type: object
+      description: One catalogue row, seen through the eyes of the calling recruiter.
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+          description: Target of POST /interactions and of the favourites routes.
+        firstName:
+          type: string
+        lastName:
+          type: string
+        headline:
+          type: string
+          nullable: true
+        location:
+          type: string
+        sector:
+          type: string
+        certificationStatus:
+          type: string
+          enum: [PENDING, IN_PROGRESS, COMPLETED, REJECTED]
+        certificationScore:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+        certificationBadge:
+          type: string
+          nullable: true
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogueSkill'
+        videoCount:
+          type: integer
+        previewVideo:
+          allOf:
+            - $ref: '#/components/schemas/CataloguePreviewVideo'
+          nullable: true
+        isFavorite:
+          type: boolean
+          description: Whether the calling recruiter shortlisted this applicant.
+        lastContactedAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        [
+          id,
+          userId,
+          firstName,
+          lastName,
+          location,
+          sector,
+          certificationStatus,
+          skills,
+          videoCount,
+          isFavorite,
+          updatedAt,
+        ]
+
+    CatalogueProfilePage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogueProfile'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      required: [data, pagination]
+
+    FacetValue:
+      type: object
+      properties:
+        value:
+          type: string
+        count:
+          type: integer
+      required: [value, count]
+
+    CatalogueFacets:
+      type: object
+      properties:
+        sectors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetValue'
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetValue'
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetValue'
+      required: [sectors, locations, skills]
+
+    InteractionCounterpart:
+      type: object
+      description: The other party, from the point of view of the caller.
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [APPLICANT, RECRUITER, ADMIN]
+        profileId:
+          type: string
+          nullable: true
+      required: [id, firstName, lastName, role]
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [NEW_INTERACTION_RECEIVED, CERTIFICATION_BADGE_EARNED]
+        title:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: boolean
+        interactionId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, type, title, message, isRead, createdAt]
+
+    NotificationPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      required: [data, pagination]
+
+    InteractionPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Interaction'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      required: [data, pagination]
+
+    DailyCount:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        count:
+          type: integer
+      required: [date, count]
+
+    LabelledCount:
+      type: object
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+      required: [label, count]
+
+    RecruiterDashboard:
+      type: object
+      properties:
+        totals:
+          type: object
+          properties:
+            profilesViewed:
+              type: integer
+              description: Distinct applicants viewed, not page loads.
+            contactsSent:
+              type: integer
+            favorites:
+              type: integer
+            applicantsReached:
+              type: integer
+          required: [profilesViewed, contactsSent, favorites, applicantsReached]
+        certifiedShare:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Share of contacted applicants holding a completed certification.
+        activityLast30Days:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyCount'
+        interactionsByType:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        topSectorsReached:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        recentContacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Interaction'
+      required:
+        [
+          totals,
+          certifiedShare,
+          activityLast30Days,
+          interactionsByType,
+          topSectorsReached,
+          recentContacts,
+        ]
+
+    AdminDashboard:
+      type: object
+      properties:
+        totals:
+          type: object
+          properties:
+            totalProfiles:
+              type: integer
+            activeApplicants:
+              type: integer
+            totalRecruiters:
+              type: integer
+            totalInteractions:
+              type: integer
+            pendingModeration:
+              type: integer
+          required:
+            [totalProfiles, activeApplicants, totalRecruiters, totalInteractions, pendingModeration]
+        certificationRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        usersByRole:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        profilesByCertificationStatus:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        interactionsByType:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        topSectors:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelledCount'
+        signupsLast30Days:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyCount'
+        interactionsLast30Days:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyCount'
+      required:
+        [
+          totals,
+          certificationRate,
+          usersByRole,
+          profilesByCertificationStatus,
+          interactionsByType,
+          topSectors,
+          signupsLast30Days,
+          interactionsLast30Days,
+        ]
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: 1-based page number. A page beyond the last one returns an empty list, not an error.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Page size, capped server-side at 20.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 20
+        default: 20
+
+  responses:
+    BadRequest:
+      description: The request failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: The caller's role does not allow this
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: The resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Rate limit reached
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
   # ==========================================================================
-  # Reusable error-response examples. Every non-2xx response in this file is
-  # `{ error, message, statusCode }` (see CLAUDE.md's "Uniform error shape"),
-  # so the concrete example bodies live once here and get referenced by
-  # `$ref` from each path's `responses` block, instead of the same JSON
-  # being retyped at every route that can fail the same way.
+  # Reusable error-response *examples* — concrete illustrative bodies, used
+  # alongside (not instead of) the `responses:` block above: `responses.*`
+  # gives a path a whole ready-made response object to `$ref`, `examples.*`
+  # gives a concrete JSON payload to show under a response's schema. Every
+  # non-2xx response in this file is `{ error, message, statusCode }` (see
+  # CLAUDE.md's "Uniform error shape"), so the concrete example bodies live
+  # once here and get referenced by `$ref` from each path's `responses`
+  # block, instead of the same JSON being retyped at every route that can
+  # fail the same way.
   # ==========================================================================
   examples:
     ValidationError:
@@ -319,7 +771,10 @@ paths:
                   type: string
                 role:
                   type: string
-                  enum: [APPLICANT, RECRUITER, ADMIN]
+                  # ADMIN is deliberately not self-assignable: this endpoint is
+                  # unauthenticated, so accepting it would let anyone mint an
+                  # administrator. Admin accounts come from the seed.
+                  enum: [APPLICANT, RECRUITER]
               required: [email, password, firstName, lastName, role]
       responses:
         '201':
@@ -908,11 +1363,25 @@ paths:
   /certification/questions:
     get:
       tags: [Certification]
-      summary: Get all certification questions (public)
+      summary: Get active certification questions (public, no scoring data)
       security: []
       responses:
         '200':
-          description: List of questions
+          description: List of questions, without points/weight/maxPoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CertificationQuestionPublic'
+
+  /admin/certification/questions:
+    get:
+      tags: [Certification, Administration]
+      summary: Get all certification questions, including inactive ones (admin only)
+      responses:
+        '200':
+          description: Full list of questions with scoring data
           content:
             application/json:
               schema:
@@ -921,7 +1390,7 @@ paths:
                   $ref: '#/components/schemas/CertificationQuestion'
 
     post:
-      tags: [Certification]
+      tags: [Certification, Administration]
       summary: Create certification question (admin only)
       requestBody:
         required: true
@@ -941,8 +1410,71 @@ paths:
                   type: string
                 weight:
                   type: integer
+                  default: 1
                 maxPoints:
                   type: integer
+                  default: 10
+                options:
+                  type: array
+                  description: Required (min 2) when type is MULTIPLE_CHOICE or CHECKBOX
+                  items:
+                    type: object
+                    properties:
+                      text:
+                        type: string
+                      points:
+                        type: integer
+                      order:
+                        type: integer
+                    required: [text, points, order]
+              required: [order, type, text]
+      responses:
+        '201':
+          description: Question created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationQuestion'
+        '400':
+          description: Validation error (including a choice question with fewer than 2 options)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/certification/questions/{id}:
+    patch:
+      tags: [Certification, Administration]
+      summary: Update a certification question, its weight, or its options (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: All fields optional. Sending `options` replaces the full option set.
+              properties:
+                order:
+                  type: integer
+                type:
+                  type: string
+                  enum: [MULTIPLE_CHOICE, SHORT_TEXT, CHECKBOX, LIKERT_SCALE]
+                text:
+                  type: string
+                description:
+                  type: string
+                weight:
+                  type: integer
+                maxPoints:
+                  type: integer
+                isActive:
+                  type: boolean
                 options:
                   type: array
                   items:
@@ -952,31 +1484,76 @@ paths:
                         type: string
                       points:
                         type: integer
-              required: [order, type, text]
+                      order:
+                        type: integer
+                    required: [text, points, order]
       responses:
-        '201':
-          description: Question created
+        '200':
+          description: Question updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CertificationQuestion'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Question not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Cannot replace options for a question that already has recorded answers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /certification/attempt:
     post:
       tags: [Certification]
-      summary: Start certification attempt (applicant only)
+      summary: Start or resume the caller's certification attempt (applicant only)
+      description: >-
+        At most one IN_PROGRESS attempt exists per user. If one is already
+        open, it is returned as-is (200) instead of creating a new one (201)
+        — this is what makes save/resume work.
       responses:
-        '201':
-          description: Attempt created
+        '200':
+          description: An IN_PROGRESS attempt already existed and was returned
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CertificationAttempt'
+        '201':
+          description: A new attempt was created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationAttempt'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user is not an APPLICANT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /certification/attempt/{attemptId}:
     get:
       tags: [Certification]
-      summary: Get certification attempt
+      summary: Get a certification attempt (applicant only, own attempt)
+      description: >-
+        While the attempt is IN_PROGRESS, each answer's `pointsEarned` is
+        omitted — scoring is never revealed before submission.
       parameters:
         - name: attemptId
           in: path
@@ -990,11 +1567,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CertificationAttempt'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: This attempt does not belong to the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Attempt not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /certification/attempt/{attemptId}/answer:
     post:
       tags: [Certification]
-      summary: Submit answer to question (applicant only, can save in progress)
+      summary: Save an answer to one question of an in-progress attempt (applicant only)
+      description: >-
+        Re-submitting an answer for the same question REPLACES it, it never
+        accumulates. Exactly one of optionId / optionIds / textAnswer /
+        numericAnswer is required, matching the question's real type in the
+        database — the client's intent is validated against that, not
+        trusted at face value. `pointsEarned` is never included in the
+        response; scoring is computed only on /submit.
       parameters:
         - name: attemptId
           in: path
@@ -1012,23 +1614,68 @@ paths:
                   type: string
                 optionId:
                   type: string
+                  description: Required for MULTIPLE_CHOICE questions
+                optionIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Required for CHECKBOX questions (one or more selected options)
                 textAnswer:
                   type: string
+                  description: Required for SHORT_TEXT questions
                 numericAnswer:
                   type: integer
+                  minimum: 1
+                  maximum: 5
+                  description: Required for LIKERT_SCALE questions (1 to 5)
               required: [questionId]
       responses:
         '201':
-          description: Answer saved
+          description: >-
+            The saved answer(s) — an array with one item, except for
+            CHECKBOX questions which return one item per selected option
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Answer'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Answer'
+        '400':
+          description: Validation error (missing/invalid field for this question's type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: This attempt does not belong to the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Attempt or question not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The attempt is no longer IN_PROGRESS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /certification/attempt/{attemptId}/submit:
     post:
       tags: [Certification]
-      summary: Submit certification attempt for scoring (applicant only)
+      summary: Score and close an in-progress attempt (applicant only)
+      description: >-
+        Computes the final score, resolves the badge tier, writes both onto
+        the applicant's Profile, and sends a notification if a badge tier
+        was actually earned (the lowest tier has no badge). Idempotent in
+        the sense that submitting an already-COMPLETED attempt is rejected
+        (409) rather than recomputing — the recorded score never changes
+        after the fact.
       parameters:
         - name: attemptId
           in: path
@@ -1037,43 +1684,317 @@ paths:
             type: string
       responses:
         '200':
-          description: Attempt submitted and scored
+          description: Attempt scored and closed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CertificationAttempt'
+                $ref: '#/components/schemas/CertificationSubmitResult'
+        '403':
+          description: This attempt does not belong to the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Attempt not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The attempt is not IN_PROGRESS (already submitted, abandoned, or expired)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ==========================================================================
-  # INTERACTIONS & RECRUITER (Domain D)
+  # RECRUITER SPACE & INTERACTIONS (Domain D)
   # ==========================================================================
+
+  /recruiter/catalogue:
+    get:
+      tags: [Recruiter]
+      summary: Browse the applicant catalogue (recruiter/admin only)
+      description: >
+        Paginated, filtered list of job-seeker profiles. Profiles rejected by
+        moderation and profiles owned by a deactivated account are never
+        returned; profiles still awaiting review are, so that a moderation
+        backlog does not hide job-seekers from recruiters.
+        Rows deliberately carry no email address — a recruiter reaches an
+        applicant through `POST /interactions`, which keeps the contact
+        auditable and notifies the applicant.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: q
+          in: query
+          description: Free-text search over headline, bio, sector, location, name and skills.
+          schema:
+            type: string
+            maxLength: 100
+        - name: sector
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: skills
+          in: query
+          description: >
+            Skill names, repeated or comma-separated. A profile must carry
+            every requested skill, not just one of them.
+          schema:
+            type: array
+            maxItems: 10
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: certifiedOnly
+          in: query
+          schema:
+            type: boolean
+        - name: minScore
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+        - name: hasVideo
+          in: query
+          schema:
+            type: boolean
+        - name: favoritesOnly
+          in: query
+          description: Restricts the result to the caller's shortlist.
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, score, name]
+            default: recent
+      responses:
+        '200':
+          description: A page of catalogue profiles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogueProfilePage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /recruiter/catalogue/facets:
+    get:
+      tags: [Recruiter]
+      summary: List filter values that match at least one visible profile
+      description: >
+        Lets the catalogue UI offer only filters that return results. Counts
+        follow the same visibility rules as the catalogue itself.
+      responses:
+        '200':
+          description: Available filter values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogueFacets'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /recruiter/favorites:
+    get:
+      tags: [Recruiter]
+      summary: List the caller's shortlisted applicants
+      description: The catalogue narrowed to favourites; accepts the same filters.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, score, name]
+            default: recent
+      responses:
+        '200':
+          description: A page of shortlisted profiles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogueProfilePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /recruiter/favorites/{applicantId}:
+    put:
+      tags: [Recruiter]
+      summary: Add an applicant to the caller's shortlist (idempotent)
+      parameters:
+        - name: applicantId
+          in: path
+          required: true
+          description: User id of the applicant, not the profile id.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The applicant was already shortlisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+        '201':
+          description: The applicant was added to the shortlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Recruiter]
+      summary: Remove an applicant from the caller's shortlist (idempotent)
+      description: >
+        Clears the favourite flag and keeps the interaction row, so the
+        history of who was shortlisted stays auditable.
+      parameters:
+        - name: applicantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: The applicant is not shortlisted any more
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /recruiter/dashboard:
+    get:
+      tags: [Recruiter]
+      summary: Activity summary for the calling recruiter
+      responses:
+        '200':
+          description: Recruiter dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterDashboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /interactions:
     get:
       tags: [Interactions]
-      summary: Get my interactions (recruiter views sent, applicant views received)
+      summary: List my interactions
+      description: >
+        Defaults to what the caller sent, or to what they received when the
+        caller is a job-seeker; `direction` overrides that.
+      parameters:
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [sent, received]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
-          description: List of interactions
+          description: A page of interactions
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  sent:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Interaction'
-                  received:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Interaction'
+                $ref: '#/components/schemas/InteractionPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
-  /interactions/{recipientId}:
     post:
       tags: [Interactions]
-      summary: Create interaction with applicant (recruiter/admin)
+      summary: Record an interaction with an applicant (recruiter/admin)
+      description: >
+        `message` is required for CONTACT and MESSAGE and rejected for the
+        other types. A repeated VIEW within 24h collapses onto the existing
+        one and answers 200 instead of 201. Only CONTACT and MESSAGE notify
+        the applicant, and they are capped at 5 per applicant per 24h.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipientId:
+                  type: string
+                  description: User id of the applicant.
+                type:
+                  type: string
+                  enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
+                message:
+                  type: string
+                  minLength: 10
+                  maxLength: 2000
+              required: [recipientId, type]
+      responses:
+        '200':
+          description: An equivalent interaction already existed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+        '201':
+          description: Interaction recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /interactions/{interactionId}:
+    patch:
+      tags: [Interactions]
+      summary: Update an interaction flag
+      description: >
+        `isViewed` may only be written by the applicant who received the
+        interaction, `isFavorite` only by the recruiter who created it.
       parameters:
-        - name: recipientId
+        - name: interactionId
           in: path
           required: true
           schema:
@@ -1084,36 +2005,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties:
-                type:
-                  type: string
-                  enum: [VIEW, CONTACT, FAVORITE, MESSAGE]
-                message:
-                  type: string
-              required: [type]
-      responses:
-        '201':
-          description: Interaction created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Interaction'
-
-  /interactions/{interactionId}:
-    patch:
-      tags: [Interactions]
-      summary: Update interaction (mark as viewed, favorite, etc)
-      parameters:
-        - name: interactionId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
+              minProperties: 1
               properties:
                 isViewed:
                   type: boolean
@@ -1126,6 +2018,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Interaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ==========================================================================
   # NOTIFICATIONS (Domain A)
@@ -1134,35 +2034,39 @@ paths:
   /notifications:
     get:
       tags: [Notifications]
-      summary: Get my notifications
+      summary: List my notifications
+      description: >
+        Newest first, paginated like every other list. `unread` is returned
+        alongside the page so a badge count does not cost a second request.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
-          description: List of notifications
+          description: A page of notifications
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    type:
-                      type: string
-                    title:
-                      type: string
-                    message:
-                      type: string
-                    isRead:
-                      type: boolean
-                    createdAt:
-                      type: string
-                      format: date-time
+                allOf:
+                  - $ref: '#/components/schemas/NotificationPage'
+                  - type: object
+                    properties:
+                      unread:
+                        type: integer
+                        description: Total unread notifications, not just on this page.
+                    required: [unread]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /notifications/{notificationId}/read:
     patch:
       tags: [Notifications]
-      summary: Mark notification as read
+      summary: Mark one of my notifications as read
+      description: >
+        Answers 404 for a notification belonging to someone else, so the route
+        cannot be used to discover that one exists.
       parameters:
         - name: notificationId
           in: path
@@ -1172,6 +2076,14 @@ paths:
       responses:
         '200':
           description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ==========================================================================
   # ADMINISTRATION
@@ -1180,23 +2092,18 @@ paths:
   /admin/dashboard:
     get:
       tags: [Administration]
-      summary: Get admin dashboard stats (admin only)
+      summary: Platform-wide statistics (admin only)
       responses:
         '200':
-          description: Dashboard stats
+          description: Administration dashboard
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  totalProfiles:
-                    type: integer
-                  certificationRate:
-                    type: number
-                  totalInteractions:
-                    type: integer
-                  activeApplicants:
-                    type: integer
+                $ref: '#/components/schemas/AdminDashboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /admin/moderation/profiles:
     get:

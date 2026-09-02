@@ -2,7 +2,7 @@ import type { ModerationAction, ModerationStatus, Prisma } from '@prisma/client'
 import { prisma } from '../config/prisma.js';
 import { profileInclude, toProfileDto } from '../utils/mappers.js';
 import { resolvePageWindow, toPaginationMeta } from '../utils/pagination.js';
-import { ServiceError } from '../utils/errors.js';
+import { HttpError } from '../utils/http-error.js';
 import type { PaginationQuery } from '../validators/pagination.js';
 import type { Profile, Paginated } from '@profils-actifs/shared';
 
@@ -67,7 +67,7 @@ export async function applyModeration(
         data: { moderationStatus },
       });
       if (count === 0) {
-        throw new ServiceError(404, 'not_found', 'Profile not found');
+        throw new HttpError(404, 'not_found', 'Profile not found');
       }
       await tx.moderationLog.create({
         data: { adminId, profileId: entityId, action, reason, notes },
@@ -78,7 +78,7 @@ export async function applyModeration(
         data: { moderationStatus },
       });
       if (count === 0) {
-        throw new ServiceError(404, 'not_found', 'Video not found');
+        throw new HttpError(404, 'not_found', 'Video not found');
       }
       await tx.moderationLog.create({
         data: { adminId, videoId: entityId, action, reason, notes },

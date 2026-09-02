@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { prisma } from '../config/prisma.js';
 import type { AddVideoInput } from '../validators/video.js';
 import { toVideoDto } from '../utils/mappers.js';
-import { ServiceError } from '../utils/errors.js';
+import { HttpError } from '../utils/http-error.js';
+import { buildVideoConsent } from './video-consent.js';
 import type { Video } from '@profils-actifs/shared';
 
 /**
@@ -48,7 +49,7 @@ export function normalizeExternalVideoUrl(rawUrl: string): string {
   try {
     parsed = new URL(rawUrl);
   } catch {
-    throw new ServiceError(400, 'validation_error', 'The video URL is not a valid URL.');
+    throw new HttpError(400, 'validation_error', 'The video URL is not a valid URL.');
   }
 
   const hostname = parsed.hostname.toLowerCase();
@@ -56,7 +57,7 @@ export function normalizeExternalVideoUrl(rawUrl: string): string {
   if (YOUTUBE_HOSTS.has(hostname)) {
     const videoId = extractYoutubeId(parsed);
     if (!videoId) {
-      throw new ServiceError(
+      throw new HttpError(
         400,
         'validation_error',
         "Couldn't find a video id in that YouTube URL.",
@@ -68,7 +69,7 @@ export function normalizeExternalVideoUrl(rawUrl: string): string {
   if (VIMEO_HOSTS.has(hostname)) {
     const videoId = extractVimeoId(parsed);
     if (!videoId) {
-      throw new ServiceError(
+      throw new HttpError(
         400,
         'validation_error',
         "Couldn't find a video id in that Vimeo URL.",
@@ -77,7 +78,7 @@ export function normalizeExternalVideoUrl(rawUrl: string): string {
     return `https://player.vimeo.com/video/${videoId}`;
   }
 
-  throw new ServiceError(
+  throw new HttpError(
     400,
     'validation_error',
     'Only YouTube or Vimeo links are accepted for a video embed.',
@@ -177,7 +178,7 @@ export async function addExternalVideo(
   });
 
   if (!profile || profile.userId !== ownerId) {
-    throw new ServiceError(404, 'not_found', 'Profile not found');
+    throw new HttpError(404, 'not_found', 'Profile not found');
   }
 
   const embedUrl = normalizeExternalVideoUrl(input.url);
@@ -190,6 +191,13 @@ export async function addExternalVideo(
       type: 'EXTERNAL_LINK',
       url: embedUrl,
       duration: input.duration,
+      // A video contains a person's image and voice — identifiable personal
+      // data (brief §7.1) — so GDPR requires logged, specific consent.
+      // Submitting this video *is* that consent act; `buildVideoConsent`
+      // timestamps it now and records which version of the consent text
+      // was in effect, so a later change to that text doesn't retroactively
+      // reinterpret what an existing candidate already agreed to.
+      ...buildVideoConsent(),
     },
   });
 
@@ -209,7 +217,7 @@ export async function deleteVideo(videoId: string, ownerId: string): Promise<voi
   });
 
   if (!video || video.profile.userId !== ownerId) {
-    throw new ServiceError(404, 'not_found', 'Video not found');
+    throw new HttpError(404, 'not_found', 'Video not found');
   }
 
   await prisma.video.delete({ where: { id: videoId } });
@@ -244,7 +252,7 @@ const MAX_UPLOAD_SIZE_BYTES = Number(process.env.MAX_VIDEO_SIZE) || 100 * 1024 *
  */
 export function assertUploadSizeWithinLimit(sizeBytes: number): void {
   if (sizeBytes > MAX_UPLOAD_SIZE_BYTES) {
-    throw new ServiceError(
+    throw new HttpError(
       413,
       'payload_too_large',
       `Video files can't exceed ${Math.floor(MAX_UPLOAD_SIZE_BYTES / (1024 * 1024))}MB.`,
@@ -395,14 +403,14 @@ export async function addUploadedVideo(
   });
 
   if (!profile || profile.userId !== ownerId) {
-    throw new ServiceError(404, 'not_found', 'Profile not found');
+    throw new HttpError(404, 'not_found', 'Profile not found');
   }
 
   assertUploadSizeWithinLimit(file.buffer.length);
 
   const contentType = detectVideoContentType(file.buffer);
   if (!contentType) {
-    throw new ServiceError(
+    throw new HttpError(
       422,
       'unprocessable_entity',
       'This file is not a recognized video format (mp4, webm, mov). Renaming a file ' +
@@ -422,6 +430,8 @@ export async function addUploadedVideo(
         url: publicUrl,
         duration: input.duration,
         fileSizeBytes: file.buffer.length,
+        // Same consent logging as addExternalVideo — see the comment there.
+        ...buildVideoConsent(),
       },
     });
 

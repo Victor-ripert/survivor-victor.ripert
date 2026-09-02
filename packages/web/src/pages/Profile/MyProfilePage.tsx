@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent, JSX } from 'react';
 import { Link } from 'react-router-dom';
 import type { Profile } from '@profils-actifs/shared';
-import { getToken } from '../../utils/authStorage.js';
+import { readToken } from '../../services/auth-storage.js';
 import { getMyProfile, upsertMyProfile } from '../../services/profiles.js';
 import { addVideo, deleteVideo } from '../../services/videos.js';
 import { myProfileFormSchema, type MyProfileFormValues } from '../../validators/profile.js';
@@ -27,16 +27,14 @@ function toFormValues(profile: Profile | null): MyProfileFormValues {
 
 /**
  * `POST /profiles/me`, applicant only. Requires a stored token (see
- * `utils/authStorage.ts`) — `api.ts`'s interceptor attaches it to every
- * request automatically, so nothing in this page constructs an
+ * `services/auth-storage.ts`) — `api.ts`'s interceptor attaches it to
+ * every request automatically, so nothing in this page constructs an
  * `Authorization` header itself. With no token, this page shows a login
- * prompt instead of the form; there's no dedicated login page to redirect
- * to yet (Domain A hasn't shipped one), so a hard `navigate()` would just
- * bounce the user at a route that doesn't exist. Once that route exists,
- * the `<Link to="/login">` below already points at it.
+ * prompt instead of the form and links to `/connexion` (Domain A's login
+ * route) rather than a hard redirect.
  */
 export function MyProfilePage(): JSX.Element {
-  const isAuthenticated = getToken() !== null;
+  const isAuthenticated = readToken() !== null;
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(isAuthenticated);
@@ -92,7 +90,7 @@ export function MyProfilePage(): JSX.Element {
     return (
       <div className={styles.emptyState}>
         <p>Vous devez être connecté(e) pour modifier votre profil.</p>
-        <Link to="/login">Se connecter</Link>
+        <Link to="/connexion">Se connecter</Link>
       </div>
     );
   }

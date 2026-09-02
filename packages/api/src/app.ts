@@ -1,85 +1,56 @@
-import 'dotenv/config';
-import express from 'express';
-import type { NextFunction, Request, Response } from 'express';
-import helmet from 'helmet';
+// Loaded first so that every module evaluated below sees the resolved
+// environment (services/jwt.ts reads JWT_SECRET at import time).
+import './config/env.js';
+
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import { prisma } from './config/prisma.js';
-import { authRouter } from './routes/auth.js';
-import { profilesRouter } from './routes/profiles.js';
-import { videosRouter } from './routes/videos.js';
+import express, { type Express } from 'express';
+import helmet from 'helmet';
+import { env } from './config/env.js';
+import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
+import { apiRateLimiter } from './middleware/rate-limit.js';
 import { adminRouter } from './routes/admin.js';
-import { ServiceError } from './utils/errors.js';
+import { authRouter } from './routes/auth.js';
+import { certificationAdminRouter, certificationRouter } from './routes/certification.js';
+import { healthRouter } from './routes/health.js';
+import { interactionsRouter } from './routes/interactions.js';
+import { notificationsRouter } from './routes/notifications.js';
+import { profilesRouter } from './routes/profiles.js';
+import { recruiterRouter } from './routes/recruiter.js';
+import { videosRouter } from './routes/videos.js';
 
-/**
- * Builds the configured Express app without starting a server — kept
- * separate from `index.ts` specifically so tests can `import { app }` and
- * drive it with `supertest` (already a dependency) directly in memory,
- * with no real port ever bound. `index.ts` is the only file that calls
- * `app.listen()`.
- */
-export const app = express();
+const JSON_BODY_LIMIT = '64kb';
 
-app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173' }));
-app.use(
-  rateLimit({
-    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-    max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  }),
-);
-app.use(express.json());
+export const createApp = (): Express => {
+  const app = express();
 
-/**
- * Checks something real (CLAUDE.md's requirement) rather than always
- * returning 200 — a `SELECT 1` round trip to Postgres, which fails fast if
- * the database is unreachable. Deliberately outside `/api`: infrastructure
- * (load balancers, container orchestrators) conventionally probes health
- * at a fixed, unversioned path rather than through the API surface.
- */
-app.get('/health', async (_req: Request, res: Response) => {
-  const version = process.env.npm_package_version ?? 'unknown';
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.status(200).json({ status: 'ok', version, database: 'connected' });
-  } catch {
-    res.status(503).json({ status: 'degraded', version, database: 'unreachable' });
-  }
-});
+  app.disable('x-powered-by');
+  app.use(helmet());
+  app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+  app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
-app.use('/api/auth', authRouter);
-app.use('/api/profiles', profilesRouter);
-// Bare /api, not /api/videos — see routes/videos.ts for why.
-app.use('/api', videosRouter);
-app.use('/api/admin', adminRouter);
+  // Health probes run on a timer and must not eat into the request budget.
+  app.use('/api/health', healthRouter);
+  app.use('/api', apiRateLimiter);
 
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({ error: 'not_found', message: 'Route not found', statusCode: 404 });
-});
+  app.use('/api/auth', authRouter);
+  app.use('/api/certification', certificationRouter);
+  app.use('/api/interactions', interactionsRouter);
+  app.use('/api/notifications', notificationsRouter);
+  app.use('/api/profiles', profilesRouter);
+  app.use('/api/recruiter', recruiterRouter);
+  // Bare /api, not /api/videos — its two routes live under two different
+  // top-level paths (/profiles/:profileId/videos and /videos/:videoId), so
+  // there's no single prefix that fits both. See routes/videos.ts.
+  app.use('/api', videosRouter);
 
-/**
- * The one place `ServiceError` gets translated into an HTTP response.
- * Every controller in this project calls into a service and simply lets a
- * thrown `ServiceError` propagate — Express 5 (unlike 4) automatically
- * forwards a rejected async handler to this middleware, so no controller
- * needs its own try/catch around a service call. Needs all four
- * parameters, `next` included even though it's unused, or Express won't
- * recognize this as error-handling middleware at all.
- */
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (err instanceof ServiceError) {
-    res.status(err.statusCode).json({
-      error: err.errorCode,
-      message: err.message,
-      statusCode: err.statusCode,
-    });
-    return;
-  }
+  // The certification admin routes guard themselves, so they are mounted
+  // ahead of the blanket requireRole(ADMIN) that adminRouter applies to
+  // everything under /api/admin.
+  app.use('/api/admin', certificationAdminRouter);
+  app.use('/api/admin', adminRouter);
 
-  console.error(err);
-  res.status(500).json({
-    error: 'internal_error',
-    message: 'Something went wrong.',
-    statusCode: 500,
-  });
-});
+  app.use(notFoundHandler);
+  app.use(errorHandler);
+
+  return app;
+};

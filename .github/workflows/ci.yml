@@ -39,16 +39,22 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Apply database migrations
         run: npm run db:migrate:prod -w @profils-actifs/db
+
+      - name: Seed database
+        run: npm run db:seed -w @profils-actifs/db
 
       - name: Build all packages
         run: npm run build
 
       - name: Run linting
         run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
 
       - name: Run tests
         run: npm run test -- -- --coverage

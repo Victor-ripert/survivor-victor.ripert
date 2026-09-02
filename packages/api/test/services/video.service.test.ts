@@ -6,7 +6,7 @@ import {
   detectVideoContentType,
   assertUploadDirOutsideAppCode,
 } from '../../src/services/video.service.js';
-import { ServiceError } from '../../src/utils/errors.js';
+import { HttpError } from '../../src/utils/http-error.js';
 
 describe('normalizeExternalVideoUrl', () => {
   describe('YouTube', () => {
@@ -48,7 +48,7 @@ describe('normalizeExternalVideoUrl', () => {
 
     it('rejects a YouTube URL with no video id', () => {
       expect(() => normalizeExternalVideoUrl('https://www.youtube.com/watch')).toThrow(
-        ServiceError,
+        HttpError,
       );
     });
   });
@@ -74,7 +74,7 @@ describe('normalizeExternalVideoUrl', () => {
 
     it('rejects a non-numeric Vimeo path (e.g. a channel page)', () => {
       expect(() => normalizeExternalVideoUrl('https://vimeo.com/channels/staffpicks')).toThrow(
-        ServiceError,
+        HttpError,
       );
     });
   });
@@ -82,24 +82,24 @@ describe('normalizeExternalVideoUrl', () => {
   describe('rejections', () => {
     it('rejects a non-YouTube, non-Vimeo host', () => {
       expect(() => normalizeExternalVideoUrl('https://example.com/video.mp4')).toThrow(
-        ServiceError,
+        HttpError,
       );
     });
 
     it('rejects a host that merely contains "youtube.com" as text', () => {
       expect(() =>
         normalizeExternalVideoUrl('https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ'),
-      ).toThrow(ServiceError);
+      ).toThrow(HttpError);
     });
 
     it('rejects a URL that smuggles the target host in a query string', () => {
       expect(() =>
         normalizeExternalVideoUrl('https://evil.example/?redirect=youtube.com'),
-      ).toThrow(ServiceError);
+      ).toThrow(HttpError);
     });
 
     it('rejects a malformed URL', () => {
-      expect(() => normalizeExternalVideoUrl('not-a-url')).toThrow(ServiceError);
+      expect(() => normalizeExternalVideoUrl('not-a-url')).toThrow(HttpError);
     });
 
     it('rejects with a 400 validation_error, per the acceptance criteria', () => {
@@ -107,9 +107,9 @@ describe('normalizeExternalVideoUrl', () => {
         normalizeExternalVideoUrl('https://example.com/video.mp4');
         throw new Error('expected normalizeExternalVideoUrl to throw');
       } catch (err) {
-        expect(err).toBeInstanceOf(ServiceError);
-        expect((err as ServiceError).statusCode).toBe(400);
-        expect((err as ServiceError).errorCode).toBe('validation_error');
+        expect(err).toBeInstanceOf(HttpError);
+        expect((err as HttpError).statusCode).toBe(400);
+        expect((err as HttpError).code).toBe('validation_error');
       }
     });
   });
@@ -124,7 +124,7 @@ describe('assertUploadSizeWithinLimit', () => {
   });
 
   it('rejects a file one byte over the cap', () => {
-    expect(() => assertUploadSizeWithinLimit(HUNDRED_MB + 1)).toThrow(ServiceError);
+    expect(() => assertUploadSizeWithinLimit(HUNDRED_MB + 1)).toThrow(HttpError);
   });
 
   it('rejects with a 413 payload_too_large', () => {
@@ -132,9 +132,9 @@ describe('assertUploadSizeWithinLimit', () => {
       assertUploadSizeWithinLimit(HUNDRED_MB + 1);
       throw new Error('expected assertUploadSizeWithinLimit to throw');
     } catch (err) {
-      expect(err).toBeInstanceOf(ServiceError);
-      expect((err as ServiceError).statusCode).toBe(413);
-      expect((err as ServiceError).errorCode).toBe('payload_too_large');
+      expect(err).toBeInstanceOf(HttpError);
+      expect((err as HttpError).statusCode).toBe(413);
+      expect((err as HttpError).code).toBe('payload_too_large');
     }
   });
 

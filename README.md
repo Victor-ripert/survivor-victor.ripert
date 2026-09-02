@@ -28,12 +28,12 @@ profils-actifs/
 
 ## 🎯 Domaines Verticaux
 
-| Domain | Propriétaire | Responsabilité | Livrable S1 |
-|--------|--------------|-----------------|------------|
-| **A** | Auth & Notifications | Inscription/login 3 rôles, middleware permissions, notifications | Socle API contractuel |
-| **B** | Profils & Vidéo | CRUD profil, vidéos (iframe), feed paginé, modération | Feed + 5 profils fictifs |
-| **C** | Questionnaire | Questions, réponses, sauvegarde, scoring, badge | Questionnaire partiel |
-| **D** | Recruteur & Dashboards | Catalogue, filtrage, favoris, tableaux bord | Démarrage possible S2 |
+| Domain | Propriétaire           | Responsabilité                                                   | Livrable S1              |
+| ------ | ---------------------- | ---------------------------------------------------------------- | ------------------------ |
+| **A**  | Auth & Notifications   | Inscription/login 3 rôles, middleware permissions, notifications | Socle API contractuel    |
+| **B**  | Profils & Vidéo        | CRUD profil, vidéos (iframe), feed paginé, modération            | Feed + 5 profils fictifs |
+| **C**  | Questionnaire          | Questions, réponses, sauvegarde, scoring, badge                  | Questionnaire partiel    |
+| **D**  | Recruteur & Dashboards | Catalogue, filtrage, favoris, tableaux bord                      | Démarrage possible S2    |
 
 ⚠️ **Chemin critique** : Questionnaire (C) — besoin de renfort fin S1.
 
@@ -142,16 +142,30 @@ npm run build
 npm run dev
 
 # Lancer API seule
-cd packages/api && npm run dev
+npm run dev -w @profils-actifs/api
 
 # Lancer Web seule
-cd packages/web && npm run dev
+npm run dev -w @profils-actifs/web
 ```
+
+| Service        | URL                              |
+| -------------- | -------------------------------- |
+| Front          | http://localhost:5173            |
+| API            | http://localhost:3000/api        |
+| Sonde de santé | http://localhost:3000/api/health |
+| pgAdmin        | http://localhost:5050            |
+
+Prérequis : `docker compose up -d` puis `npm run db:migrate && npm run db:seed`
+(voir [Database](#database)). L'API refuse de démarrer sans `.env.local` — copiez
+`.env.example`.
 
 ### Database
 
 ```bash
-# Créer/migrer la DB (depuis `packages/db`)
+# Démarrer PostgreSQL (port 5432) et pgAdmin (port 5050)
+docker compose up -d
+
+# Créer/migrer la DB
 npm run db:migrate
 
 # Seeder la DB (données fictives)
@@ -160,6 +174,16 @@ npm run db:seed
 # Ouvrir Prisma Studio (GUI)
 npm run db:studio
 ```
+
+Le seed crée un jeu de démonstration (12 candidats, 2 recruteurs, 1 administrateur,
+compétences, vidéos et un historique d'interactions étalé sur 30 jours). Il est
+idempotent et refuse de s'exécuter avec `NODE_ENV=production`.
+
+| Rôle           | Compte                                    | Mot de passe   |
+| -------------- | ----------------------------------------- | -------------- |
+| Administrateur | `admin@profils-actifs.fr`                 | `Password123!` |
+| Recruteur      | `recruteur@profils-actifs.fr`             | `Password123!` |
+| Candidat       | `amina.berthier@example.fr` (+ 11 autres) | `Password123!` |
 
 ### Tests
 
@@ -186,13 +210,61 @@ npm run format
 
 ---
 
+## 🧑‍💼 Espace recruteur & tableaux de bord (Domain D)
+
+### Parcours
+
+| Page                           | Route                     | Rôles            |
+| ------------------------------ | ------------------------- | ---------------- |
+| Tableau de bord recruteur      | `/recruteur`              | RECRUITER, ADMIN |
+| Catalogue des profils          | `/recruteur/catalogue`    | RECRUITER, ADMIN |
+| Ma sélection (favoris)         | `/recruteur/favoris`      | RECRUITER, ADMIN |
+| Historique des interactions    | `/recruteur/interactions` | RECRUITER, ADMIN |
+| Tableau de bord administrateur | `/admin`                  | ADMIN            |
+
+Les filtres du catalogue vivent dans l'URL (`?sector=...&skills=React,SQL&sort=score`) :
+une recherche est partageable, marquable et restaurée par le bouton retour.
+
+### Endpoints
+
+| Méthode    | Route                                    | Rôle             | Rôle métier                                       |
+| ---------- | ---------------------------------------- | ---------------- | ------------------------------------------------- |
+| GET        | `/api/recruiter/catalogue`               | RECRUITER, ADMIN | Liste paginée et filtrée des profils              |
+| GET        | `/api/recruiter/catalogue/facets`        | RECRUITER, ADMIN | Valeurs de filtres réellement disponibles         |
+| GET        | `/api/recruiter/favorites`               | RECRUITER, ADMIN | Catalogue restreint à la sélection                |
+| PUT/DELETE | `/api/recruiter/favorites/{applicantId}` | RECRUITER, ADMIN | Ajout/retrait d'un favori (idempotent)            |
+| GET        | `/api/recruiter/dashboard`               | RECRUITER, ADMIN | Statistiques du recruteur connecté                |
+| GET        | `/api/interactions`                      | Tous             | Interactions envoyées ou reçues, paginées         |
+| POST       | `/api/interactions`                      | RECRUITER, ADMIN | Consultation, favori ou prise de contact          |
+| PATCH      | `/api/interactions/{id}`                 | Tous             | `isViewed` (destinataire) / `isFavorite` (auteur) |
+| GET        | `/api/admin/dashboard`                   | ADMIN            | Statistiques plateforme                           |
+
+### Règles métier
+
+- **Visibilité** : un profil rejeté par la modération ou porté par un compte désactivé
+  n'apparaît jamais dans le catalogue ; un profil en attente de modération reste visible,
+  pour qu'un retard de modération ne masque pas un candidat.
+- **Pas d'adresse e-mail dans le catalogue** : le recruteur passe par `POST /interactions`,
+  ce qui trace le contact et notifie le candidat.
+- **Consultations dédupliquées sur 24h** : les tableaux de bord comptent des personnes,
+  pas des chargements de page.
+- **Seules les prises de contact notifient** le candidat, et elles sont plafonnées à
+  5 messages par candidat et par tranche de 24h.
+- **Les favoris ne sont pas supprimés** : le retrait bascule `isFavorite`, l'historique reste auditable.
+- **`isViewed` appartient au destinataire, `isFavorite` à l'auteur** : aucune des deux
+  parties ne peut écrire le champ de l'autre.
+
+---
+
 ## 📋 Contrat d'API
 
 **Fichier** : `packages/api/openapi.yaml`
 
 L'API est documentée en OpenAPI 3.0. Tous les endpoints, payloads et réponses y sont définis avant la première ligne de code métier.
 
-**Accès** : Swagger UI disponible sur `http://localhost:3000/api/docs` une fois l'API lancée.
+**Accès** : le contrat se lit directement dans `packages/api/openapi.yaml` (ou dans n'importe quel
+client OpenAPI pointé dessus). L'API ne sert pas encore de Swagger UI — il n'y a pas de route
+`/api/docs`.
 
 ### Principes d'API
 
@@ -245,6 +317,7 @@ router.post('/profiles/:id/moderate', requireRole('ADMIN'), moderateProfile);
 ```
 
 Trois rôles :
+
 - **APPLICANT** : CRUD profil/vidéos, passation certification
 - **RECRUITER** : consultation catalogue, favoris, contact
 - **ADMIN** : modération, gestion questionnaire, dashboards
@@ -288,6 +361,7 @@ Trois rôles :
 ### ⚠️ Questionnaire = Chemin Critique
 
 Le questionnaire concentre la plus grande logique métier :
+
 - Sauvegarde en cours de passation (reprise possible)
 - Pondérations variables par question
 - Calcul de score complexe
@@ -352,14 +426,14 @@ Exemple : `feat(certification): implement answer saving with partial completion`
 
 ## 📅 Timeline
 
-| Date | Événement | Attendu |
-|------|-----------|---------|
-| J1 | Socle commun | DB, API spec, auth middleware, CI/CD |
-| J2-J4 | Développement parallèle | Domaines A, B, C (partiel) |
-| **Vendredi S1** | **Revue de projet** | **Feed + profils + questionnaire partiel + présentation** |
-| J6-J8 | Continuation + renfort C | Finition D, complétion C |
-| **Jeudi S2** | **Revue technique** | Code quality, tests, docs |
-| **Vendredi S2** | **Keynote** | Démo finale + rétrospective |
+| Date            | Événement                | Attendu                                                   |
+| --------------- | ------------------------ | --------------------------------------------------------- |
+| J1              | Socle commun             | DB, API spec, auth middleware, CI/CD                      |
+| J2-J4           | Développement parallèle  | Domaines A, B, C (partiel)                                |
+| **Vendredi S1** | **Revue de projet**      | **Feed + profils + questionnaire partiel + présentation** |
+| J6-J8           | Continuation + renfort C | Finition D, complétion C                                  |
+| **Jeudi S2**    | **Revue technique**      | Code quality, tests, docs                                 |
+| **Vendredi S2** | **Keynote**              | Démo finale + rétrospective                               |
 
 ---
 

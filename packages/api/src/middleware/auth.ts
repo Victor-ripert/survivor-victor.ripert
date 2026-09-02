@@ -1,30 +1,34 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import type { UserRole } from '@prisma/client';
 import { verifyToken } from '../services/jwt.js';
+import { forbidden, unauthorized } from '../utils/http-error.js';
 
-export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(' ')[1];
+/** Only the `Bearer` scheme carries our tokens; splitting on whitespace alone
+ *  would just as happily accept a `Basic` credential as a JWT. */
+const readBearerToken = (header: string | undefined): string | null => {
+  const [scheme, value, ...rest] = header?.split(' ') ?? [];
+
+  if (scheme?.toLowerCase() !== 'bearer' || !value || rest.length > 0) return null;
+
+  return value;
+};
+
+export const requireAuth = (req: Request, _res: Response, next: NextFunction): void => {
+  const token = readBearerToken(req.headers.authorization);
 
   if (!token) {
-    res.status(401).json({
-      error: 'unauthorized',
-      message: 'No token provided',
-      statusCode: 401,
-    });
+    next(unauthorized('Aucun jeton fourni'));
     return;
   }
 
   try {
     req.user = verifyToken(token);
-    next();
   } catch {
-    res.status(401).json({
-      error: 'unauthorized',
-      message: 'Invalid or expired token',
-      statusCode: 401,
-    });
+    next(unauthorized('Jeton invalide ou expiré'));
+    return;
   }
+
+  next();
 };
 
 /**
@@ -56,15 +60,12 @@ export const optionalAuth = (req: Request, _res: Response, next: NextFunction): 
 };
 
 export const requireRole = (...allowedRoles: UserRole[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
-      res.status(403).json({
-        error: 'forbidden',
-        message: 'Insufficient permissions',
-        statusCode: 403,
-      });
+      next(forbidden());
       return;
     }
+
     next();
   };
 };

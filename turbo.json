@@ -3,8 +3,8 @@
   "tasks": {
     "dev": {
       "cache": false,
-      "interactive": true,
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "persistent": true
     },
     "build": {
       "outputs": ["dist/**", ".next/**"],
@@ -14,11 +14,24 @@
     "test": {
       "outputs": ["coverage/**"],
       "cache": true,
-      "inputs": ["src/**", "test/**", "package.json"]
+      "inputs": ["src/**", "test/**", "package.json", "jest.config.js", "tsconfig.json"],
+      "dependsOn": ["^build"],
+      "env": [
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "JWT_EXPIRY",
+        "NODE_ENV",
+        "CORS_ORIGIN",
+        "RATE_LIMIT_MAX_REQUESTS",
+        "RATE_LIMIT_WINDOW_MS",
+        "API_PORT",
+        "API_HOST"
+      ]
     },
     "lint": {
       "outputs": [],
-      "cache": false
+      "cache": true,
+      "inputs": ["src/**", "package.json", "eslint.config.js", "tsconfig.json"]
     },
     "db:migrate": {
       "cache": false,
@@ -30,5 +43,11 @@
       "dependsOn": ["db:migrate"]
     }
   },
-  "globalDependencies": [".env.local", ".env"]
+  "globalDependencies": [
+    ".env.local",
+    ".env",
+    "jest.preset.mjs",
+    "eslint.base.mjs",
+    "tsconfig.json"
+  ]
 }

@@ -43,6 +43,7 @@ Utiliser un **monorepo Turborepo** avec packages séparés (`api`, `web`, `share
 Organiser par **verticale fonctionnelle** (A, B, C, D) plutôt que par couche (frontend, backend).
 
 Chaque équipe possède :
+
 - Frontend React pour son domaine
 - Backend Express + routes API correspondantes
 - Intégration DB pour son contexte
@@ -52,6 +53,7 @@ Chaque équipe possède :
 **Évite les blocages S2** : Au lieu d'attendre les routes API du backend, chaque verticale est autonome.
 
 Exemple :
+
 - Domain B (Profils) : route `POST /profiles/me` + composant React ProfileForm + table Profile schema
 - Domain D (Recruteur) : route `GET /interactions` + composant RecruiterDashboard + tables Interaction
 
@@ -141,7 +143,7 @@ CertificationQuestion → (1:N) CertificationOption
 export const requireAuth = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
-  
+
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   req.user = decoded;
   next();
@@ -193,6 +195,7 @@ export const requireRole = (role: UserRole) => (req, res, next) => {
    - **Default limit** : 20 (hardcoded pour feed profils)
 
 4. **Erreurs** :
+
    ```json
    {
      "error": "validation_error",
@@ -293,6 +296,7 @@ export default api;
 ### Backend
 
 1. **Validation errors** (400) : Zod schemas
+
    ```typescript
    const RegisterSchema = z.object({
      email: z.string().email(),
@@ -330,10 +334,12 @@ app.use((err, req, res, next) => {
 ### CORS
 
 ```typescript
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+  }),
+);
 ```
 
 ### Rate Limiting

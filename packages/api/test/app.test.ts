@@ -1,13 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
-import { app } from '../src/app.js';
+import { createApp } from '../src/app.js';
 import { prisma } from '../src/config/prisma.js';
 import { signToken } from '../src/services/jwt.js';
 
+const app = createApp();
+
 /**
  * HTTP-level integration tests, driven through `supertest` directly
- * against the exported `app` — no real port bound (that's the whole
- * reason `app.ts` and `index.ts` are separate files). Requires a reachable
+ * against `createApp()` — no real port bound (that's the whole reason
+ * `app.ts` and `index.ts` are separate files). Requires a reachable
  * database, same as `moderation.service.test.ts`.
  */
 describe('app', () => {
@@ -46,11 +48,11 @@ describe('app', () => {
     await prisma.$disconnect();
   });
 
-  describe('GET /health', () => {
+  describe('GET /api/health', () => {
     it('reports a connected database', async () => {
-      const res = await request(app).get('/health');
+      const res = await request(app).get('/api/health');
       expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({ status: 'ok', database: 'connected' });
+      expect(res.body).toMatchObject({ status: 'ok', database: { status: 'up' } });
     });
   });
 
@@ -60,7 +62,7 @@ describe('app', () => {
       expect(res.status).toBe(404);
       expect(res.body).toEqual({
         error: 'not_found',
-        message: 'Route not found',
+        message: 'Route inconnue : GET /api/this-route-does-not-exist',
         statusCode: 404,
       });
     });

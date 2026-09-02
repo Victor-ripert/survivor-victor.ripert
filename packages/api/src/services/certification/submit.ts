@@ -1,0 +1,98 @@
+import { prisma } from '../../config/prisma.js';
+import { scoreAttempt, type ScoringQuestion, type ScoringAnswer } from './scoring.js';
+import { resolveBadgeLevel, isBadgeEarned } from './badge.js';
+import { notifyBadgeEarned } from '../notifications.js';
+import { attemptForbidden, attemptNotFound } from './attempts.js';
+import { attemptNotInProgress } from './answers.js';
+import { conflict } from '../../utils/http-error.js';
+
+export const submitAttempt = async (attemptId: string, userId: string) => {
+  const attempt = await prisma.certificationAttempt.findUnique({ where: { id: attemptId } });
+  if (!attempt) throw attemptNotFound();
+  if (attempt.userId !== userId) throw attemptForbidden();
+  // Also blocks a double-submit: once COMPLETED, this throws instead of
+  // recomputing — re-submitting never silently overwrites an existing score.
+  if (attempt.status !== 'IN_PROGRESS') throw attemptNotInProgress();
+
+  // Only active questions count — mirrors the public GET and the CHOICE
+  // question validation in answers.ts, so a question deactivated mid-attempt
+  // is excluded from scoring and its orphaned answers just earn 0 below.
+  const [questions, answers] = await Promise.all([
+    prisma.certificationQuestion.findMany({
+      where: { isActive: true },
+      include: { options: { select: { id: true, points: true } } },
+    }),
+    prisma.answer.findMany({ where: { attemptId } }),
+  ]);
+
+  const scoringQuestions: ScoringQuestion[] = questions.map((question) => ({
+    id: question.id,
+    type: question.type,
+    weight: question.weight,
+    maxPoints: question.maxPoints,
+    options: question.options,
+  }));
+  const scoringAnswers: ScoringAnswer[] = answers.map((answer) => ({
+    questionId: answer.questionId,
+    optionId: answer.optionId,
+    textAnswer: answer.textAnswer,
+    numericAnswer: answer.numericAnswer,
+  }));
+
+  const { totalScore, questionScores } = scoreAttempt(scoringQuestions, scoringAnswers);
+  const badgeLevel = await resolveBadgeLevel(totalScore);
+  const earned = isBadgeEarned(badgeLevel);
+
+  const scoreByQuestion = new Map(questionScores.map((qs) => [qs.questionId, qs.pointsEarned]));
+  const answersByQuestion = new Map<string, typeof answers>();
+  for (const answer of answers) {
+    const list = answersByQuestion.get(answer.questionId) ?? [];
+    list.push(answer);
+    answersByQuestion.set(answer.questionId, list);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // A CHECKBOX question can have several Answer rows for one question —
+    // there's no per-question junction row to hold the aggregate, so the
+    // question's total pointsEarned goes on the first row and the rest get
+    // 0. This keeps SUM(Answer.pointsEarned) per attempt meaningful instead
+    // of overcounting if someone naively sums every row.
+    for (const [questionId, questionAnswers] of answersByQuestion) {
+      const total = scoreByQuestion.get(questionId) ?? 0;
+      const [first, ...rest] = questionAnswers;
+      await tx.answer.update({ where: { id: first!.id }, data: { pointsEarned: total } });
+      for (const extra of rest) {
+        await tx.answer.update({ where: { id: extra.id }, data: { pointsEarned: 0 } });
+      }
+    }
+
+    const updatedAttempt = await tx.certificationAttempt.update({
+      where: { id: attemptId },
+      data: { status: 'COMPLETED', score: totalScore, completedAt: new Date() },
+    });
+
+    // The badge lives on the Profile, so there has to be one to write it to
+    // (creating it is Domain B's concern). `updateMany` reports the miss
+    // instead of raising Prisma's P2025, which the error middleware would
+    // turn into a bare 404 "Ressource introuvable" — unreadable on a submit
+    // call, where the caller needs to be told to fill in their profile.
+    const { count } = await tx.profile.updateMany({
+      where: { userId },
+      data: {
+        certificationStatus: earned ? 'COMPLETED' : 'REJECTED',
+        certificationScore: totalScore,
+        certificationBadge: earned ? badgeLevel.name : null,
+      },
+    });
+
+    if (count === 0) {
+      throw conflict('Complétez votre profil avant de valider la certification');
+    }
+
+    // In the same transaction as the score, so a failed write never leaves
+    // someone congratulated for a badge they were not awarded.
+    if (earned) await notifyBadgeEarned(userId, badgeLevel.name, totalScore, tx);
+
+    return { attempt: updatedAttempt, score: totalScore, badge: badgeLevel };
+  });
+};

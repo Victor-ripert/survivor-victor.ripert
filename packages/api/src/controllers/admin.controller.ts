@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { paginationQuerySchema } from '../validators/pagination.js';
 import { moderateEntitySchema } from '../validators/moderation.js';
 import * as moderationService from '../services/moderation.service.js';
+import { getAdminDashboard } from '../services/dashboard.service.js';
 
 /** `GET /admin/moderation/profiles` — the review queue, oldest-pending-first. */
 export const listPendingProfiles = async (req: Request, res: Response): Promise<void> => {
@@ -40,4 +41,8 @@ export const moderateProfile = async (req: Request, res: Response): Promise<void
     parsed.data.notes,
   );
   res.status(200).json({ message: 'Profile moderated' });
+};
+
+export const getDashboard = async (_req: Request, res: Response): Promise<void> => {
+  res.status(200).json(await getAdminDashboard());
 };

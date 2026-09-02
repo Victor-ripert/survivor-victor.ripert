@@ -80,11 +80,12 @@ const upsertUser = async (
   lastName: string,
   role: UserRole,
   passwordHash: string,
+  birthDate: Date | null = null,
 ) =>
   prisma.user.upsert({
     where: { email },
-    update: { firstName, lastName, role },
-    create: { email, firstName, lastName, role, passwordHash },
+    update: { firstName, lastName, role, birthDate },
+    create: { email, firstName, lastName, role, passwordHash, birthDate },
     select: { id: true, email: true },
   });
 
@@ -108,6 +109,7 @@ const seedApplicant = async (applicant: ApplicantSeed, passwordHash: string) => 
     applicant.lastName,
     UserRole.APPLICANT,
     passwordHash,
+    new Date(applicant.birthDate),
   );
 
   const profileData = {
@@ -242,11 +244,36 @@ async function main(): Promise<void> {
   console.table(staff.map(({ role, email }) => ({ role, email })));
 }
 
+/** The two failures that actually happen when someone seeds a fresh clone,
+ *  named so the fix is obvious instead of buried in a Prisma stack trace. */
+const explain = (error: unknown): string | null => {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (/ECONNREFUSED|Can't reach database server/i.test(message)) {
+    return 'La base de données est injoignable. Démarrez-la avec `docker compose up -d postgres`, puis vérifiez DATABASE_URL dans .env.local.';
+  }
+
+  if (
+    /does not exist in the current database|relation .* does not exist|P2021|P2022/i.test(message)
+  ) {
+    return 'Le schéma est absent ou incomplet. Appliquez les migrations avec `npm run db:migrate` avant de semer.';
+  }
+
+  return null;
+};
+
 main()
   .catch((error: unknown) => {
+    const hint = explain(error);
+    if (hint) console.error(`\n${hint}\n`);
+
     console.error(error);
     process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    // A disconnect that fails must not mask the seeding error above, and must
+    // not turn a successful run into a non-zero exit either.
+    await prisma.$disconnect().catch((error: unknown) => {
+      console.error('[seed] prisma did not disconnect cleanly', error);
+    });
   });

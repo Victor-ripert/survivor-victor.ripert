@@ -273,15 +273,64 @@ components:
           $ref: '#/components/schemas/InteractionCounterpart'
       required: [id, recipientId, createdById, type, createdAt, counterpart]
 
+    HealthStatus:
+      type: object
+      description: >-
+        Answered by /health. `status` is `ok` (200) or `degraded` (503) — the
+        probe reports the database's real state rather than the fact that the
+        process is running.
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        version:
+          type: string
+          description: The API package's version, read from its manifest
+        environment:
+          type: string
+          enum: [development, test, production]
+        uptimeSeconds:
+          type: integer
+        database:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [up, down]
+            latencyMs:
+              type: integer
+              description: Present only when the database answered
+          required: [status]
+      required: [status, version, environment, uptimeSeconds, database]
+
     ErrorResponse:
       type: object
+      description: >-
+        The single error shape every non-2xx response uses. `error` is the
+        snake_case code the frontend branches on — the complete set is the
+        `ApiErrorCode` union in @profils-actifs/shared, mirrored by the enum
+        below. `validation_error` (400) and `unprocessable_entity` (422) split
+        on interpretability: 400 is decided by reading the request alone
+        (malformed JSON, wrong shape, out-of-range primitive), 422 needs a
+        database read — the payload is well formed but contradicts the state or
+        the type of the resource it targets.
       properties:
         error:
           type: string
+          enum:
+            - validation_error
+            - unauthorized
+            - forbidden
+            - not_found
+            - unprocessable_entity
+            - conflict
+            - too_many_requests
+            - internal_error
         message:
           type: string
         statusCode:
           type: integer
+      required: [error, message, statusCode]
 
     PaginationMeta:
       type: object
@@ -653,6 +702,14 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: >-
+        The payload parsed and matched its schema, but contradicts the resource
+        it targets — the mismatch is only detectable against database state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     TooManyRequests:
       description: Rate limit reached
       content:
@@ -664,6 +721,34 @@ security:
   - bearerAuth: []
 
 paths:
+  # ==========================================================================
+  # SYSTEM
+  # ==========================================================================
+
+  /health:
+    get:
+      tags: [System]
+      summary: Liveness and database-connectivity probe
+      description: >-
+        Mounted ahead of the rate limiter, so a probe running on a timer never
+        consumes a caller's request budget. It runs a real `SELECT 1` — an API
+        whose database is unreachable answers 503 and is taken out of rotation
+        instead of serving errors (§8.2).
+      security: []
+      responses:
+        '200':
+          description: The process answers and the database accepted a query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: The database is unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
   # ==========================================================================
   # AUTHENTICATION (Domain A)
   # ==========================================================================
@@ -1106,7 +1191,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CertificationQuestion'
         '400':
-          description: Validation error
+          description: The patch body itself is invalid
           content:
             application/json:
               schema:
@@ -1119,6 +1204,15 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: Cannot replace options for a question that already has recorded answers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: >-
+            The patch is well formed but its effective result breaks a rule —
+            a MULTIPLE_CHOICE or CHECKBOX question left with fewer than 2
+            options, checked against the type already stored
           content:
             application/json:
               schema:
@@ -1252,7 +1346,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/Answer'
         '400':
-          description: Validation error (missing/invalid field for this question's type)
+          description: >-
+            The body itself is invalid — malformed JSON, missing questionId, or
+            a numericAnswer outside 1..5
           content:
             application/json:
               schema:
@@ -1271,6 +1367,15 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: The attempt is no longer IN_PROGRESS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: >-
+            The body is well formed but does not fit the question's real type —
+            the required field for that type is missing, or an optionId belongs
+            to another question
           content:
             application/json:
               schema:

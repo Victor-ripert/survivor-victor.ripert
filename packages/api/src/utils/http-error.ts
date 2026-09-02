@@ -28,6 +28,13 @@ export const forbidden = (message = 'Permissions insuffisantes'): HttpError =>
 export const notFound = (message = 'Ressource introuvable'): HttpError =>
   new HttpError(404, 'not_found', message);
 
+/** The payload parsed cleanly but contradicts the resource it targets — an
+ *  answer that does not fit the question's actual type, an admin patch whose
+ *  effective result would break a rule. Detecting it needs a database read,
+ *  which is what separates it from `badRequest`. */
+export const unprocessableEntity = (message: string): HttpError =>
+  new HttpError(422, 'unprocessable_entity', message);
+
 export const conflict = (message: string): HttpError => new HttpError(409, 'conflict', message);
 
 export const tooManyRequests = (message: string): HttpError =>

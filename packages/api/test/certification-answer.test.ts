@@ -212,20 +212,22 @@ describe('MULTIPLE_CHOICE', () => {
     expect(res.body[0]).not.toHaveProperty('pointsEarned');
   });
 
-  it('rejects a missing optionId', async () => {
+  it('rejects a missing optionId as unprocessable', async () => {
     const res = await request(app)
       .post(answerUrl())
       .set('Authorization', `Bearer ${applicantToken}`)
       .send({ questionId: mcQuestionId });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({ error: 'unprocessable_entity' });
   });
 
-  it('rejects an optionId belonging to a different question', async () => {
+  it('rejects an optionId belonging to a different question as unprocessable', async () => {
     const res = await request(app)
       .post(answerUrl())
       .set('Authorization', `Bearer ${applicantToken}`)
       .send({ questionId: mcQuestionId, optionId: foreignOptionId });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({ error: 'unprocessable_entity' });
   });
 
   it('replaces the previous answer instead of accumulating', async () => {
@@ -260,12 +262,13 @@ describe('CHECKBOX', () => {
     expect(res.body).toHaveLength(2);
   });
 
-  it('rejects an empty optionIds array', async () => {
+  it('rejects an empty optionIds array as unprocessable', async () => {
     const res = await request(app)
       .post(answerUrl())
       .set('Authorization', `Bearer ${applicantToken}`)
       .send({ questionId: checkboxQuestionId, optionIds: [] });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({ error: 'unprocessable_entity' });
   });
 });
 
@@ -279,12 +282,13 @@ describe('SHORT_TEXT', () => {
     expect(res.body[0].textAnswer).toBe('a real answer');
   });
 
-  it('rejects an empty textAnswer', async () => {
+  it('rejects an empty textAnswer as unprocessable', async () => {
     const res = await request(app)
       .post(answerUrl())
       .set('Authorization', `Bearer ${applicantToken}`)
       .send({ questionId: shortTextQuestionId, textAnswer: '   ' });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({ error: 'unprocessable_entity' });
   });
 });
 
@@ -298,12 +302,13 @@ describe('LIKERT_SCALE', () => {
     expect(res.body[0].numericAnswer).toBe(4);
   });
 
-  it('rejects a numericAnswer outside 1-5', async () => {
+  it('rejects a numericAnswer outside 1-5 as a plain validation error', async () => {
     const res = await request(app)
       .post(answerUrl())
       .set('Authorization', `Bearer ${applicantToken}`)
       .send({ questionId: likertQuestionId, numericAnswer: 6 });
     expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: 'validation_error' });
   });
 });
 

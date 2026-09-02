@@ -42,9 +42,9 @@ profils-actifs/
 ## 🔧 Stack Technique
 
 - **Runtime** : Node.js ≥ 20
-- **Language** : TypeScript 5.3+
-- **Backend** : Express 4
-- **Frontend** : React 18 + Vite
+- **Language** : TypeScript 7 (compilateur natif) avec l'API 6.x pour ts-jest et ESLint
+- **Backend** : Express 5
+- **Frontend** : React 19 + Vite
 - **Database** : PostgreSQL + Prisma
 - **Testing** : Jest + Supertest
 - **Orchestration** : Turborepo 2.0
@@ -175,15 +175,16 @@ npm run db:seed
 npm run db:studio
 ```
 
-Le seed crée un jeu de démonstration (12 candidats, 2 recruteurs, 1 administrateur,
+Le seed crée un jeu de démonstration (13 candidats dont un mineur, 2 recruteurs, 1 administrateur, 100 questions,
 compétences, vidéos et un historique d'interactions étalé sur 30 jours). Il est
 idempotent et refuse de s'exécuter avec `NODE_ENV=production`.
 
-| Rôle           | Compte                                    | Mot de passe   |
-| -------------- | ----------------------------------------- | -------------- |
-| Administrateur | `admin@profils-actifs.fr`                 | `Password123!` |
-| Recruteur      | `recruteur@profils-actifs.fr`             | `Password123!` |
-| Candidat       | `amina.berthier@example.fr` (+ 11 autres) | `Password123!` |
+| Rôle                     | Compte                                    | Mot de passe   |
+| ------------------------ | ----------------------------------------- | -------------- |
+| Administrateur           | `admin@profils-actifs.fr`                 | `Password123!` |
+| Recruteur                | `recruteur@profils-actifs.fr`             | `Password123!` |
+| Candidat                 | `amina.berthier@example.fr` (+ 12 autres) | `Password123!` |
+| Candidat mineur (17 ans) | `lucas.morel@example.fr`                  | `Password123!` |
 
 ### Tests
 
@@ -214,16 +215,26 @@ npm run format
 
 ### Parcours
 
-| Page                           | Route                     | Rôles            |
-| ------------------------------ | ------------------------- | ---------------- |
-| Tableau de bord recruteur      | `/recruteur`              | RECRUITER, ADMIN |
-| Catalogue des profils          | `/recruteur/catalogue`    | RECRUITER, ADMIN |
-| Ma sélection (favoris)         | `/recruteur/favoris`      | RECRUITER, ADMIN |
-| Historique des interactions    | `/recruteur/interactions` | RECRUITER, ADMIN |
-| Tableau de bord administrateur | `/admin`                  | ADMIN            |
+| Page                             | Route                        | Rôles             |
+| -------------------------------- | ---------------------------- | ----------------- |
+| Fil public des profils           | `/`                          | tous, sans compte |
+| Profil public                    | `/profils/:id`               | tous, sans compte |
+| Inscription / connexion          | `/inscription`, `/connexion` | —                 |
+| Mon profil (vidéos, compétences) | `/mon-profil`                | APPLICANT         |
+| Questionnaire de certification   | `/certification`             | APPLICANT         |
+| Notifications                    | `/notifications`             | connectés         |
+| Tableau de bord recruteur        | `/recruteur`                 | RECRUITER, ADMIN  |
+| Catalogue des profils            | `/recruteur/catalogue`       | RECRUITER, ADMIN  |
+| Ma sélection (favoris)           | `/recruteur/favoris`         | RECRUITER, ADMIN  |
+| Historique des interactions      | `/recruteur/interactions`    | RECRUITER, ADMIN  |
+| Tableau de bord administrateur   | `/admin`                     | ADMIN             |
+| Modération des profils           | `/admin/moderation-profils`  | ADMIN             |
+| Modération des vidéos            | `/admin/moderation-videos`   | ADMIN             |
+| Questionnaire (barème)           | `/admin/questionnaire`       | ADMIN             |
 
 Les filtres du catalogue vivent dans l'URL (`?sector=...&skills=React,SQL&sort=score`) :
-une recherche est partageable, marquable et restaurée par le bouton retour.
+une recherche est partageable, marquable et restaurée par le bouton retour. Le fil public,
+lui, n'expose aucun filtre.
 
 ### Endpoints
 
@@ -262,9 +273,8 @@ une recherche est partageable, marquable et restaurée par le bouton retour.
 
 L'API est documentée en OpenAPI 3.0. Tous les endpoints, payloads et réponses y sont définis avant la première ligne de code métier.
 
-**Accès** : le contrat se lit directement dans `packages/api/openapi.yaml` (ou dans n'importe quel
-client OpenAPI pointé dessus). L'API ne sert pas encore de Swagger UI — il n'y a pas de route
-`/api/docs`.
+**Accès** : Swagger UI est servi sur `http://localhost:3000/api/docs/` (assets embarqués, aucun
+CDN), et le contrat brut sur `/api/docs/openapi.yaml`.
 
 ### Principes d'API
 

@@ -73,8 +73,8 @@ environment with Zod at import time and throws with every failing key listed. `a
 its first line precisely so that happens before any module that reads `env`. Copy `.env.example` as a
 starting point.
 
-**API Documentation:** The contract is `packages/api/openapi.yaml`, read directly or through any
-OpenAPI client. There is no `/api/docs` route — the API serves no Swagger UI.
+**API Documentation:** The contract is `packages/api/openapi.yaml`; the API serves it with Swagger UI
+at `/api/docs/` (assets bundled from `swagger-ui-dist`, no CDN) and raw at `/api/docs/openapi.yaml`.
 
 ### Toolchain quirks that will bite you
 
@@ -116,20 +116,36 @@ Work is split by **feature domain**, each owned end-to-end (backend routes _and_
 
 Consequence: don't reorganise `api/src` or `web/src` into layer-first buckets, and expect several people to touch adjacent files in the same directory.
 
-### What is wired up, and what is contract-only
+### What is wired up
 
-`packages/api/src/app.ts` is the honest inventory of the backend: auth, certification (public and
-admin), interactions, notifications, recruiter and admin routers are mounted; **profiles and videos
-are not**. `openapi.yaml` already specifies `/profiles`, `/profiles/{id}`, `/profiles/me`,
-`/profiles/{profileId}/videos` and `/videos/{videoId}`, and `origin/7-profils-vidéo-b` carries a
-`profile.service.ts`, its validators and the shared DTOs — but nothing reaches an Express route yet.
-A documented path with no implementation is the contract-first workflow working as intended, not a
-regression to hunt.
+`packages/api/src/app.ts` is the honest inventory of the backend: auth, profiles (feed, public
+page, own profile, skills), videos, skills catalogue, certification (public and admin),
+interactions, notifications, recruiter, admin (dashboard, profile and video moderation), health
+and the Swagger UI at `/api/docs` are all mounted. Direct video upload (`type: UPLOAD`) is the one
+documented capability that still answers `501 not_implemented`: the size and content-type checks
+exist in `video.service.ts`, but no route parses a multipart body — the demonstrator ships iframe
+embedding only.
 
-Two mount orderings in `app.ts` are load-bearing: `/api/health` is mounted **before**
-`apiRateLimiter` (a probe on a timer must not consume a caller's request budget), and
-`certificationAdminRouter` is mounted **before** `adminRouter` (it guards itself per-route, and
-`adminRouter` applies a blanket `requireRole('ADMIN')` to everything beneath `/api/admin`).
+Two mount orderings in `app.ts` are load-bearing: `/api/health` and `/api/docs` are mounted
+**before** `apiRateLimiter` (a probe on a timer, or four static files per documentation page load,
+must not consume a caller's request budget), and `certificationAdminRouter` is mounted **before**
+`adminRouter` (it guards itself per-route, and `adminRouter` applies a blanket
+`requireRole('ADMIN')` to everything beneath `/api/admin`).
+
+### Who sees what
+
+`packages/api/src/services/visibility.ts` is the single place the read rules live:
+
+- **Public** (`GET /profiles`, `GET /profiles/{id}`, `GET /profiles/{id}/videos`, no account):
+  `APPROVED` profiles of active **adult** job-seekers, with `APPROVED` videos only. A minor's
+  profile, a pending profile and a nonexistent id all answer the same 404 (brief §7.9.1, §7.9.2).
+  The public feed carries **no filter** — `docs/livrables/note-criteres-de-filtrage.md` says so to
+  the legal adviser, and the validator enforces it.
+- **Owner**: their own profile whatever its state, every video, plus the last rejection reason on
+  a `REJECTED` video (`Video.moderationReason`, brief §7.9.2).
+- **Recruiter catalogue**: active job-seekers whose profile is not `REJECTED` (pending stays
+  listed), `APPROVED` videos only, minors included (the route is role-gated).
+- **Admin queues**: everything, including pending video URLs — the one place they are disclosed.
 
 ### The API contract comes first
 
@@ -142,8 +158,10 @@ Where the database and the contract disagree, `schema.prisma` carries an inline 
 `packages/db/prisma/schema.prisma` is the source of truth for domain types — `UserRole`, `CertificationStatus` etc. are imported from `@prisma/client` rather than redeclared. Some rules the schema deliberately cannot express:
 
 - **At most one `IN_PROGRESS` `CertificationAttempt` per user** — this is what makes "resume where you left off" work; a new attempt must never be created while one is open. Resume must survive a server restart, so this lives in `CertificationAttempt`/`Answer`, never in browser storage. `services/certification/attempts.ts` holds this with a `Serializable` transaction and a P2034 retry rather than a DB constraint; keep both if you touch it.
-- **Editing an active question must invalidate every open attempt** — agreed in writing with the digital advisor on 2026-09-02, **not implemented yet**: the in-progress session is abandoned, its partial `Answer` rows are purged, and the candidate is told. Multiple concurrent question versions are deliberately not modelled, so a question edit must never leave a live attempt scored against a version that no longer exists.
-- **100 MB video cap** for `VideoType.UPLOAD` (`Video.fileSizeBytes` records it, the app rejects over-size), enforced server-side. Verify uploaded file type from file content, not the extension or the client-supplied MIME type, and store uploads outside the application code directory.
+- **Editing an active question invalidates every open attempt** — agreed in writing with the digital advisor on 2026-09-02 and implemented in `services/certification/invalidation.ts`, inside the same transaction as the edit: the in-progress session is marked `ABANDONED`, its `Answer` rows are purged, and the candidate gets a `CERTIFICATION_ATTEMPT_INVALIDATED` notification (the questionnaire page also shows it). Multiple concurrent question versions are deliberately not modelled.
+- **100 MB video cap** for `VideoType.UPLOAD` (`Video.fileSizeBytes` records it, the app rejects over-size), enforced server-side; `MAX_VIDEO_SIZE` and `UPLOAD_DIR` come from `config/env.ts`. Verify uploaded file type from file content, not the extension or the client-supplied MIME type, and store uploads outside the application code directory.
+- **Video consent is an explicit act**: `POST /profiles/{id}/videos` requires `consentAccepted: true` and logs `acceptedAt` + `consentTextVersion` (`VIDEO_CONSENT_TEXT` in `@profils-actifs/shared`; bump `CONSENT_TEXT_VERSION` when the wording changes). Deleting a video is the revocation: the row goes, and an uploaded file with it.
+- **Registration**: only an `APPLICANT` supplies `birthDate`, refused under 16; a `RECRUITER` is never asked. Seed accounts all carry one, including a 17-year-old fixture.
 - **Feed pagination is capped at 20 profiles per page**, server-side (no infinite-scroll-loads-everything). An out-of-range page must return a clean empty result, not error.
 - `Answer` is intentionally _not_ uniquely keyed on `(attemptId, questionId)`: a `CHECKBOX` question emits one row per selected option.
 - Scoring is a backend concern — `CertificationAttempt.score` and the `CertificationLevel` band that resolves the badge are computed server-side, never trusted from the client.
@@ -202,7 +220,7 @@ import { verifyToken } from '../services/jwt.js';
 
 **Uniform error shape:** Every non-2xx response is `{ error, message, statusCode }`, where `error` is a snake_case code (`unauthorized`, `forbidden`, `validation_error`). The codes are the `ApiErrorCode` union in `@profils-actifs/shared` — the frontend branches on them, so do not invent new ones inline.
 
-**Paginated lists:** `{ data: [...], pagination: { page, limit, total, pages } }`, built with `buildPaginationMeta`/`resolvePageRequest` from `@profils-actifs/shared`. `resolvePageRequest` is what enforces the 20-per-page cap; never re-implement the clamp.
+**Paginated lists:** `{ data: [...], pagination: { page, limit, total, pages } }`, built with `buildPaginationMeta`/`resolvePageRequest` from `@profils-actifs/shared`. `resolvePageRequest` is what enforces the 20-per-page cap; never re-implement the clamp. Query strings go through `paginationQuerySchema` in `validators/common.ts` — there is no second pagination validator.
 
 ### One way to fail a request
 
@@ -211,7 +229,8 @@ There is a single error path, and handlers never build an error body by hand:
 - **Services throw** `HttpError` via the helpers in `api/src/utils/http-error.ts` (`notFound`, `forbidden`, `conflict`, `tooManyRequests`, `badRequest`, `internalError`).
 - **Controllers parse** with `schema.parse(...)` and let the `ZodError` propagate — no `safeParse` + hand-written 400.
 - **`middleware/error-handler.ts`** turns `HttpError`, `ZodError`, Prisma's known request errors and malformed JSON into the uniform shape. Express 5 forwards rejected promises to it on its own, so handlers need no try/catch.
-- Anything unrecognised becomes an opaque 500; the cause is logged server-side only, never described to the client.
+- **`service_unavailable` (503)** is the one error no route declares: `error-handler.ts` raises it whenever the database is unreachable. Prisma 7 speaks through a driver adapter and passes the driver's own code through, so a stopped Postgres arrives as `ECONNREFUSED` — not a `P####` code — which is why the handler matches connection errnos and Postgres SQLSTATE class `08` as well as `P2024`.
+- Anything unrecognised becomes an opaque 500; the cause is logged server-side only, with the route that produced it, and never described to the client.
 
 Adding a per-domain error class re-introduces a second path — don't. Middleware
 (`auth.ts`, `rate-limit.ts`) forwards with `next(httpError)` for the same reason.
@@ -231,6 +250,20 @@ Input validation uses Zod in `api/src/validators/`. Backend validates independen
 - Shared primitives live in `validators/common.ts`: `idSchema`/`parseId` for path parameters, `printableText` for free text, `booleanQueryParam` and `listQueryParam` for query strings, `paginationQuerySchema` for paging. Build on them instead of re-declaring.
 - Path parameters go through `parseId(req.params.x)` — never an `as string` cast.
 - The authenticated caller comes from `currentUser(req)` (`utils/current-user.ts`), never `req.user!`.
+
+### Frontend
+
+A rendering crash is contained by `components/ErrorBoundary.tsx`, mounted twice: once at the root, and once inside `AppLayout` keyed on the path, so a broken page leaves the header and the navigation usable and navigating away clears it. Without it React unmounts the tree and the reader gets a blank page.
+
+`packages/web` is one React app for the three roles, on a single design system in
+`src/styles/global.css` (tokens on `:root`, dark values redefined under `prefers-color-scheme`,
+every text/background pair at or above 4.5:1). No CSS modules, no third-party UI kit, no external
+font (brief §8.3). Data fetching goes through `hooks/useAsyncResource.ts` and the thin wrappers in
+`src/services/`; auth state lives in `context/AuthContext.tsx` and route gating in
+`components/ProtectedRoute.tsx` — never decode the token in the browser. Videos are click-to-load
+(`components/VideoPlayer.tsx`): nothing is requested from YouTube/Vimeo until the viewer asks, and a
+page keeps a single active player (brief §8.6). Routes are French (`/inscription`, `/mon-profil`,
+`/certification`, `/recruteur/...`, `/admin/...`).
 
 ### Where shared code lives
 

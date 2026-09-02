@@ -64,6 +64,10 @@ model Skill {
   name String @unique
 
   profiles ProfileSkill[]
+
+  // The unique btree above serves exact lookups; the catalogue matches skill
+  // names case-insensitively, which is an ILIKE the btree cannot answer.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
 }
 
 enum SkillLevel {
@@ -84,7 +88,11 @@ model ProfileSkill {
   level SkillLevel @default(INTERMEDIATE)
 
   @@unique([profileId, skillId])
-  @@index([skillId])
+  // Reverse direction of the unique index above: the catalogue's skill facet
+  // starts from a skill and asks which profiles carry it. Both columns are in
+  // the index, so that lookup never touches the heap. Supersedes a standalone
+  // index on skillId, which was only its prefix.
+  @@index([skillId, profileId])
 }
 
 enum CertificationStatus {
@@ -126,10 +134,17 @@ model Profile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([sector])
-  @@index([location])
+  // `sector` and `location` are filtered case-insensitively, which Prisma
+  // emits as ILIKE — a plain btree cannot answer that, so these two are
+  // trigram indexes. See docs/decisions/02-index-du-catalogue.md for the
+  // measurements and for why write-time normalisation was not chosen instead.
+  @@index([sector(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([location(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([certificationStatus])
   @@index([moderationStatus])
+  // `sort=score` and `sort=recent`, the catalogue's two default orderings.
+  @@index([certificationScore])
+  @@index([updatedAt])
 }
 
 enum VideoType {

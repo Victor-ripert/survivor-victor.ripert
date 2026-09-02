@@ -16,14 +16,14 @@ const toPublicUser = (user: User) => ({
 });
 
 export const register = async (req: Request, res: Response): Promise<void> => {
-  const { email, password, firstName, lastName, role } = registerSchema.parse(req.body);
+  const { email, password, firstName, lastName, role, birthDate } = registerSchema.parse(req.body);
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) throw conflict('Cette adresse e-mail est déjà utilisée');
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { email, passwordHash, firstName, lastName, role },
+    data: { email, passwordHash, firstName, lastName, role, birthDate },
   });
 
   const token = signToken({ id: user.id, email: user.email, role: user.role });

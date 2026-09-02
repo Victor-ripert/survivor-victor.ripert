@@ -20,6 +20,7 @@ model User {
   lastName     String
   role         UserRole
   isActive     Boolean  @default(true)
+  birthDate    DateTime?
 
   profile               Profile?
   attempts              CertificationAttempt[]
@@ -168,7 +169,9 @@ model Video {
   // Same contract-gap note as Profile.moderationStatus.
   moderationStatus ModerationStatus @default(PENDING)
 
-  createdAt DateTime @default(now())
+  acceptedAt        DateTime
+  consentTextVersion String
+  revokedAt         DateTime?
 
   @@index([profileId])
 }

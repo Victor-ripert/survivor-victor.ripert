@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { MIN_APPLICANT_AGE } from '@profils-actifs/shared';
+import { calculateAge } from '../utils/age.js';
 
 export const registerSchema = z.object({
   email: z.email({ error: 'Email invalide' }),
@@ -8,6 +10,11 @@ export const registerSchema = z.object({
   role: z.enum(['APPLICANT', 'RECRUITER'], {
     error: 'Rôle invalide',
   }),
+  birthDate: z.coerce
+    .date({ error: 'Date de naissance invalide' })
+    .refine((date) => calculateAge(date) >= MIN_APPLICANT_AGE, {
+      error: `Vous devez avoir au moins ${MIN_APPLICANT_AGE} ans pour vous inscrire`,
+    }),
 });
 
 export const loginSchema = z.object({

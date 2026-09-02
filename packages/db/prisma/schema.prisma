@@ -154,7 +154,9 @@ model Video {
   // Same contract-gap note as Profile.moderationStatus.
   moderationStatus ModerationStatus @default(PENDING)
 
-  createdAt DateTime @default(now())
+  acceptedAt        DateTime
+  consentTextVersion String
+  revokedAt         DateTime?
 
   @@index([profileId])
 }

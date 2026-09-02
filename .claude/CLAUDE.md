@@ -21,6 +21,12 @@ Two things worth knowing if `CdC.MD` comes up:
 
 Some of `CdC.MD` §8 (Thomas Vignal's technical acceptance criteria) is genuinely useful and doesn't conflict with anything above — see the relevant bullets folded into Architecture below.
 
+One §8 conflict is now closed: **save/resume governs** (§8.4 over §2.2/§4.4), and the follow-up
+question §8.4 asks for — what happens to in-progress answers when question content changes — was
+answered on 2026-09-02 and accepted by return mail: invalidate the session, purge it, inform the
+candidate. The remaining open conflicts (the JibJob rename, likes, the visual identity) are still
+unresolved and still don't authorise anything.
+
 ## Commands
 
 Run from the repo root (Turborepo fans out to every package):
@@ -43,9 +49,15 @@ npm run test -w @profils-actifs/web
 Single test file / single test case (Jest):
 
 ```bash
-npm test -w @profils-actifs/api -- src/services/jwt.test.ts
-npm test -w @profils-actifs/api -- -t "rejects an expired token"
+npm test -w @profils-actifs/api -- src/services/notifications.test.ts
+npm test -w @profils-actifs/api -- -t "returns a clean empty page beyond the last one"
 ```
+
+Part of the API suite is integration tests hitting one real shared database, so
+`packages/api/jest.config.js` pins `maxWorkers: 1` and the suite needs Postgres up and
+migrated before it will pass. Raising the worker count is not a fix for a flaky run — two
+files flipping `CertificationQuestion.isActive` at the same time is a genuine race. CI runs
+`npm run test -- -- --coverage`; the doubled `--` is Turborepo forwarding the flag to Jest.
 
 Database (Postgres runs in Docker; Prisma owns the tables inside it):
 
@@ -56,10 +68,29 @@ npm run db:seed
 npm run db:studio -w @profils-actifs/db   # browse/edit rows in the browser
 ```
 
-`.env.local` is required before the API boots — `packages/api/src/services/jwt.ts` throws at import time if `JWT_SECRET` is missing. Copy `.env.example` as a starting point.
+`.env.local` is required before the API boots — `packages/api/src/config/env.ts` parses the whole
+environment with Zod at import time and throws with every failing key listed. `app.ts` imports it on
+its first line precisely so that happens before any module that reads `env`. Copy `.env.example` as a
+starting point.
 
 **API Documentation:** The contract is `packages/api/openapi.yaml`, read directly or through any
 OpenAPI client. There is no `/api/docs` route — the API serves no Swagger UI.
+
+### Toolchain quirks that will bite you
+
+- **Two TypeScripts on purpose.** `typescript` is aliased to `@typescript/typescript6` (ts-jest and
+  typescript-eslint still need the 6.x programmatic API); the real native 7.x compiler is aliased to
+  `typescript-native`. Bare `tsc` is ambiguous in this workspace, so every package's `build` calls
+  `node ../../scripts/tsc-native.js` instead. Don't replace that with `tsc`.
+- **Test files are excluded from every package `tsconfig`.** TS7 does not resolve the hoisted root
+  `@types/jest`, so any `*.test.ts(x)` left inside `include` fails the build with
+  `Cannot find name 'describe'`. Keep `src/**/*.test.ts` in `exclude` when adding a package; tests
+  are type-checked by ts-jest at test time. Do not "fix" this with a `types` field or a per-package
+  `@types/jest` install.
+- **Prisma 7 with a driver adapter.** `packages/db/prisma.config.ts` (not `schema.prisma`) is where
+  the CLI gets its schema path and `DATABASE_URL`, and it loads the repo-root env itself because
+  Prisma's config-file system loads no `.env`. The root `postinstall` runs `prisma generate`, so a
+  fresh clone has a client before the first build.
 
 ## Architecture
 
@@ -85,6 +116,21 @@ Work is split by **feature domain**, each owned end-to-end (backend routes _and_
 
 Consequence: don't reorganise `api/src` or `web/src` into layer-first buckets, and expect several people to touch adjacent files in the same directory.
 
+### What is wired up, and what is contract-only
+
+`packages/api/src/app.ts` is the honest inventory of the backend: auth, certification (public and
+admin), interactions, notifications, recruiter and admin routers are mounted; **profiles and videos
+are not**. `openapi.yaml` already specifies `/profiles`, `/profiles/{id}`, `/profiles/me`,
+`/profiles/{profileId}/videos` and `/videos/{videoId}`, and `origin/7-profils-vidéo-b` carries a
+`profile.service.ts`, its validators and the shared DTOs — but nothing reaches an Express route yet.
+A documented path with no implementation is the contract-first workflow working as intended, not a
+regression to hunt.
+
+Two mount orderings in `app.ts` are load-bearing: `/api/health` is mounted **before**
+`apiRateLimiter` (a probe on a timer must not consume a caller's request budget), and
+`certificationAdminRouter` is mounted **before** `adminRouter` (it guards itself per-route, and
+`adminRouter` applies a blanket `requireRole('ADMIN')` to everything beneath `/api/admin`).
+
 ### The API contract comes first
 
 `packages/api/openapi.yaml` is the agreed contract between all four domains, written before the implementation. **Update it in the same change as any route, payload or status-code change** — a frontend domain is reading it as the spec while the backend is still being written.
@@ -95,7 +141,8 @@ Where the database and the contract disagree, `schema.prisma` carries an inline 
 
 `packages/db/prisma/schema.prisma` is the source of truth for domain types — `UserRole`, `CertificationStatus` etc. are imported from `@prisma/client` rather than redeclared. Some rules the schema deliberately cannot express:
 
-- **At most one `IN_PROGRESS` `CertificationAttempt` per user** — this is what makes "resume where you left off" work; a new attempt must never be created while one is open. Resume must survive a server restart, so this lives in `CertificationAttempt`/`Answer`, never in browser storage.
+- **At most one `IN_PROGRESS` `CertificationAttempt` per user** — this is what makes "resume where you left off" work; a new attempt must never be created while one is open. Resume must survive a server restart, so this lives in `CertificationAttempt`/`Answer`, never in browser storage. `services/certification/attempts.ts` holds this with a `Serializable` transaction and a P2034 retry rather than a DB constraint; keep both if you touch it.
+- **Editing an active question must invalidate every open attempt** — agreed in writing with the digital advisor on 2026-09-02, **not implemented yet**: the in-progress session is abandoned, its partial `Answer` rows are purged, and the candidate is told. Multiple concurrent question versions are deliberately not modelled, so a question edit must never leave a live attempt scored against a version that no longer exists.
 - **100 MB video cap** for `VideoType.UPLOAD` (`Video.fileSizeBytes` records it, the app rejects over-size), enforced server-side. Verify uploaded file type from file content, not the extension or the client-supplied MIME type, and store uploads outside the application code directory.
 - **Feed pagination is capped at 20 profiles per page**, server-side (no infinite-scroll-loads-everything). An out-of-range page must return a clean empty result, not error.
 - `Answer` is intentionally _not_ uniquely keyed on `(attemptId, questionId)`: a `CHECKBOX` question emits one row per selected option.

@@ -3,6 +3,7 @@ import type { CertificationStatus } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import type { PaginationQuery } from '../validators/pagination.js';
 import type { UpsertProfileInput } from '../validators/profile.js';
+import { toVideoDto } from '../utils/mappers.js';
 import { MAX_PAGE_SIZE } from '@profils-actifs/shared';
 import type { Profile, Paginated } from '@profils-actifs/shared';
 
@@ -46,15 +47,7 @@ function toProfileDto(profile: ProfileWithRelations): Profile {
       skillName: profileSkill.skill.name,
       level: profileSkill.level,
     })),
-    videos: profile.videos.map((video) => ({
-      id: video.id,
-      profileId: video.profileId,
-      title: video.title,
-      description: video.description ?? undefined,
-      type: video.type,
-      url: video.url,
-      duration: video.duration ?? undefined,
-    })),
+    videos: profile.videos.map(toVideoDto),
     certificationStatus: profile.certificationStatus,
     certificationScore: profile.certificationScore ?? undefined,
     certificationBadge: profile.certificationBadge ?? undefined,

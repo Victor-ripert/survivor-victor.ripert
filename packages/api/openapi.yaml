@@ -289,15 +289,132 @@ components:
           $ref: '#/components/schemas/InteractionCounterpart'
       required: [id, recipientId, createdById, type, createdAt, counterpart]
 
+    HealthStatus:
+      type: object
+      description: >-
+        Answered by /health. `status` is `ok` (200) or `degraded` (503) — the
+        probe reports the database's real state rather than the fact that the
+        process is running.
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        version:
+          type: string
+          description: The API package's version, read from its manifest
+        environment:
+          type: string
+          enum: [development, test, production]
+        uptimeSeconds:
+          type: integer
+        database:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [up, down]
+            latencyMs:
+              type: integer
+              description: Present only when the database answered
+          required: [status]
+      required: [status, version, environment, uptimeSeconds, database]
+
+    VideoModerationItem:
+      type: object
+      description: One row of the video moderation queue.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        url:
+          type: string
+          description: >-
+            Disclosed on this admin-only route even while the video is PENDING,
+            because moderating it means watching it. Never present on any
+            recruiter- or public-facing response.
+        durationSeconds:
+          type: integer
+          nullable: true
+        moderationStatus:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        submittedAt:
+          type: string
+          format: date-time
+        applicant:
+          type: object
+          properties:
+            profileId:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            headline:
+              type: string
+              nullable: true
+          required: [profileId, firstName, lastName]
+        lastDecision:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/VideoModerationDecision'
+      required: [id, title, url, moderationStatus, submittedAt, applicant]
+
+    VideoModerationDecision:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [APPROVE, REJECT]
+        reason:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+        decidedBy:
+          type: object
+          properties:
+            id:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+          required: [id, firstName, lastName]
+      required: [action, reason, decidedAt, decidedBy]
+
     ErrorResponse:
       type: object
+      description: >-
+        The single error shape every non-2xx response uses. `error` is the
+        snake_case code the frontend branches on — the complete set is the
+        `ApiErrorCode` union in @profils-actifs/shared, mirrored by the enum
+        below. `validation_error` (400) and `unprocessable_entity` (422) split
+        on interpretability: 400 is decided by reading the request alone
+        (malformed JSON, wrong shape, out-of-range primitive), 422 needs a
+        database read — the payload is well formed but contradicts the state or
+        the type of the resource it targets.
       properties:
         error:
           type: string
+          enum:
+            - validation_error
+            - unauthorized
+            - forbidden
+            - not_found
+            - unprocessable_entity
+            - conflict
+            - too_many_requests
+            - internal_error
         message:
           type: string
         statusCode:
           type: integer
+      required: [error, message, statusCode]
 
     PaginationMeta:
       type: object
@@ -669,6 +786,14 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: >-
+        The payload parsed and matched its schema, but contradicts the resource
+        it targets — the mismatch is only detectable against database state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     TooManyRequests:
       description: Rate limit reached
       content:
@@ -743,6 +868,34 @@ security:
   - bearerAuth: []
 
 paths:
+  # ==========================================================================
+  # SYSTEM
+  # ==========================================================================
+
+  /health:
+    get:
+      tags: [System]
+      summary: Liveness and database-connectivity probe
+      description: >-
+        Mounted ahead of the rate limiter, so a probe running on a timer never
+        consumes a caller's request budget. It runs a real `SELECT 1` — an API
+        whose database is unreachable answers 503 and is taken out of rotation
+        instead of serving errors (§8.2).
+      security: []
+      responses:
+        '200':
+          description: The process answers and the database accepted a query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: The database is unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
   # ==========================================================================
   # AUTHENTICATION (Domain A)
   # ==========================================================================
@@ -1495,7 +1648,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CertificationQuestion'
         '400':
-          description: Validation error
+          description: The patch body itself is invalid
           content:
             application/json:
               schema:
@@ -1508,6 +1661,15 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: Cannot replace options for a question that already has recorded answers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: >-
+            The patch is well formed but its effective result breaks a rule —
+            a MULTIPLE_CHOICE or CHECKBOX question left with fewer than 2
+            options, checked against the type already stored
           content:
             application/json:
               schema:
@@ -1641,7 +1803,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/Answer'
         '400':
-          description: Validation error (missing/invalid field for this question's type)
+          description: >-
+            The body itself is invalid — malformed JSON, missing questionId, or
+            a numericAnswer outside 1..5
           content:
             application/json:
               schema:
@@ -1660,6 +1824,15 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: The attempt is no longer IN_PROGRESS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: >-
+            The body is well formed but does not fit the question's real type —
+            the required field for that type is missing, or an optionId belongs
+            to another question
           content:
             application/json:
               schema:
@@ -1729,7 +1902,10 @@ paths:
         - $ref: '#/components/parameters/LimitParam'
         - name: q
           in: query
-          description: Free-text search over headline, bio, sector, location, name and skills.
+          description: >-
+            Free-text search over headline, bio, sector, location and skills.
+            Deliberately not over the candidate's first or last name — see
+            docs/livrables/note-criteres-de-filtrage.md.
           schema:
             type: string
             maxLength: 100
@@ -2104,6 +2280,101 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /admin/moderation/videos:
+    get:
+      tags: [Administration]
+      summary: Videos awaiting an administrator's decision (admin only)
+      description: >-
+        The queue behind the *a priori* moderation the addendum of 2 September
+        requires (§7.9.2). No video reaches a recruiter or the public before it
+        is approved here.
+
+        This is the one response that carries the address of a video that is not
+        published: an administrator cannot decide on a video without watching
+        it. The route is admin-only, and every other surface — catalogue, feed,
+        public profile — filters on APPROVED.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          description: Defaults to PENDING, the queue itself.
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED, ALL]
+            default: PENDING
+      responses:
+        '200':
+          description: A page of videos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VideoModerationItem'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                required: [data, pagination]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/videos/{videoId}/moderate:
+    post:
+      tags: [Administration]
+      summary: Approve or reject a video, with a recorded reason (admin only)
+      description: >-
+        Writes the decision and a ModerationLog row naming who decided and when.
+        The reason is mandatory in both directions — a rejected video whose
+        author is told nothing is, in the legal adviser's words, litigation
+        starting — and it is surfaced to the candidate in their own space.
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [APPROVE, REJECT]
+                reason:
+                  type: string
+                  minLength: 10
+                  maxLength: 500
+                  description: Shown to the candidate. Required for both actions.
+                notes:
+                  type: string
+                  description: Internal, never shown to the candidate.
+              required: [action, reason]
+      responses:
+        '200':
+          description: The video with its new status and the decision that set it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoModerationItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /admin/moderation/profiles:
     get:

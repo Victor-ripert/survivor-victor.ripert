@@ -1,4 +1,8 @@
-import { buildCatalogueOrderBy, buildCatalogueWhere } from './catalogue.filters.js';
+import {
+  buildCatalogueOrderBy,
+  buildCatalogueWhere,
+  publishedVideoFilter,
+} from './catalogue.filters.js';
 
 const conditions = (where: ReturnType<typeof buildCatalogueWhere>) =>
   (where.AND ?? []) as Record<string, unknown>[];
@@ -15,17 +19,24 @@ describe('buildCatalogueWhere', () => {
     expect(conditions(buildCatalogueWhere({}))).toHaveLength(1);
   });
 
-  it('searches across the profile, its owner and its skills', () => {
+  it('searches across the profile and its skills', () => {
     const [, search] = conditions(buildCatalogueWhere({ q: 'soudure' }));
     const clauses = search.OR as Record<string, unknown>[];
 
     expect(clauses).toContainEqual({ headline: { contains: 'soudure', mode: 'insensitive' } });
     expect(clauses).toContainEqual({
-      user: { lastName: { contains: 'soudure', mode: 'insensitive' } },
-    });
-    expect(clauses).toContainEqual({
       skills: { some: { skill: { name: { contains: 'soudure', mode: 'insensitive' } } } },
     });
+  });
+
+  // Art. L1132-1: a surname is a proxy for origin, so it is not a criterion a
+  // recruiter may narrow the catalogue by.
+  it('never matches on the candidate`s name', () => {
+    const [, search] = conditions(buildCatalogueWhere({ q: 'soudure' }));
+    const clauses = search.OR as Record<string, unknown>[];
+
+    expect(JSON.stringify(clauses)).not.toContain('firstName');
+    expect(JSON.stringify(clauses)).not.toContain('lastName');
   });
 
   it('requires every requested skill rather than any of them', () => {
@@ -51,9 +62,12 @@ describe('buildCatalogueWhere', () => {
     });
   });
 
-  it('only counts videos that moderation has not rejected', () => {
+  // §7.9.2: moderation is a priori. A video awaiting review is not "not yet
+  // rejected", it is simply not published, and `hasVideo` must not surface a
+  // profile on the strength of one.
+  it('only counts videos moderation has approved', () => {
     expect(conditions(buildCatalogueWhere({ hasVideo: true }))).toContainEqual({
-      videos: { some: { moderationStatus: { not: 'REJECTED' } } },
+      videos: { some: { moderationStatus: 'APPROVED' } },
     });
   });
 
@@ -73,6 +87,17 @@ describe('buildCatalogueWhere', () => {
     expect(conditions(buildCatalogueWhere({ restrictToUserIds: [] }))).toContainEqual({
       userId: { in: [] },
     });
+  });
+});
+
+describe('publishedVideoFilter', () => {
+  it('admits approved videos only', () => {
+    expect(publishedVideoFilter).toEqual({ moderationStatus: 'APPROVED' });
+  });
+
+  it.each([['PENDING'], ['REJECTED']])('keeps a %s video out', (status) => {
+    expect(publishedVideoFilter).not.toEqual({ moderationStatus: status });
+    expect(JSON.stringify(publishedVideoFilter)).not.toContain('not');
   });
 });
 

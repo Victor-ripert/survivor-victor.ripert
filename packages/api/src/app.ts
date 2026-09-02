@@ -11,6 +11,7 @@ import { apiRateLimiter } from './middleware/rate-limit.js';
 import { adminRouter } from './routes/admin.js';
 import { authRouter } from './routes/auth.js';
 import { certificationAdminRouter, certificationRouter } from './routes/certification.js';
+import { docsRouter } from './routes/docs.js';
 import { healthRouter } from './routes/health.js';
 import { interactionsRouter } from './routes/interactions.js';
 import { notificationsRouter } from './routes/notifications.js';
@@ -30,6 +31,10 @@ export const createApp = (): Express => {
 
   // Health probes run on a timer and must not eat into the request budget.
   app.use('/api/health', healthRouter);
+  // Same reasoning for the contract: one page load pulls four static files,
+  // and charging those to the caller's quota makes the documentation
+  // unreadable after a handful of refreshes.
+  app.use('/api/docs', docsRouter);
   app.use('/api', apiRateLimiter);
 
   app.use('/api/auth', authRouter);

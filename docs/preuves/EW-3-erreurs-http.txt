@@ -1,0 +1,175 @@
+EW-3 — preuves des réponses d'erreur (§8.1)
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-02T16:29:30+02:00
+commit      : 1d44bad09414964c62887dfe335ec7549d1b004a
+branche     : feat/api-contract-and-deliverables
+API         : http://localhost:3000/api
+version API : 1.0.0
+compte      : yanis.oubrahim@example.fr (compte de démonstration issu du seed)
+
+Le jeton porteur est passé par $TOKEN_CANDIDAT et n'est pas imprimé.
+Tout le reste est la sortie brute de curl.
+
+==============================================================================
+400 — corps de requête invalide
+attendu : validation_error : questionId manquant, décidable en lisant le corps seul
+------------------------------------------------------------------------------
+$ curl -i -X POST http://localhost:3000/api/certification/attempt/cmtjwgy2y0000ahio8buypf3d/answer -H 'Content-Type: application/json' -H 'Authorization: Bearer $TOKEN_CANDIDAT' -d '{}'
+
+HTTP/1.1 400 Bad Request
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+RateLimit: "100-in-15min"; r=62; t=897
+RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
+Content-Type: application/json; charset=utf-8
+Content-Length: 108
+ETag: W/"6c-45wA9L5qBkWbPIR4L3of/OFIPHk"
+Date: Wed, 02 Sep 2026 14:29:30 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"error":"validation_error","message":"Invalid input: expected string, received undefined","statusCode":400}
+
+==============================================================================
+401 — absence d'authentification
+attendu : unauthorized : aucun en-tête Authorization
+------------------------------------------------------------------------------
+$ curl -i http://localhost:3000/api/auth/me
+
+HTTP/1.1 401 Unauthorized
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+RateLimit: "100-in-15min"; r=61; t=897
+RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
+Content-Type: application/json; charset=utf-8
+Content-Length: 72
+ETag: W/"48-k6kD4fKfKIYuABOW8TgLrw1zlPI"
+Date: Wed, 02 Sep 2026 14:29:30 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"error":"unauthorized","message":"Aucun jeton fourni","statusCode":401}
+
+==============================================================================
+403 — rôle insuffisant
+attendu : forbidden : un candidat n'accède pas au catalogue recruteur
+------------------------------------------------------------------------------
+$ curl -i http://localhost:3000/api/recruiter/catalogue -H 'Authorization: Bearer $TOKEN_CANDIDAT'
+
+HTTP/1.1 403 Forbidden
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+RateLimit: "100-in-15min"; r=60; t=897
+RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
+Content-Type: application/json; charset=utf-8
+Content-Length: 76
+ETag: W/"4c-zlp9IyvmH8ROS5D696yBpwgZ+8Q"
+Date: Wed, 02 Sep 2026 14:29:30 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"error":"forbidden","message":"Permissions insuffisantes","statusCode":403}
+
+==============================================================================
+404 — ressource inexistante
+attendu : not_found : cette tentative n'existe pas
+------------------------------------------------------------------------------
+$ curl -i http://localhost:3000/api/certification/attempt/tentative-qui-nexiste-pas -H 'Authorization: Bearer $TOKEN_CANDIDAT'
+
+HTTP/1.1 404 Not Found
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+RateLimit: "100-in-15min"; r=59; t=897
+RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
+Content-Type: application/json; charset=utf-8
+Content-Length: 89
+ETag: W/"59-vQlgDz/JVC6pc0ize4y9F+YUYis"
+Date: Wed, 02 Sep 2026 14:29:30 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"error":"not_found","message":"Tentative de certification introuvable","statusCode":404}
+
+==============================================================================
+422 — corps valide, incompatible avec la ressource visée
+attendu : unprocessable_entity : question MULTIPLE_CHOICE, optionId absent
+------------------------------------------------------------------------------
+$ curl -i -X POST http://localhost:3000/api/certification/attempt/cmtjwgy2y0000ahio8buypf3d/answer -H 'Content-Type: application/json' -H 'Authorization: Bearer $TOKEN_CANDIDAT' -d '{"questionId":"q-comm-mc-1"}'
+
+HTTP/1.1 422 Unprocessable Entity
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+RateLimit: "100-in-15min"; r=58; t=897
+RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
+Content-Type: application/json; charset=utf-8
+Content-Length: 115
+ETag: W/"73-cdNHyYDheo4+Cbwh2dilBBbaBdY"
+Date: Wed, 02 Sep 2026 14:29:30 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"error":"unprocessable_entity","message":"optionId est requis pour une question MULTIPLE_CHOICE","statusCode":422}
+
+==============================================================================
+Fin de la transcription — 2026-09-02T16:29:30+02:00

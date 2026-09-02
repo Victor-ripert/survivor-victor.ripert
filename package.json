@@ -18,6 +18,10 @@
   "workspaces": [
     "packages/*"
   ],
+  "scarfSettings": {
+    "//": "swagger-ui-dist depends on @scarf/scarf, whose postinstall reports install analytics to scarf.sh. §8.3 rules out anything that sends data off the machine, documentation tooling included.",
+    "enabled": false
+  },
   "devDependencies": {
     "turbo": "^2.10.12",
     "prettier": "^3.9.6",

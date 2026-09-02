@@ -1,4 +1,5 @@
 import { NotificationType, UserRole, VideoType } from '@prisma/client';
+import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
 import bcrypt from 'bcryptjs';
 import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
 import { prisma } from './client.js';

@@ -1,14 +1,18 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
 import { questionTypeRequiresOptions } from '../../validators/certification.js';
-import { badRequest, conflict } from '../../utils/http-error.js';
+import { conflict, unprocessableEntity } from '../../utils/http-error.js';
 import type { CreateQuestionInput, UpdateQuestionInput } from '../../validators/certification.js';
 
 // Raised when an admin patch fails the "choice questions need >=2 options"
 // rule against the *effective* type (existing DB value merged with the
 // patch) — Zod alone can't check this on update since `type` may be absent.
+// That database read is exactly what makes it a 422 rather than the 400 the
+// create path returns, where the same rule is a plain schema refinement.
 const invalidOptions = () =>
-  badRequest('Une question à choix (MULTIPLE_CHOICE ou CHECKBOX) requiert au moins 2 options');
+  unprocessableEntity(
+    'Une question à choix (MULTIPLE_CHOICE ou CHECKBOX) requiert au moins 2 options',
+  );
 
 // Raised when replacing a question's options would delete one that already
 // has recorded Answer rows — the DB's FK blocks the delete; this turns that

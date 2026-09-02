@@ -20,6 +20,7 @@ model User {
   lastName     String
   role         UserRole
   isActive     Boolean  @default(true)
+  birthDate    DateTime?
 
   profile               Profile?
   attempts              CertificationAttempt[]

@@ -1,0 +1,87 @@
+EW-6 — conformité schéma / migrations / base (§8.2)
+ProfilsActifs — JEB/DNI/2026-003
+
+date    : 2026-09-02T11:48:59+02:00
+commit  : 75ccee1c881b9629658b0c906a22f71e6e7166e3
+branche : feat/api-contract-and-deliverables
+
+==============================================================================
+A. Le schéma décrit-il la base en place ?
+------------------------------------------------------------------------------
+$ prisma migrate diff --from-schema=prisma/schema.prisma --to-config-datasource --exit-code
+
+Loaded Prisma config from prisma.config.ts.
+
+No difference detected.
+
+code de sortie : 0 (aucune différence ; 2 signalerait une dérive)
+
+==============================================================================
+B. Rejouer les migrations reconstruit-il ce schéma ?
+------------------------------------------------------------------------------
+$ prisma migrate diff --from-migrations=prisma/migrations --to-schema=prisma/schema.prisma --exit-code
+
+Loaded Prisma config from prisma.config.ts.
+
+No difference detected.
+
+code de sortie : 0 (aucune différence)
+
+==============================================================================
+Migrations appliquées à la base
+------------------------------------------------------------------------------
+             migration_name              |          finished_at          | applied_steps_count 
+-----------------------------------------+-------------------------------+---------------------
+ 20260831150606_init                     | 2026-08-31 15:06:06.81336+00  |                   1
+ 20260902093737_catalogue_search_indexes | 2026-09-02 09:45:25.202866+00 |                   1
+(2 rows)
+
+
+==============================================================================
+Index réellement en place
+------------------------------------------------------------------------------
+       tablename       |                 indexname                  |                                                             indexdef                                                             
+-----------------------+--------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------
+ Answer                | Answer_attemptId_questionId_idx            | CREATE INDEX "Answer_attemptId_questionId_idx" ON public."Answer" USING btree ("attemptId", "questionId")
+ Answer                | Answer_pkey                                | CREATE UNIQUE INDEX "Answer_pkey" ON public."Answer" USING btree (id)
+ CertificationAttempt  | CertificationAttempt_pkey                  | CREATE UNIQUE INDEX "CertificationAttempt_pkey" ON public."CertificationAttempt" USING btree (id)
+ CertificationAttempt  | CertificationAttempt_userId_status_idx     | CREATE INDEX "CertificationAttempt_userId_status_idx" ON public."CertificationAttempt" USING btree ("userId", status)
+ CertificationLevel    | CertificationLevel_minScore_maxScore_idx   | CREATE INDEX "CertificationLevel_minScore_maxScore_idx" ON public."CertificationLevel" USING btree ("minScore", "maxScore")
+ CertificationLevel    | CertificationLevel_name_key                | CREATE UNIQUE INDEX "CertificationLevel_name_key" ON public."CertificationLevel" USING btree (name)
+ CertificationLevel    | CertificationLevel_pkey                    | CREATE UNIQUE INDEX "CertificationLevel_pkey" ON public."CertificationLevel" USING btree (id)
+ CertificationOption   | CertificationOption_pkey                   | CREATE UNIQUE INDEX "CertificationOption_pkey" ON public."CertificationOption" USING btree (id)
+ CertificationOption   | CertificationOption_questionId_idx         | CREATE INDEX "CertificationOption_questionId_idx" ON public."CertificationOption" USING btree ("questionId")
+ CertificationQuestion | CertificationQuestion_isActive_order_idx   | CREATE INDEX "CertificationQuestion_isActive_order_idx" ON public."CertificationQuestion" USING btree ("isActive", "order")
+ CertificationQuestion | CertificationQuestion_pkey                 | CREATE UNIQUE INDEX "CertificationQuestion_pkey" ON public."CertificationQuestion" USING btree (id)
+ Interaction           | Interaction_createdById_type_createdAt_idx | CREATE INDEX "Interaction_createdById_type_createdAt_idx" ON public."Interaction" USING btree ("createdById", type, "createdAt")
+ Interaction           | Interaction_pkey                           | CREATE UNIQUE INDEX "Interaction_pkey" ON public."Interaction" USING btree (id)
+ Interaction           | Interaction_recipientId_type_idx           | CREATE INDEX "Interaction_recipientId_type_idx" ON public."Interaction" USING btree ("recipientId", type)
+ ModerationLog         | ModerationLog_adminId_idx                  | CREATE INDEX "ModerationLog_adminId_idx" ON public."ModerationLog" USING btree ("adminId")
+ ModerationLog         | ModerationLog_pkey                         | CREATE UNIQUE INDEX "ModerationLog_pkey" ON public."ModerationLog" USING btree (id)
+ ModerationLog         | ModerationLog_profileId_idx                | CREATE INDEX "ModerationLog_profileId_idx" ON public."ModerationLog" USING btree ("profileId")
+ Notification          | Notification_pkey                          | CREATE UNIQUE INDEX "Notification_pkey" ON public."Notification" USING btree (id)
+ Notification          | Notification_userId_isRead_idx             | CREATE INDEX "Notification_userId_isRead_idx" ON public."Notification" USING btree ("userId", "isRead")
+ Profile               | Profile_certificationScore_idx             | CREATE INDEX "Profile_certificationScore_idx" ON public."Profile" USING btree ("certificationScore")
+ Profile               | Profile_certificationStatus_idx            | CREATE INDEX "Profile_certificationStatus_idx" ON public."Profile" USING btree ("certificationStatus")
+ Profile               | Profile_location_idx                       | CREATE INDEX "Profile_location_idx" ON public."Profile" USING gin (location gin_trgm_ops)
+ Profile               | Profile_moderationStatus_idx               | CREATE INDEX "Profile_moderationStatus_idx" ON public."Profile" USING btree ("moderationStatus")
+ Profile               | Profile_pkey                               | CREATE UNIQUE INDEX "Profile_pkey" ON public."Profile" USING btree (id)
+ Profile               | Profile_sector_idx                         | CREATE INDEX "Profile_sector_idx" ON public."Profile" USING gin (sector gin_trgm_ops)
+ Profile               | Profile_updatedAt_idx                      | CREATE INDEX "Profile_updatedAt_idx" ON public."Profile" USING btree ("updatedAt")
+ Profile               | Profile_userId_key                         | CREATE UNIQUE INDEX "Profile_userId_key" ON public."Profile" USING btree ("userId")
+ ProfileSkill          | ProfileSkill_pkey                          | CREATE UNIQUE INDEX "ProfileSkill_pkey" ON public."ProfileSkill" USING btree (id)
+ ProfileSkill          | ProfileSkill_profileId_skillId_key         | CREATE UNIQUE INDEX "ProfileSkill_profileId_skillId_key" ON public."ProfileSkill" USING btree ("profileId", "skillId")
+ ProfileSkill          | ProfileSkill_skillId_profileId_idx         | CREATE INDEX "ProfileSkill_skillId_profileId_idx" ON public."ProfileSkill" USING btree ("skillId", "profileId")
+ Skill                 | Skill_name_idx                             | CREATE INDEX "Skill_name_idx" ON public."Skill" USING gin (name gin_trgm_ops)
+ Skill                 | Skill_name_key                             | CREATE UNIQUE INDEX "Skill_name_key" ON public."Skill" USING btree (name)
+ Skill                 | Skill_pkey                                 | CREATE UNIQUE INDEX "Skill_pkey" ON public."Skill" USING btree (id)
+ User                  | User_email_key                             | CREATE UNIQUE INDEX "User_email_key" ON public."User" USING btree (email)
+ User                  | User_pkey                                  | CREATE UNIQUE INDEX "User_pkey" ON public."User" USING btree (id)
+ User                  | User_role_idx                              | CREATE INDEX "User_role_idx" ON public."User" USING btree (role)
+ Video                 | Video_pkey                                 | CREATE UNIQUE INDEX "Video_pkey" ON public."Video" USING btree (id)
+ Video                 | Video_profileId_idx                        | CREATE INDEX "Video_profileId_idx" ON public."Video" USING btree ("profileId")
+ _prisma_migrations    | _prisma_migrations_pkey                    | CREATE UNIQUE INDEX _prisma_migrations_pkey ON public._prisma_migrations USING btree (id)
+(39 rows)
+
+
+Fin de la transcription — 2026-09-02T11:49:03+02:00

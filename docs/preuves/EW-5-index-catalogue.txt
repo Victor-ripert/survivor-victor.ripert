@@ -1,0 +1,486 @@
+EW-5 — index du catalogue : mesures avant et après (§8.2 + mail)
+ProfilsActifs — JEB/DNI/2026-003
+
+date         : 2026-09-02T11:49:11+02:00
+commit       : 75ccee1c881b9629658b0c906a22f71e6e7166e3
+branche      : feat/api-contract-and-deliverables
+base         : profils_actifs_bench (50000 profils, 150 000 lignes ProfileSkill, 300 compétences)
+PostgreSQL   : 16.15
+
+Les requêtes sont celles émises par Prisma, relevées avec
+scripts/preuves/capturer-sql-catalogue.mts ; seuls les paramètres liés
+sont remplacés par leurs valeurs.
+
+==============================================================================
+AVANT — schéma de la migration initiale (btree sur sector et location)
+==============================================================================
+
+Index présents sur Profile, ProfileSkill et Skill :
+  tablename   |             indexname              |                                                        indexdef                                                        
+--------------+------------------------------------+------------------------------------------------------------------------------------------------------------------------
+ Profile      | Profile_certificationStatus_idx    | CREATE INDEX "Profile_certificationStatus_idx" ON public."Profile" USING btree ("certificationStatus")
+ Profile      | Profile_location_idx               | CREATE INDEX "Profile_location_idx" ON public."Profile" USING btree (location)
+ Profile      | Profile_moderationStatus_idx       | CREATE INDEX "Profile_moderationStatus_idx" ON public."Profile" USING btree ("moderationStatus")
+ Profile      | Profile_pkey                       | CREATE UNIQUE INDEX "Profile_pkey" ON public."Profile" USING btree (id)
+ Profile      | Profile_sector_idx                 | CREATE INDEX "Profile_sector_idx" ON public."Profile" USING btree (sector)
+ Profile      | Profile_userId_key                 | CREATE UNIQUE INDEX "Profile_userId_key" ON public."Profile" USING btree ("userId")
+ ProfileSkill | ProfileSkill_pkey                  | CREATE UNIQUE INDEX "ProfileSkill_pkey" ON public."ProfileSkill" USING btree (id)
+ ProfileSkill | ProfileSkill_profileId_skillId_key | CREATE UNIQUE INDEX "ProfileSkill_profileId_skillId_key" ON public."ProfileSkill" USING btree ("profileId", "skillId")
+ ProfileSkill | ProfileSkill_skillId_idx           | CREATE INDEX "ProfileSkill_skillId_idx" ON public."ProfileSkill" USING btree ("skillId")
+ Skill        | Skill_name_key                     | CREATE UNIQUE INDEX "Skill_name_key" ON public."Skill" USING btree (name)
+ Skill        | Skill_pkey                         | CREATE UNIQUE INDEX "Skill_pkey" ON public."Skill" USING btree (id)
+(11 rows)
+
+
+------------------------------------------------------------------------------
+AVANT — critère : secteur
+------------------------------------------------------------------------------
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=3632.13..3632.18 rows=20 width=14) (actual time=42.862..42.871 rows=20 loops=1)
+   Buffers: shared hit=1582
+   ->  Sort  (cost=3632.13..3635.31 rows=1275 width=14) (actual time=42.859..42.865 rows=20 loops=1)
+         Sort Key: "Profile"."updatedAt" DESC, "Profile".id
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=1582
+         ->  Hash Join  (cost=1832.94..3598.20 rows=1275 width=14) (actual time=25.836..42.612 rows=1250 loops=1)
+               Hash Cond: (j0.id = "Profile"."userId")
+               Buffers: shared hit=1576
+               ->  Seq Scan on "User" j0  (cost=0.00..1634.00 rows=50000 width=6) (actual time=0.013..11.525 rows=50000 loops=1)
+                     Filter: ("isActive" AND (id IS NOT NULL) AND (role = ('APPLICANT'::cstring)::"UserRole"))
+                     Buffers: shared hit=759
+               ->  Hash  (cost=1817.00..1817.00 rows=1275 width=20) (actual time=25.781..25.783 rows=1250 loops=1)
+                     Buckets: 2048  Batches: 1  Memory Usage: 83kB
+                     Buffers: shared hit=817
+                     ->  Seq Scan on "Profile"  (cost=0.00..1817.00 rows=1275 width=20) (actual time=0.049..25.438 rows=1250 loops=1)
+                           Filter: ((sector ~~* 'Informatique'::text) AND ("moderationStatus" <> ('REJECTED'::cstring)::"ModerationStatus"))
+                           Rows Removed by Filter: 48750
+                           Buffers: shared hit=817
+ Planning:
+   Buffers: shared hit=289
+ Planning Time: 2.442 ms
+ Execution Time: 43.003 ms
+(23 rows)
+
+
+------------------------------------------------------------------------------
+AVANT — critère : localisation
+------------------------------------------------------------------------------
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=3601.58..3601.63 rows=20 width=14) (actual time=37.640..37.648 rows=20 loops=1)
+   Buffers: shared hit=1582
+   ->  Sort  (cost=3601.58..3602.82 rows=494 width=14) (actual time=37.637..37.642 rows=20 loops=1)
+         Sort Key: "Profile"."updatedAt" DESC, "Profile".id
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=1582
+         ->  Hash Join  (cost=1823.17..3588.44 rows=494 width=14) (actual time=21.475..37.548 rows=250 loops=1)
+               Hash Cond: (j0.id = "Profile"."userId")
+               Buffers: shared hit=1576
+               ->  Seq Scan on "User" j0  (cost=0.00..1634.00 rows=50000 width=6) (actual time=0.012..11.637 rows=50000 loops=1)
+                     Filter: ("isActive" AND (id IS NOT NULL) AND (role = ('APPLICANT'::cstring)::"UserRole"))
+                     Buffers: shared hit=759
+               ->  Hash  (cost=1817.00..1817.00 rows=494 width=20) (actual time=21.366..21.367 rows=250 loops=1)
+                     Buckets: 1024  Batches: 1  Memory Usage: 22kB
+                     Buffers: shared hit=817
+                     ->  Seq Scan on "Profile"  (cost=0.00..1817.00 rows=494 width=20) (actual time=0.096..21.274 rows=250 loops=1)
+                           Filter: ((location ~~* 'Lyon'::text) AND ("moderationStatus" <> ('REJECTED'::cstring)::"ModerationStatus"))
+                           Rows Removed by Filter: 49750
+                           Buffers: shared hit=817
+ Planning:
+   Buffers: shared hit=289
+ Planning Time: 2.427 ms
+ Execution Time: 37.764 ms
+(23 rows)
+
+
+------------------------------------------------------------------------------
+AVANT — critère : competences
+------------------------------------------------------------------------------
+                                                                                QUERY PLAN                                                                                 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=1317.77..1317.82 rows=20 width=14) (actual time=10.177..10.186 rows=20 loops=1)
+   Buffers: shared hit=3503
+   ->  Sort  (cost=1317.77..1319.02 rows=500 width=14) (actual time=10.174..10.180 rows=20 loops=1)
+         Sort Key: "Profile"."updatedAt" DESC, "Profile".id
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=3503
+         ->  Nested Loop  (cost=902.13..1304.47 rows=500 width=14) (actual time=2.580..9.996 rows=499 loops=1)
+               Buffers: shared hit=3497
+               ->  Nested Loop  (cost=901.84..1105.84 rows=500 width=20) (actual time=2.555..6.359 rows=499 loops=1)
+                     Buffers: shared hit=2000
+                     ->  HashAggregate  (cost=901.55..906.55 rows=500 width=6) (actual time=2.523..2.644 rows=499 loops=1)
+                           Group Key: t1."profileId"
+                           Batches: 1  Memory Usage: 73kB
+                           Buffers: shared hit=503
+                           ->  Nested Loop  (cost=8.17..900.30 rows=500 width=6) (actual time=0.293..2.336 rows=499 loops=1)
+                                 Buffers: shared hit=503
+                                 ->  Seq Scan on "Skill" j2  (cost=0.00..5.75 rows=1 width=4) (actual time=0.013..0.198 rows=1 loops=1)
+                                       Filter: ((id IS NOT NULL) AND (name ~~* 'React'::text))
+                                       Rows Removed by Filter: 299
+                                       Buffers: shared hit=2
+                                 ->  Bitmap Heap Scan on "ProfileSkill" t1  (cost=8.17..889.55 rows=500 width=10) (actual time=0.276..2.052 rows=499 loops=1)
+                                       Recheck Cond: ("skillId" = j2.id)
+                                       Filter: ("profileId" IS NOT NULL)
+                                       Heap Blocks: exact=499
+                                       Buffers: shared hit=501
+                                       ->  Bitmap Index Scan on "ProfileSkill_skillId_idx"  (cost=0.00..8.04 rows=500 width=0) (actual time=0.162..0.162 rows=499 loops=1)
+                                             Index Cond: ("skillId" = j2.id)
+                                             Buffers: shared hit=2
+                     ->  Index Scan using "Profile_pkey" on "Profile"  (cost=0.29..0.40 rows=1 width=20) (actual time=0.007..0.007 rows=1 loops=499)
+                           Index Cond: (id = t1."profileId")
+                           Filter: ("moderationStatus" <> ('REJECTED'::cstring)::"ModerationStatus")
+                           Buffers: shared hit=1497
+               ->  Index Scan using "User_pkey" on "User" j0  (cost=0.29..0.40 rows=1 width=6) (actual time=0.007..0.007 rows=1 loops=499)
+                     Index Cond: ((id = "Profile"."userId") AND (id IS NOT NULL))
+                     Filter: ("isActive" AND (role = ('APPLICANT'::cstring)::"UserRole"))
+                     Buffers: shared hit=1497
+ Planning:
+   Buffers: shared hit=399
+ Planning Time: 3.626 ms
+ Execution Time: 10.460 ms
+(40 rows)
+
+
+------------------------------------------------------------------------------
+AVANT — critère : recherche
+------------------------------------------------------------------------------
+                                                                                                                                                                          QUERY PLAN                                                                                                                                                                          
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=8730.97..8731.02 rows=20 width=14) (actual time=224.605..224.626 rows=20 loops=1)
+   Buffers: shared hit=3603
+   ->  Sort  (cost=8730.97..8793.50 rows=25012 width=14) (actual time=224.602..224.620 rows=20 loops=1)
+         Sort Key: "Profile"."updatedAt" DESC, "Profile".id
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=3603
+         ->  Hash Join  (cost=6027.00..8065.41 rows=25012 width=14) (actual time=51.948..224.481 rows=499 loops=1)
+               Hash Cond: ("Profile"."userId" = j0.id)
+               Buffers: shared hit=3597
+               ->  Hash Left Join  (cost=3768.00..5740.74 rows=25012 width=20) (actual time=32.157..204.334 rows=499 loops=1)
+                     Hash Cond: ("Profile"."userId" = j2.id)
+                     Filter: (("Profile".headline ~~* '%react%'::text) OR ("Profile".bio ~~* '%react%'::text) OR ("Profile".sector ~~* '%react%'::text) OR ("Profile".location ~~* '%react%'::text) OR ((j1."firstName" ~~* '%react%'::text) AND (j1.id IS NOT NULL)) OR ((j2."lastName" ~~* '%react%'::text) AND (j2.id IS NOT NULL)) OR (hashed SubPlan 2))
+                     Rows Removed by Filter: 49501
+                     Buffers: shared hit=2838
+                     ->  Hash Left Join  (cost=1884.00..3707.26 rows=50000 width=87) (actual time=14.792..49.031 rows=50000 loops=1)
+                           Hash Cond: ("Profile"."userId" = j1.id)
+                           Buffers: shared hit=1576
+                           ->  Seq Scan on "Profile"  (cost=0.00..1692.00 rows=50000 width=70) (actual time=0.009..14.351 rows=50000 loops=1)
+                                 Filter: ("moderationStatus" <> ('REJECTED'::cstring)::"ModerationStatus")
+                                 Buffers: shared hit=817
+                           ->  Hash  (cost=1259.00..1259.00 rows=50000 width=17) (actual time=14.581..14.583 rows=50000 loops=1)
+                                 Buckets: 65536  Batches: 1  Memory Usage: 2981kB
+                                 Buffers: shared hit=759
+                                 ->  Seq Scan on "User" j1  (cost=0.00..1259.00 rows=50000 width=17) (actual time=0.006..6.121 rows=50000 loops=1)
+                                       Buffers: shared hit=759
+                     ->  Hash  (cost=1259.00..1259.00 rows=50000 width=14) (actual time=14.724..14.725 rows=50000 loops=1)
+                           Buckets: 65536  Batches: 1  Memory Usage: 2835kB
+                           Buffers: shared hit=759
+                           ->  Seq Scan on "User" j2  (cost=0.00..1259.00 rows=50000 width=14) (actual time=0.005..6.238 rows=50000 loops=1)
+                                 Buffers: shared hit=759
+                     SubPlan 2
+                       ->  Nested Loop  (cost=8.17..900.30 rows=500 width=6) (actual time=0.226..1.868 rows=499 loops=1)
+                             Buffers: shared hit=503
+                             ->  Seq Scan on "Skill" j4  (cost=0.00..5.75 rows=1 width=4) (actual time=0.009..0.146 rows=1 loops=1)
+                                   Filter: ((id IS NOT NULL) AND (name ~~* '%react%'::text))
+                                   Rows Removed by Filter: 299
+                                   Buffers: shared hit=2
+                             ->  Bitmap Heap Scan on "ProfileSkill" t3  (cost=8.17..889.55 rows=500 width=10) (actual time=0.211..1.660 rows=499 loops=1)
+                                   Recheck Cond: ("skillId" = j4.id)
+                                   Filter: ("profileId" IS NOT NULL)
+                                   Heap Blocks: exact=499
+                                   Buffers: shared hit=501
+                                   ->  Bitmap Index Scan on "ProfileSkill_skillId_idx"  (cost=0.00..8.04 rows=500 width=0) (actual time=0.129..0.130 rows=499 loops=1)
+                                         Index Cond: ("skillId" = j4.id)
+                                         Buffers: shared hit=2
+               ->  Hash  (cost=1634.00..1634.00 rows=50000 width=6) (actual time=19.587..19.596 rows=50000 loops=1)
+                     Buckets: 65536  Batches: 1  Memory Usage: 2406kB
+                     Buffers: shared hit=759
+                     ->  Seq Scan on "User" j0  (cost=0.00..1634.00 rows=50000 width=6) (actual time=0.008..12.357 rows=50000 loops=1)
+                           Filter: ("isActive" AND (id IS NOT NULL) AND (role = ('APPLICANT'::cstring)::"UserRole"))
+                           Buffers: shared hit=759
+ Planning:
+   Buffers: shared hit=437
+ Planning Time: 3.487 ms
+ Execution Time: 225.722 ms
+(55 rows)
+
+
+==============================================================================
+APRÈS — migration 20260902093737_catalogue_search_indexes appliquée
+==============================================================================
+
+Index présents sur Profile, ProfileSkill et Skill :
+  tablename   |             indexname              |                                                        indexdef                                                        
+--------------+------------------------------------+------------------------------------------------------------------------------------------------------------------------
+ Profile      | Profile_certificationScore_idx     | CREATE INDEX "Profile_certificationScore_idx" ON public."Profile" USING btree ("certificationScore")
+ Profile      | Profile_certificationStatus_idx    | CREATE INDEX "Profile_certificationStatus_idx" ON public."Profile" USING btree ("certificationStatus")
+ Profile      | Profile_location_idx               | CREATE INDEX "Profile_location_idx" ON public."Profile" USING gin (location gin_trgm_ops)
+ Profile      | Profile_moderationStatus_idx       | CREATE INDEX "Profile_moderationStatus_idx" ON public."Profile" USING btree ("moderationStatus")
+ Profile      | Profile_pkey                       | CREATE UNIQUE INDEX "Profile_pkey" ON public."Profile" USING btree (id)
+ Profile      | Profile_sector_idx                 | CREATE INDEX "Profile_sector_idx" ON public."Profile" USING gin (sector gin_trgm_ops)
+ Profile      | Profile_updatedAt_idx              | CREATE INDEX "Profile_updatedAt_idx" ON public."Profile" USING btree ("updatedAt")
+ Profile      | Profile_userId_key                 | CREATE UNIQUE INDEX "Profile_userId_key" ON public."Profile" USING btree ("userId")
+ ProfileSkill | ProfileSkill_pkey                  | CREATE UNIQUE INDEX "ProfileSkill_pkey" ON public."ProfileSkill" USING btree (id)
+ ProfileSkill | ProfileSkill_profileId_skillId_key | CREATE UNIQUE INDEX "ProfileSkill_profileId_skillId_key" ON public."ProfileSkill" USING btree ("profileId", "skillId")
+ ProfileSkill | ProfileSkill_skillId_profileId_idx | CREATE INDEX "ProfileSkill_skillId_profileId_idx" ON public."ProfileSkill" USING btree ("skillId", "profileId")
+ Skill        | Skill_name_idx                     | CREATE INDEX "Skill_name_idx" ON public."Skill" USING gin (name gin_trgm_ops)
+ Skill        | Skill_name_key                     | CREATE UNIQUE INDEX "Skill_name_key" ON public."Skill" USING btree (name)
+ Skill        | Skill_pkey                         | CREATE UNIQUE INDEX "Skill_pkey" ON public."Skill" USING btree (id)
+(14 rows)
+
+
+------------------------------------------------------------------------------
+APRÈS — critère : secteur
+------------------------------------------------------------------------------
+                                                                              QUERY PLAN                                                                              
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=7.85..153.67 rows=20 width=14) (actual time=1.962..1.967 rows=20 loops=1)
+   Buffers: shared hit=967 read=5
+   ->  Incremental Sort  (cost=7.85..9245.50 rows=1267 width=14) (actual time=1.960..1.963 rows=20 loops=1)
+         Sort Key: "Profile"."updatedAt" DESC, "Profile".id
+         Presorted Key: "Profile"."updatedAt"
+         Full-sort Groups: 1  Sort Method: quicksort  Average Memory: 25kB  Peak Memory: 25kB
+         Buffers: shared hit=967 read=5
+         ->  Nested Loop  (cost=0.58..9188.52 rows=1267 width=14) (actual time=0.360..1.897 rows=21 loops=1)
+               Buffers: shared hit=958 read=5
+               ->  Index Scan Backward using "Profile_updatedAt_idx" on "Profile"  (cost=0.29..5070.25 rows=1267 width=20) (actual time=0.337..1.660 rows=21 loops=1)
+                     Filter: ((sector ~~* 'Informatique'::text) AND ("moderationStatus" <> ('REJECTED'::cstring)::"ModerationStatus"))
+                     Rows Removed by Filter: 872
+                     Buffers: shared hit=895 read=5
+               ->  Index Scan using "User_pkey" on "User" j0  (cost=0.29..3.25 rows=1 width=6) (actual time=0.011..0.011 rows=1 loops=21)
+                     Index Cond: ((id = "Profile"."userId") AND (id IS NOT NULL))
+                     Filter: ("isActive" AND (role = ('APPLICANT'::cstring)::"UserRole"))
+                     Buffers: shared hit=63
+ Planning:
+   Buffers: shared hit=327
+ Planning Time: 2.291 ms
+ Execution Time: 2.048 ms
+(21 rows)
+
+
+------------------------------------------------------------------------------
+APRÈS — critère : localisation
+------------------------------------------------------------------------------
+                                                                     QUERY PLAN                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=112.21..112.22 rows=5 width=14) (actual time=4.188..4.196 rows=20 loops=1)
+   Buffers: shared hit=1017
+   ->  Sort  (cost=112.21..112.22 rows=5 width=14) (actual time=4.185..4.189 rows=20 loops=1)
+         Sort Key: "Profile"."updatedAt" DESC, "Profile".id
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=1017
+         ->  Nested Loop  (cost=51.93..112.15 rows=5 width=14) (actual time=0.220..4.072 rows=250 loops=1)
+               Buffers: shared hit=1011
+               ->  Bitmap Heap Scan on "Profile"  (cost=51.64..70.56 rows=5 width=20) (actual time=0.187..1.523 rows=250 loops=1)
+                     Recheck Cond: (location ~~* 'Lyon'::text)
+                     Filter: ("moderationStatus" <> ('REJECTED'::cstring)::"ModerationStatus")
+                     Heap Blocks: exact=250
+                     Buffers: shared hit=261
+                     ->  Bitmap Index Scan on "Profile_location_idx"  (cost=0.00..51.64 rows=5 width=0) (actual time=0.138..0.139 rows=250 loops=1)
+                           Index Cond: (location ~~* 'Lyon'::text)
+                           Buffers: shared hit=11
+               ->  Index Scan using "User_pkey" on "User" j0  (cost=0.29..8.32 rows=1 width=6) (actual time=0.010..0.010 rows=1 loops=250)
+                     Index Cond: ((id = "Profile"."userId") AND (id IS NOT NULL))
+                     Filter: ("isActive" AND (role = ('APPLICANT'::cstring)::"UserRole"))
+                     Buffers: shared hit=750
+ Planning:
+   Buffers: shared hit=342
+ Planning Time: 2.255 ms
+ Execution Time: 4.396 ms
+(24 rows)
+
+
+------------------------------------------------------------------------------
+APRÈS — critère : competences
+------------------------------------------------------------------------------
+                                                                                              QUERY PLAN                                                                                               
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=446.62..446.67 rows=20 width=14) (actual time=7.993..8.001 rows=20 loops=1)
+   Buffers: shared hit=3006 read=1
+   ->  Sort  (cost=446.62..447.87 rows=500 width=14) (actual time=7.990..7.995 rows=20 loops=1)
+         Sort Key: "Profile"."updatedAt" DESC, "Profile".id
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=3006 read=1
+         ->  Nested Loop  (cost=31.00..433.32 rows=500 width=14) (actual time=0.655..7.818 rows=499 loops=1)
+               Buffers: shared hit=3000 read=1
+               ->  Nested Loop  (cost=30.71..234.69 rows=500 width=20) (actual time=0.630..4.286 rows=499 loops=1)
+                     Buffers: shared hit=1503 read=1
+                     ->  HashAggregate  (cost=30.42..35.42 rows=500 width=6) (actual time=0.600..0.706 rows=499 loops=1)
+                           Group Key: t1."profileId"
+                           Batches: 1  Memory Usage: 73kB
+                           Buffers: shared hit=6 read=1
+                           ->  Nested Loop  (cost=0.42..29.17 rows=500 width=6) (actual time=0.064..0.456 rows=499 loops=1)
+                                 Buffers: shared hit=6 read=1
+                                 ->  Seq Scan on "Skill" j2  (cost=0.00..5.75 rows=1 width=4) (actual time=0.017..0.251 rows=1 loops=1)
+                                       Filter: ((id IS NOT NULL) AND (name ~~* 'React'::text))
+                                       Rows Removed by Filter: 299
+                                       Buffers: shared hit=2
+                                 ->  Index Only Scan using "ProfileSkill_skillId_profileId_idx" on "ProfileSkill" t1  (cost=0.42..18.42 rows=500 width=10) (actual time=0.044..0.125 rows=499 loops=1)
+                                       Index Cond: (("skillId" = j2.id) AND ("profileId" IS NOT NULL))
+                                       Heap Fetches: 0
+                                       Buffers: shared hit=4 read=1
+                     ->  Index Scan using "Profile_pkey" on "Profile"  (cost=0.29..0.40 rows=1 width=20) (actual time=0.007..0.007 rows=1 loops=499)
+                           Index Cond: (id = t1."profileId")
+                           Filter: ("moderationStatus" <> ('REJECTED'::cstring)::"ModerationStatus")
+                           Buffers: shared hit=1497
+               ->  Index Scan using "User_pkey" on "User" j0  (cost=0.29..0.40 rows=1 width=6) (actual time=0.007..0.007 rows=1 loops=499)
+                     Index Cond: ((id = "Profile"."userId") AND (id IS NOT NULL))
+                     Filter: ("isActive" AND (role = ('APPLICANT'::cstring)::"UserRole"))
+                     Buffers: shared hit=1497
+ Planning:
+   Buffers: shared hit=469 read=5
+ Planning Time: 4.585 ms
+ Execution Time: 8.218 ms
+(36 rows)
+
+
+------------------------------------------------------------------------------
+APRÈS — critère : recherche
+------------------------------------------------------------------------------
+                                                                                                                                                                          QUERY PLAN                                                                                                                                                                          
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=23.89..479.13 rows=20 width=14) (actual time=18.547..18.555 rows=20 loops=1)
+   Buffers: shared hit=11526 read=2
+   ->  Incremental Sort  (cost=23.89..569347.46 rows=25012 width=14) (actual time=18.545..18.550 rows=20 loops=1)
+         Sort Key: "Profile"."updatedAt" DESC, "Profile".id
+         Presorted Key: "Profile"."updatedAt"
+         Full-sort Groups: 1  Sort Method: quicksort  Average Memory: 25kB  Peak Memory: 25kB
+         Buffers: shared hit=11526 read=2
+         ->  Nested Loop  (cost=1.16..568221.92 rows=25012 width=14) (actual time=1.545..18.456 rows=21 loops=1)
+               Buffers: shared hit=11517 read=2
+               ->  Nested Loop Left Join  (cost=0.87..558285.76 rows=25012 width=20) (actual time=1.521..18.366 rows=21 loops=1)
+                     Filter: (("Profile".headline ~~* '%react%'::text) OR ("Profile".bio ~~* '%react%'::text) OR ("Profile".sector ~~* '%react%'::text) OR ("Profile".location ~~* '%react%'::text) OR ((j1."firstName" ~~* '%react%'::text) AND (j1.id IS NOT NULL)) OR ((j2."lastName" ~~* '%react%'::text) AND (j2.id IS NOT NULL)) OR (hashed SubPlan 2))
+                     Rows Removed by Filter: 1613
+                     Buffers: shared hit=11454 read=2
+                     ->  Nested Loop Left Join  (cost=0.58..24308.15 rows=50000 width=87) (actual time=0.067..9.323 rows=1634 loops=1)
+                           Buffers: shared hit=6545 read=2
+                           ->  Index Scan Backward using "Profile_updatedAt_idx" on "Profile"  (cost=0.29..4945.25 rows=50000 width=70) (actual time=0.038..2.313 rows=1634 loops=1)
+                                 Filter: ("moderationStatus" <> ('REJECTED'::cstring)::"ModerationStatus")
+                                 Buffers: shared hit=1643 read=2
+                           ->  Index Scan using "User_pkey" on "User" j1  (cost=0.29..0.39 rows=1 width=17) (actual time=0.004..0.004 rows=1 loops=1634)
+                                 Index Cond: (id = "Profile"."userId")
+                                 Buffers: shared hit=4902
+                     ->  Index Scan using "User_pkey" on "User" j2  (cost=0.29..0.39 rows=1 width=14) (actual time=0.002..0.002 rows=1 loops=1634)
+                           Index Cond: (id = "Profile"."userId")
+                           Buffers: shared hit=4902
+                     SubPlan 2
+                       ->  Nested Loop  (cost=0.42..29.17 rows=500 width=6) (actual time=0.055..0.400 rows=499 loops=1)
+                             Buffers: shared hit=7
+                             ->  Seq Scan on "Skill" j4  (cost=0.00..5.75 rows=1 width=4) (actual time=0.014..0.209 rows=1 loops=1)
+                                   Filter: ((id IS NOT NULL) AND (name ~~* '%react%'::text))
+                                   Rows Removed by Filter: 299
+                                   Buffers: shared hit=2
+                             ->  Index Only Scan using "ProfileSkill_skillId_profileId_idx" on "ProfileSkill" t3  (cost=0.42..18.42 rows=500 width=10) (actual time=0.039..0.112 rows=499 loops=1)
+                                   Index Cond: (("skillId" = j4.id) AND ("profileId" IS NOT NULL))
+                                   Heap Fetches: 0
+                                   Buffers: shared hit=5
+               ->  Index Scan using "User_pkey" on "User" j0  (cost=0.29..0.40 rows=1 width=6) (actual time=0.004..0.004 rows=1 loops=21)
+                     Index Cond: ((id = "Profile"."userId") AND (id IS NOT NULL))
+                     Filter: ("isActive" AND (role = ('APPLICANT'::cstring)::"UserRole"))
+                     Buffers: shared hit=63
+ Planning:
+   Buffers: shared hit=515
+ Planning Time: 5.756 ms
+ Execution Time: 18.811 ms
+(43 rows)
+
+
+==============================================================================
+Coût en espace des index ajoutés
+==============================================================================
+               index                | taille  
+------------------------------------+---------
+ ProfileSkill_pkey                  | 5640 kB
+ ProfileSkill_profileId_skillId_key | 5552 kB
+ ProfileSkill_skillId_profileId_idx | 4640 kB
+ Profile_pkey                       | 1904 kB
+ Profile_userId_key                 | 1904 kB
+ Profile_location_idx               | 1112 kB
+ Profile_updatedAt_idx              | 1104 kB
+ Profile_sector_idx                 | 960 kB
+ Profile_certificationScore_idx     | 376 kB
+ Profile_moderationStatus_idx       | 336 kB
+ Profile_certificationStatus_idx    | 336 kB
+ Skill_name_idx                     | 48 kB
+ Skill_name_key                     | 32 kB
+ Skill_pkey                         | 16 kB
+(14 rows)
+
+
+==============================================================================
+ANNEXE A — le même filtre secteur, trié par score (sort=score)
+==============================================================================
+
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=2581.46..2581.51 rows=20 width=18) (actual time=17.846..17.854 rows=20 loops=1)
+   Buffers: shared hit=1619
+   ->  Sort  (cost=2581.46..2584.63 rows=1267 width=18) (actual time=17.842..17.848 rows=20 loops=1)
+         Sort Key: "Profile"."certificationScore" DESC NULLS LAST, "Profile"."updatedAt" DESC, "Profile".id
+         Sort Method: top-N heapsort  Memory: 27kB
+         Buffers: shared hit=1619
+         ->  Hash Join  (cost=1032.49..2547.75 rows=1267 width=18) (actual time=4.490..17.534 rows=1250 loops=1)
+               Hash Cond: (j0.id = "Profile"."userId")
+               Buffers: shared hit=1610
+               ->  Seq Scan on "User" j0  (cost=0.00..1384.00 rows=50000 width=6) (actual time=0.024..7.771 rows=50000 loops=1)
+                     Filter: ("isActive" AND (id IS NOT NULL) AND (role = 'APPLICANT'::"UserRole"))
+                     Buffers: shared hit=759
+               ->  Hash  (cost=1016.65..1016.65 rows=1267 width=24) (actual time=4.430..4.432 rows=1250 loops=1)
+                     Buckets: 2048  Batches: 1  Memory Usage: 93kB
+                     Buffers: shared hit=851
+                     ->  Bitmap Heap Scan on "Profile"  (cost=144.08..1016.65 rows=1267 width=24) (actual time=1.026..4.138 rows=1250 loops=1)
+                           Recheck Cond: (sector ~~* 'Informatique'::text)
+                           Filter: ("moderationStatus" <> 'REJECTED'::"ModerationStatus")
+                           Heap Blocks: exact=817
+                           Buffers: shared hit=851
+                           ->  Bitmap Index Scan on "Profile_sector_idx"  (cost=0.00..143.76 rows=1267 width=0) (actual time=0.894..0.895 rows=1250 loops=1)
+                                 Index Cond: (sector ~~* 'Informatique'::text)
+                                 Buffers: shared hit=34
+ Planning:
+   Buffers: shared hit=329
+ Planning Time: 2.793 ms
+ Execution Time: 18.163 ms
+(27 rows)
+
+
+==============================================================================
+ANNEXE B — le même référentiel de compétences porté à 5 000 entrées
+==============================================================================
+
+Recherche d'une compétence par son nom, insensible à la casse :
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on "Skill"  (cost=56.22..60.24 rows=1 width=5) (actual time=0.044..0.046 rows=1 loops=1)
+   Recheck Cond: (name ~~* 'React'::text)
+   Heap Blocks: exact=1
+   Buffers: shared hit=14
+   ->  Bitmap Index Scan on "Skill_name_idx"  (cost=0.00..56.22 rows=1 width=0) (actual time=0.033..0.033 rows=1 loops=1)
+         Index Cond: (name ~~* 'React'::text)
+         Buffers: shared hit=13
+ Planning:
+   Buffers: shared hit=37
+ Planning Time: 0.489 ms
+ Execution Time: 0.094 ms
+(11 rows)
+
+
+==============================================================================
+ANNEXE C — une compétence portée par 5 profils sur 50 000
+==============================================================================
+
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Index Only Scan using "ProfileSkill_skillId_profileId_idx" on "ProfileSkill"  (cost=0.42..17.10 rows=496 width=6) (actual time=0.025..0.027 rows=5 loops=1)
+   Index Cond: ("skillId" = 's-rare'::text)
+   Heap Fetches: 0
+   Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=32
+ Planning Time: 0.261 ms
+ Execution Time: 0.052 ms
+(8 rows)
+
+
+La base de mesure est conservée sous le nom profils_actifs_bench ; elle est
+recréée à chaque exécution et n'est jamais celle de développement.
+Fin de la transcription — 2026-09-02T11:49:16+02:00

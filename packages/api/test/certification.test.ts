@@ -9,7 +9,11 @@ import { prisma } from '../src/config/prisma.js';
 const app = createApp();
 
 const adminToken = signToken({ id: 'test-admin', email: 'admin@test.local', role: 'ADMIN' });
-const applicantToken = signToken({ id: 'test-applicant', email: 'applicant@test.local', role: 'APPLICANT' });
+const applicantToken = signToken({
+  id: 'test-applicant',
+  email: 'applicant@test.local',
+  role: 'APPLICANT',
+});
 
 describe('GET /certification/questions (public)', () => {
   it('returns questions without exposing points/weight/maxPoints', async () => {
@@ -31,7 +35,14 @@ describe('GET /certification/questions (public)', () => {
 
   it('only returns active questions', async () => {
     const inactive = await prisma.certificationQuestion.create({
-      data: { order: 999, type: 'SHORT_TEXT', text: 'inactive test question', weight: 1, maxPoints: 5, isActive: false },
+      data: {
+        order: 999,
+        type: 'SHORT_TEXT',
+        text: 'inactive test question',
+        weight: 1,
+        maxPoints: 5,
+        isActive: false,
+      },
     });
 
     const res = await request(app).get('/api/certification/questions');

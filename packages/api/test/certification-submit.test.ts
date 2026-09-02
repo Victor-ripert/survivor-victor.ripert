@@ -10,11 +10,22 @@ import { prisma } from '../src/config/prisma.js';
 const app = createApp();
 
 const applicantId = 'test-applicant-submit';
-const applicantToken = signToken({ id: applicantId, email: 'applicant-submit@test.local', role: 'APPLICANT' });
+const applicantToken = signToken({
+  id: applicantId,
+  email: 'applicant-submit@test.local',
+  role: 'APPLICANT',
+});
 
 beforeAll(async () => {
   await prisma.user.create({
-    data: { id: applicantId, email: 'applicant-submit@test.local', passwordHash: 'x', firstName: 'T', lastName: 'S', role: 'APPLICANT' },
+    data: {
+      id: applicantId,
+      email: 'applicant-submit@test.local',
+      passwordHash: 'x',
+      firstName: 'T',
+      lastName: 'S',
+      role: 'APPLICANT',
+    },
   });
   await prisma.profile.create({
     data: { userId: applicantId, location: 'Paris', sector: 'Tech' },
@@ -39,13 +50,18 @@ afterAll(async () => {
 // real seeded questions to make this test deterministic.
 const answerAllActiveQuestionsOptimally = async (attemptId: string) => {
   const questions: (CertificationQuestion & { options: CertificationOption[] })[] =
-    await prisma.certificationQuestion.findMany({ where: { isActive: true }, include: { options: true } });
+    await prisma.certificationQuestion.findMany({
+      where: { isActive: true },
+      include: { options: true },
+    });
 
   for (const question of questions) {
     switch (question.type) {
       case 'MULTIPLE_CHOICE': {
         const best = question.options.reduce((a, b) => (b.points > a.points ? b : a));
-        await prisma.answer.create({ data: { attemptId, questionId: question.id, optionId: best.id } });
+        await prisma.answer.create({
+          data: { attemptId, questionId: question.id, optionId: best.id },
+        });
         break;
       }
       case 'CHECKBOX': {
@@ -56,11 +72,15 @@ const answerAllActiveQuestionsOptimally = async (attemptId: string) => {
         break;
       }
       case 'LIKERT_SCALE': {
-        await prisma.answer.create({ data: { attemptId, questionId: question.id, numericAnswer: 5 } });
+        await prisma.answer.create({
+          data: { attemptId, questionId: question.id, numericAnswer: 5 },
+        });
         break;
       }
       case 'SHORT_TEXT': {
-        await prisma.answer.create({ data: { attemptId, questionId: question.id, textAnswer: 'answered' } });
+        await prisma.answer.create({
+          data: { attemptId, questionId: question.id, textAnswer: 'answered' },
+        });
         break;
       }
     }
@@ -89,6 +109,54 @@ describe('POST /certification/attempt/:attemptId/submit — auth & lifecycle', (
   });
 });
 
+describe('POST /certification/attempt/:attemptId/submit — applicant without a profile', () => {
+  const orphanId = 'test-applicant-submit-no-profile';
+  const orphanToken = signToken({
+    id: orphanId,
+    email: 'applicant-submit-orphan@test.local',
+    role: 'APPLICANT',
+  });
+
+  beforeAll(async () => {
+    await prisma.user.create({
+      data: {
+        id: orphanId,
+        email: 'applicant-submit-orphan@test.local',
+        passwordHash: 'x',
+        firstName: 'T',
+        lastName: 'O',
+        role: 'APPLICANT',
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.user.delete({ where: { id: orphanId } });
+  });
+
+  it('answers 409 and leaves the attempt open instead of a bare 404', async () => {
+    const attempt = await prisma.certificationAttempt.create({ data: { userId: orphanId } });
+    await answerAllActiveQuestionsOptimally(attempt.id);
+
+    const res = await request(app)
+      .post(`/api/certification/attempt/${attempt.id}/submit`)
+      .set('Authorization', `Bearer ${orphanToken}`);
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ error: 'conflict' });
+
+    // The whole submit is one transaction: a scored attempt must not survive
+    // a write that could not land the badge on a profile.
+    const unchanged = await prisma.certificationAttempt.findUniqueOrThrow({
+      where: { id: attempt.id },
+    });
+    expect(unchanged.status).toBe('IN_PROGRESS');
+    expect(unchanged.score).toBeNull();
+
+    await prisma.certificationAttempt.delete({ where: { id: attempt.id } });
+  });
+});
+
 describe('POST /certification/attempt/:attemptId/submit — scoring outcomes', () => {
   it('a perfect run scores 100, earns a badge, updates the profile, and notifies', async () => {
     const attempt = await prisma.certificationAttempt.create({ data: { userId: applicantId } });
@@ -103,7 +171,9 @@ describe('POST /certification/attempt/:attemptId/submit — scoring outcomes', (
     expect(res.body.attempt.status).toBe('COMPLETED');
     expect(res.body.badge.badgeIconUrl).not.toBeNull();
 
-    const dbAttempt = await prisma.certificationAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
+    const dbAttempt = await prisma.certificationAttempt.findUniqueOrThrow({
+      where: { id: attempt.id },
+    });
     expect(dbAttempt.status).toBe('COMPLETED');
     expect(dbAttempt.score).toBe(100);
     expect(dbAttempt.completedAt).not.toBeNull();
@@ -155,22 +225,31 @@ describe('POST /certification/attempt/:attemptId/submit — scoring outcomes', (
     expect(second.status).toBe(409);
   });
 
-  it("distributes pointsEarned across CHECKBOX answer rows without double counting", async () => {
+  it('distributes pointsEarned across CHECKBOX answer rows without double counting', async () => {
     const checkboxQuestion = await prisma.certificationQuestion.findFirst({
       where: { type: 'CHECKBOX', isActive: true },
       include: { options: true },
     });
-    if (!checkboxQuestion) throw new Error('seed must contain at least one active CHECKBOX question for this test');
+    if (!checkboxQuestion)
+      throw new Error('seed must contain at least one active CHECKBOX question for this test');
 
     const attempt = await prisma.certificationAttempt.create({ data: { userId: applicantId } });
     const positive = checkboxQuestion.options.filter((o) => o.points > 0);
     await prisma.answer.createMany({
-      data: positive.map((o) => ({ attemptId: attempt.id, questionId: checkboxQuestion.id, optionId: o.id })),
+      data: positive.map((o) => ({
+        attemptId: attempt.id,
+        questionId: checkboxQuestion.id,
+        optionId: o.id,
+      })),
     });
 
-    await request(app).post(`/api/certification/attempt/${attempt.id}/submit`).set('Authorization', `Bearer ${applicantToken}`);
+    await request(app)
+      .post(`/api/certification/attempt/${attempt.id}/submit`)
+      .set('Authorization', `Bearer ${applicantToken}`);
 
-    const rows = await prisma.answer.findMany({ where: { attemptId: attempt.id, questionId: checkboxQuestion.id } });
+    const rows = await prisma.answer.findMany({
+      where: { attemptId: attempt.id, questionId: checkboxQuestion.id },
+    });
     const sum = rows.reduce((total, row) => total + row.pointsEarned, 0);
     const expected = Math.min(
       positive.reduce((total, o) => total + o.points, 0),

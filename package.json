@@ -10,7 +10,8 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,mjs,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,mjs,json,md,yaml,yml}\"",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed"
   },

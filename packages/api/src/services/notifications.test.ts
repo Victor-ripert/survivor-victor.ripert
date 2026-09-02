@@ -8,9 +8,8 @@ jest.unstable_mockModule('../config/prisma.js', () => ({
   prisma: asPrismaClient(prismaMock),
 }));
 
-const { listNotifications, markNotificationAsRead, notifyNewInteraction } = await import(
-  './notifications.js'
-);
+const { listNotifications, markNotificationAsRead, notifyNewInteraction } =
+  await import('./notifications.js');
 
 const USER_ID = 'applicant-1';
 

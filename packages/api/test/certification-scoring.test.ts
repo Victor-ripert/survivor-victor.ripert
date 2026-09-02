@@ -78,11 +78,17 @@ describe('scoreAttempt — overall score', () => {
   it('weight makes a heavier question matter more than a lighter one', () => {
     const lightWrong = scoreAttempt(
       [mcQuestion, likertQuestion], // mc weight 2, likert weight 1
-      [{ questionId: 'mc-1', optionId: 'opt-bad' }, { questionId: 'likert-1', numericAnswer: 5 }],
+      [
+        { questionId: 'mc-1', optionId: 'opt-bad' },
+        { questionId: 'likert-1', numericAnswer: 5 },
+      ],
     );
     const heavyWrong = scoreAttempt(
       [mcQuestion, likertQuestion],
-      [{ questionId: 'mc-1', optionId: 'opt-best' }, { questionId: 'likert-1', numericAnswer: 1 }],
+      [
+        { questionId: 'mc-1', optionId: 'opt-best' },
+        { questionId: 'likert-1', numericAnswer: 1 },
+      ],
     );
     // Missing the heavier (weight 2) question hurts more than missing the lighter one.
     expect(lightWrong.totalScore).toBeLessThan(heavyWrong.totalScore);
@@ -95,13 +101,21 @@ describe('scoreAttempt — SHORT_TEXT exclusion', () => {
       [mcQuestion, shortTextQuestion],
       [{ questionId: 'mc-1', optionId: 'opt-best' }],
     );
-    const withoutTextQuestion = scoreAttempt([mcQuestion], [{ questionId: 'mc-1', optionId: 'opt-best' }]);
+    const withoutTextQuestion = scoreAttempt(
+      [mcQuestion],
+      [{ questionId: 'mc-1', optionId: 'opt-best' }],
+    );
 
     expect(withUnansweredText.totalScore).toBe(withoutTextQuestion.totalScore);
     expect(withUnansweredText.totalScore).toBe(100);
 
     const textScore = withUnansweredText.questionScores.find((q) => q.questionId === 'text-1');
-    expect(textScore).toEqual({ questionId: 'text-1', scored: false, pointsEarned: 0, weightedPoints: 0 });
+    expect(textScore).toEqual({
+      questionId: 'text-1',
+      scored: false,
+      pointsEarned: 0,
+      weightedPoints: 0,
+    });
   });
 });
 
@@ -119,7 +133,10 @@ describe('scoreAttempt — CHECKBOX', () => {
   it('sums points across all selected options', () => {
     const result = scoreAttempt(
       [checkboxQuestion],
-      [{ questionId: 'checkbox-1', optionId: 'cb-a' }, { questionId: 'checkbox-1', optionId: 'cb-b' }],
+      [
+        { questionId: 'checkbox-1', optionId: 'cb-a' },
+        { questionId: 'checkbox-1', optionId: 'cb-b' },
+      ],
     );
     expect(result.questionScores[0]!.pointsEarned).toBe(8);
   });
@@ -143,10 +160,13 @@ describe('scoreAttempt — LIKERT_SCALE', () => {
     [1, 0],
     [3, 5],
     [5, 10],
-  ])('maps numericAnswer %i to %i points on a 0-10 maxPoints scale', (numericAnswer, expectedPoints) => {
-    const result = scoreAttempt([likertQuestion], [{ questionId: 'likert-1', numericAnswer }]);
-    expect(result.questionScores[0]!.pointsEarned).toBe(expectedPoints);
-  });
+  ])(
+    'maps numericAnswer %i to %i points on a 0-10 maxPoints scale',
+    (numericAnswer, expectedPoints) => {
+      const result = scoreAttempt([likertQuestion], [{ questionId: 'likert-1', numericAnswer }]);
+      expect(result.questionScores[0]!.pointsEarned).toBe(expectedPoints);
+    },
+  );
 
   it('awards 0 when unanswered', () => {
     const result = scoreAttempt([likertQuestion], []);

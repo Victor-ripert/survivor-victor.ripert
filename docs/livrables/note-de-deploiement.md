@@ -2,7 +2,9 @@
 
 **Destinataire** Thomas Vignal, conseiller au numérique · pour transmission à la Direction
 **Référence** JEB/DNI/2026-003 §8.3 · **Échéance** vendredi 4 septembre, 17h00
-**Tâche** EW-9 · **Rédacteur** Ewan — domaine D, contrat d'API et intégration
+**Tâche** MA-8 (rédigée sous la référence EW-9, avant la révision du plan du
+2 septembre 16h30 qui l'a transférée au domaine C)
+**Rédacteur** Ewan — domaine D, contrat d'API et intégration
 
 Ce document répond aux trois questions du §8.3 : **où** cela tournerait en
 production, **quelles ressources** cela demanderait, et **quelles données

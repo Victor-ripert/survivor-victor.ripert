@@ -16,32 +16,35 @@ documents concernés.
 
 ## Partie 1 — Ce dont j'ai besoin
 
-### A1 · Adrien (domaine A) — les deux migrations, avant jeudi 12h00
+### A1 · Adrien (domaine A) — reçu, et trois choses à savoir
 
-**Bloque :** la version définitive de `docs/livrables/schema-de-base-de-donnees.md`
-(EW-6) et de `docs/livrables/registre-de-traitement.md` (EW-7).
+**Réglé.** `User.birthDate` et le consentement vidéo sont dans `origin/main`, et
+le registre comme le livrable de schéma les décrivent désormais avec leurs vrais
+noms de champs. Merci — c'est ce qui débloquait EW-6 et EW-7.
 
-Les deux documents sont écrits et complets **pour le modèle actuel**. Ce qui
-manque est nommément identifié :
+Trois points en retour, parce qu'ils ont coûté une soirée et qu'ils vont
+retomber sur toi si personne ne les écrit :
 
-- Registre, §4 : deux lignes « traitements attendus, non encore au modèle »
-- Livrable de schéma, §6 : le tableau des migrations attendues, plus un
-  avertissement en tête du document
+1. **`20260902133533_add_video_consent` supprime `Video.createdAt`.** L'en-tête
+   généré de ta migration l'annonce lui-même. Le catalogue s'en sert pour
+   choisir la vidéo d'aperçu d'un profil, donc l'API ne compilait plus. J'ai
+   réintroduit la colonne (`20260902142731_restore_video_created_at`) en
+   reprenant sa valeur depuis `acceptedAt` : rien n'est perdu. Si la suppression
+   était voulue, dis-le moi et on en reparle — mais alors le catalogue a besoin
+   d'un autre critère d'ordre.
+2. **La même migration bloque toute base contenant déjà des vidéos.**
+   `NOT NULL` sans valeur par défaut passe sur une table vide — la CI — et
+   échoue partout ailleurs. Si `npm run db:migrate` te refuse quelque chose :
+   `./scripts/reparer-migration-consentement.sh`, qui répare **sans** vider ta
+   base.
+3. **Le seed ne fournissait pas `acceptedAt`.** La CI enchaîne migrations →
+   seed → build, elle s'arrêtait à la deuxième étape. Corrigé, avec
+   `CONSENT_TEXT_VERSION` importé de `@profils-actifs/shared`.
 
-Ce dont j'ai besoin, exactement :
+Le détail complet est dans `docs/ORDRE-DE-MERGE.md` §2.
 
-|      | Champs attendus                                                                          | Où ça atterrit chez moi        |
-| ---- | ---------------------------------------------------------------------------------------- | ------------------------------ |
-| AD-1 | `User.birthDate`                                                                         | registre §4, schéma §1 et §2   |
-| AD-3 | `acceptedAt`, `consentTextVersion`, `revokedAt`, **et le nom de la table qui les porte** | registre §4 et §2.3, schéma §1 |
-
-Le nom de table du modèle de consentement est le point que je ne peux pas
-deviner : le registre doit citer _« le vrai nom de table et de champ »_, et
-Florine annonce qu'une fiche qui ne correspond pas au modèle réel ne compte pas.
-Dis-le moi dès que la migration est écrite, même avant qu'elle soit appliquée.
-
-Une fois les migrations sur `main` : je rejoue `./scripts/preuves/schema-conforme.sh`
-et je régénère les deux documents. Compter trente minutes après le gel.
+**Reste de ton côté** pour que le registre soit complet : rien. La seule case
+vide qui subsiste est `ModerationLog.videoId`, côté Victor.
 
 ### A2 · Adrien — relecture croisée registre ↔ CGU, vendredi 11h00
 
@@ -64,7 +67,7 @@ Quatre points de mon registre que ta CGU doit couvrir, sans quoi ils divergeront
 4. **Il n'y a pas de journal de connexion.** Mon registre §2.8 l'écrit
    explicitement. Si ta CGU en mentionne un, l'un des deux documents ment.
 
-### B1 · Victor (domaine B) — trois corrections avant de fusionner
+### B1 · Victor (domaine B) — quatre corrections avant de fusionner
 
 Détail complet dans `docs/ORDRE-DE-MERGE.md` §2. En résumé : `origin/7-profils-vidéo-b`
 est 4 commits devant `main` et **20 derrière**, et son diff supprime du travail
@@ -83,8 +86,24 @@ en place.
    `shared/types/pagination.ts` qui font double emploi. `resolvePageRequest` est
    ce qui applique le plafond de 20 du §8.6 : deux implémentations, c'est un
    plafond qu'on oubliera de mettre à jour d'un côté.
-3. **`packages/shared/src/index.ts`** est modifié des deux côtés. Garder les
-   exports de `main`, ajouter les DTO profil et vidéo.
+3. **`packages/shared/src/index.ts` et `app.ts`** sont modifiés des deux côtés.
+   Garder les exports et les montages de `main`, ajouter les tiens.
+4. **Le contrat de modération vidéo a divergé, et j'ai tranché.** Ta branche
+   définit déjà `/admin/moderation/videos` et `/admin/videos/{videoId}/moderate`,
+   mais elle a été écrite **avant l'addendum du 2 septembre**, qui change ce que
+   ces routes doivent faire. Le tableau des différences est dans
+   `docs/ORDRE-DE-MERGE.md` §3.3. Les trois qui comptent :
+   - **`reason` devient obligatoire** (10 à 500 caractères), dans les deux sens,
+     validation comprise — il est montré au candidat ;
+   - **la réponse porte la décision**, pas un `{ message }` : le §7.9.2 exige la
+     trace « qui a décidé et quand » ;
+   - **l'élément de file porte le candidat**, parce qu'un administrateur ne
+     décide pas sur un titre seul.
+
+   Les types sont écrits (`packages/shared/src/types/moderation.ts`), le contrat
+   est à jour, et **l'écran existe et est testé** (`VideoModerationPage`). Il te
+   reste le service, les routes, et `ModerationLog.videoId` — c'est VI-10.
+   Branche-toi sur les types partagés plutôt que sur ta version du contrat.
 
 ### B2 · Victor — `/profiles` et `/videos` ne sont pas couverts par mes preuves
 
@@ -97,6 +116,11 @@ et non par la logique métier.
 Dès que tes routes sont montées, dis-le moi : je rejoue le script et j'ajoute
 un bloc sur `/profiles`. C'est une commande, pas une rédaction.
 
+Même chose pour `docs/preuves/SOIR-3-video-inaccessible.txt`, qui balaie toutes
+les routes montées pour vérifier qu'aucune ne divulgue l'adresse d'une vidéo en
+attente : il faudra le rejouer une fois `/profiles` et `/videos` en place, parce
+que ce sont précisément les deux surfaces où une vidéo peut fuir.
+
 ### B3 · Victor — le filtre `hasVideo`, réserve à lever
 
 `docs/livrables/note-criteres-de-filtrage.md` §3 signale à Florine que le filtre
@@ -108,13 +132,29 @@ Si Florine demande son retrait, c'est une ligne dans `catalogue.filters.ts`
 (chez moi) **et** le comportement du fil (chez toi). Autant le savoir tous les
 deux avant vendredi.
 
-### C1 · Marin (domaine C) — le seed à 100 questions
+### C1 · Marin (domaine C) — rebase simple, et deux notes qui me reviennent
 
-Sans impact sur mes livrables, une seule conséquence pratique :
-`scripts/preuves/erreurs-http.sh` cherche la première question
-`MULTIPLE_CHOICE` du seed pour produire le 422. Tant qu'il en reste au moins
-une, le script marche quel que soit le nombre de questions. Rien à faire de ton
-côté.
+`origin/feat/certif-improvment` est 14 commits derrière `origin/main` mais ne
+touche presque rien de partagé. Le seul fichier commun est
+`services/certification/questions.ts`, où ma modification porte sur la fabrique
+`invalidOptions()` en tête de fichier, pas sur `updateQuestion`. Git devrait
+fusionner seul ; en cas de conflit, garde `unprocessableEntity`.
+
+Sans impact sur mes livrables : `scripts/preuves/erreurs-http.sh` cherche la
+première question `MULTIPLE_CHOICE` du seed pour produire le 422 — il marche
+quel que soit le nombre de questions.
+
+**Deux notes du plan sont passées chez toi et j'en avais déjà écrit une** :
+
+- **MA-8, note de déploiement.** Elle était EW-9 dans la version précédente du
+  plan et je l'avais rédigée avant la révision :
+  `docs/livrables/note-de-deploiement.md`. Elle est complète — hébergement
+  cible, ressources, et surtout ce qui sort de l'infrastructure et vers qui.
+  Prends-la, corrige-la, signe-la ; ce n'est plus ma ligne.
+- **MA-9, note sur les compteurs d'engagement.** Ma remontée n° 02
+  (`docs/remontees/02-compteurs-d-engagement.md`) contient déjà la démonstration
+  que rien n'est exposé, avec la liste des champs de `CatalogueProfile`. Sers-t'en
+  comme base.
 
 ---
 

@@ -151,7 +151,7 @@ Ils ne changent aucune cardinalité, mais ils changent ce que la base contient.
 | `NotificationType`    | `NEW_INTERACTION_RECEIVED`, `CERTIFICATION_BADGE_EARNED`    |
 
 `InteractionType` **n'a pas de valeur `LIKE`**. C'est un choix de périmètre, pas
-un oubli — voir `docs/remontees/02-les-likes.md`.
+un oubli — voir `docs/remontees/02-compteurs-d-engagement.md`.
 
 ---
 

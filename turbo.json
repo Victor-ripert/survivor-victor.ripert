@@ -43,5 +43,11 @@
       "dependsOn": ["db:migrate"]
     }
   },
-  "globalDependencies": [".env.local", ".env", "jest.preset.mjs", "eslint.base.mjs", "tsconfig.json"]
+  "globalDependencies": [
+    ".env.local",
+    ".env",
+    "jest.preset.mjs",
+    "eslint.base.mjs",
+    "tsconfig.json"
+  ]
 }

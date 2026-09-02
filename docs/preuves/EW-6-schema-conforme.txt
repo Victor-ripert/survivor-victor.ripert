@@ -1,8 +1,8 @@
 EW-6 — conformité schéma / migrations / base (§8.2)
 ProfilsActifs — JEB/DNI/2026-003
 
-date    : 2026-09-02T11:48:59+02:00
-commit  : 75ccee1c881b9629658b0c906a22f71e6e7166e3
+date    : 2026-09-02T15:48:10+02:00
+commit  : f29c7a60d48c78094bd50d285ee9223e332ff7c7
 branche : feat/api-contract-and-deliverables
 
 ==============================================================================
@@ -84,4 +84,4 @@ Index réellement en place
 (39 rows)
 
 
-Fin de la transcription — 2026-09-02T11:49:03+02:00
+Fin de la transcription — 2026-09-02T15:48:12+02:00

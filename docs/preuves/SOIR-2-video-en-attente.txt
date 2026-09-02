@@ -1,0 +1,61 @@
+SOIR-2 — une vidéo en attente ne doit apparaître nulle part (§7.9.2)
+ProfilsActifs — JEB/DNI/2026-003
+
+Sujet : la vidéo réellement en PENDING dans la base de développement.
+Les deux blocs ci-dessous sont produits par le même script, contre la
+même base et le même compte recruteur ; seul le code change entre eux.
+
+==============================================================================
+AVANT
+==============================================================================
+date      : 2026-09-02T16:16:55+02:00
+commit    : f29c7a60d48c78094bd50d285ee9223e332ff7c7
+filtre    : export const publishedVideoFilter: Prisma.VideoWhereInput = { moderationStatus: { not: ModerationStatus.REJECTED }, }; 
+
+Vidéo sujet : cmtisrjz50011y5io6vabpaio (candidat Kamara)
+Statut      : PENDING
+Adresse     : https://www.youtube.com/embed/kJQP7kiw5Fk
+
+--- GET /recruiter/catalogue?limit=20 — la fiche du candidat -------------------
+{
+  "firstName": "Idriss",
+  "lastName": "Kamara",
+  "videoCount": 1,
+  "previewVideo": {
+    "id": "cmtisrjz50011y5io6vabpaio",
+    "title": "Mon expérience en entrepôt",
+    "url": "https://www.youtube.com/embed/kJQP7kiw5Fk"
+  }
+}
+
+--- GET /recruiter/catalogue?hasVideo=true — le candidat y figure-t-il ? -------
+occurrences : 1
+
+--- L'adresse de la vidéo fuit-elle dans la réponse du catalogue ? -------------
+OUI — l'adresse de la vidéo en attente est présente dans la réponse
+
+
+==============================================================================
+APRÈS
+==============================================================================
+date      : 2026-09-02T16:18:48+02:00
+commit    : f29c7a60d48c78094bd50d285ee9223e332ff7c7
+filtre    : publishedVideoFilter = APPROVED (source et comportement du serveur concordent)
+
+Vidéo sujet : cmtisrjz50011y5io6vabpaio (candidat Kamara)
+Statut      : PENDING
+Adresse     : https://www.youtube.com/embed/kJQP7kiw5Fk
+
+--- GET /recruiter/catalogue?limit=20 — la fiche du candidat -------------------
+{
+  "firstName": "Idriss",
+  "lastName": "Kamara",
+  "videoCount": 0,
+  "previewVideo": null
+}
+
+--- GET /recruiter/catalogue?hasVideo=true — le candidat y figure-t-il ? -------
+occurrences : 0
+
+--- L'adresse de la vidéo fuit-elle dans la réponse du catalogue ? -------------
+non — l'adresse n'apparaît nulle part dans la réponse

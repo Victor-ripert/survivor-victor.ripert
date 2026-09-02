@@ -1,8 +1,8 @@
 EW-3 — preuves des réponses d'erreur (§8.1)
 ProfilsActifs — JEB/DNI/2026-003
 
-date        : 2026-09-02T11:48:58+02:00
-commit      : 75ccee1c881b9629658b0c906a22f71e6e7166e3
+date        : 2026-09-02T15:48:10+02:00
+commit      : f29c7a60d48c78094bd50d285ee9223e332ff7c7
 branche     : feat/api-contract-and-deliverables
 API         : http://localhost:3000/api
 version API : 1.0.0
@@ -37,7 +37,7 @@ RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
 Content-Type: application/json; charset=utf-8
 Content-Length: 108
 ETag: W/"6c-45wA9L5qBkWbPIR4L3of/OFIPHk"
-Date: Wed, 02 Sep 2026 09:48:58 GMT
+Date: Wed, 02 Sep 2026 13:48:10 GMT
 Connection: keep-alive
 Keep-Alive: timeout=5
 
@@ -69,7 +69,7 @@ RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
 Content-Type: application/json; charset=utf-8
 Content-Length: 72
 ETag: W/"48-k6kD4fKfKIYuABOW8TgLrw1zlPI"
-Date: Wed, 02 Sep 2026 09:48:58 GMT
+Date: Wed, 02 Sep 2026 13:48:10 GMT
 Connection: keep-alive
 Keep-Alive: timeout=5
 
@@ -101,7 +101,7 @@ RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
 Content-Type: application/json; charset=utf-8
 Content-Length: 76
 ETag: W/"4c-zlp9IyvmH8ROS5D696yBpwgZ+8Q"
-Date: Wed, 02 Sep 2026 09:48:58 GMT
+Date: Wed, 02 Sep 2026 13:48:10 GMT
 Connection: keep-alive
 Keep-Alive: timeout=5
 
@@ -133,7 +133,7 @@ RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
 Content-Type: application/json; charset=utf-8
 Content-Length: 89
 ETag: W/"59-vQlgDz/JVC6pc0ize4y9F+YUYis"
-Date: Wed, 02 Sep 2026 09:48:58 GMT
+Date: Wed, 02 Sep 2026 13:48:10 GMT
 Connection: keep-alive
 Keep-Alive: timeout=5
 
@@ -165,11 +165,11 @@ RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
 Content-Type: application/json; charset=utf-8
 Content-Length: 115
 ETag: W/"73-cdNHyYDheo4+Cbwh2dilBBbaBdY"
-Date: Wed, 02 Sep 2026 09:48:58 GMT
+Date: Wed, 02 Sep 2026 13:48:10 GMT
 Connection: keep-alive
 Keep-Alive: timeout=5
 
 {"error":"unprocessable_entity","message":"optionId est requis pour une question MULTIPLE_CHOICE","statusCode":422}
 
 ==============================================================================
-Fin de la transcription — 2026-09-02T11:48:58+02:00
+Fin de la transcription — 2026-09-02T15:48:10+02:00

@@ -1,0 +1,116 @@
+SOIR-3 — inaccessibilité d'une vidéo en attente (§7.9.2)
+ProfilsActifs — JEB/DNI/2026-003
+
+date    : 2026-09-02T16:19:59+02:00
+commit  : f29c7a60d48c78094bd50d285ee9223e332ff7c7
+branche : feat/api-contract-and-deliverables
+
+Vidéo sujet : cmtisrjz50011y5io6vabpaio
+Statut      : PENDING
+Adresse     : https://www.youtube.com/embed/kJQP7kiw5Fk
+
+==============================================================================
+1. Toutes les routes montées, l'adresse de la vidéo apparaît-elle ?
+==============================================================================
+
+ROUTE                                          APPELANT       CODE   ADRESSE PRÉSENTE
+---------------------------------------------- -------------- ------ ----------------
+/recruiter/catalogue?limit=100                 anonyme        401    non
+/recruiter/catalogue?limit=100                 recruteur      200    non
+/recruiter/catalogue?limit=100                 administrateur 200    non
+/recruiter/catalogue?limit=100&hasVideo=true   anonyme        401    non
+/recruiter/catalogue?limit=100&hasVideo=true   recruteur      200    non
+/recruiter/catalogue?limit=100&hasVideo=true   administrateur 200    non
+/recruiter/catalogue/facets                    anonyme        401    non
+/recruiter/catalogue/facets                    recruteur      200    non
+/recruiter/catalogue/facets                    administrateur 200    non
+/recruiter/favorites                           anonyme        401    non
+/recruiter/favorites                           recruteur      200    non
+/recruiter/favorites                           administrateur 200    non
+/recruiter/dashboard                           anonyme        401    non
+/recruiter/dashboard                           recruteur      200    non
+/recruiter/dashboard                           administrateur 200    non
+/interactions                                  anonyme        401    non
+/interactions                                  recruteur      200    non
+/interactions                                  administrateur 200    non
+/notifications                                 anonyme        401    non
+/notifications                                 recruteur      200    non
+/notifications                                 administrateur 200    non
+/admin/dashboard                               anonyme        401    non
+/admin/dashboard                               recruteur      403    non
+/admin/dashboard                               administrateur 200    non
+/certification/questions                       anonyme        200    non
+/certification/questions                       recruteur      200    non
+/certification/questions                       administrateur 200    non
+/health                                        anonyme        200    non
+/health                                        recruteur      200    non
+/health                                        administrateur 200    non
+
+L'adresse de la ressource sur notre plateforme :
+
+$ curl -i http://localhost:3000/api/videos/cmtisrjz50011y5io6vabpaio
+HTTP/1.1 404 Not Found
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+RateLimit: "100-in-15min"; r=65; t=793
+RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
+Content-Type: application/json; charset=utf-8
+Content-Length: 109
+ETag: W/"6d-2rqJTuM43ZKsm/pYFIER5xZDLoE"
+Date: Wed, 02 Sep 2026 14:19:59 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"error":"not_found","message":"Route inconnue : GET /api/videos/cmtisrjz50011y5io6vabpaio","statusCode":404}
+
+==============================================================================
+2. Navigation privée, sans session
+==============================================================================
+
+Capture : SOIR-3-navigation-privee.png
+Adresse ouverte : http://localhost:3000/api/videos/cmtisrjz50011y5io6vabpaio
+
+Le navigateur est lancé en mode incognito, sans profil, donc sans jeton
+ni témoin de connexion — c'est la posture d'un visiteur qui aurait
+récupéré l'identifiant de la vidéo par un autre moyen.
+
+Capture produite.
+
+
+==============================================================================
+3. La limite : ce que l'intégration par lien ne permet pas de garantir
+==============================================================================
+
+La vidéo est un VideoType.EXTERNAL_LINK. Son contenu est hébergé par un
+tiers et y est public indépendamment de nous. Mesure de l'adresse chez
+l'hébergeur, à la même seconde que le reste de cette transcription :
+
+$ curl -o /dev/null -s -w '%{http_code}' https://www.youtube.com/embed/kJQP7kiw5Fk
+200
+
+Lecture honnête de ce chiffre : la plateforme maîtrise **la divulgation**
+de l'adresse, pas **l'existence** du contenu. Le §1 ci-dessus établit
+qu'aucune de nos routes ne divulgue plus cette adresse ; il n'établit pas,
+et ne peut pas établir, que le contenu a disparu de chez l'hébergeur.
+
+Rendre la vidéo réellement inaccessible suppose de changer de mécanisme :
+n'accepter que des liens non répertoriés — ce qui n'est toujours qu'une
+obscurité, pas un contrôle — ou passer au téléversement local, ce qui
+rouvre l'intégralité du §8.5 et ne tient pas dans la semaine.
+
+Ce point est remonté par écrit à Florine Pontaillac plutôt que masqué :
+docs/remontees/05-lien-externe-inaccessibilite.md
+
+Fin de la transcription — 2026-09-02T16:20:02+02:00

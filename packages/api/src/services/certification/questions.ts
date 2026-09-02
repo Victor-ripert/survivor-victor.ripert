@@ -3,6 +3,7 @@ import { prisma } from '../../config/prisma.js';
 import { questionTypeRequiresOptions } from '../../validators/certification.js';
 import { badRequest, conflict } from '../../utils/http-error.js';
 import type { CreateQuestionInput, UpdateQuestionInput } from '../../validators/certification.js';
+import { invalidateInProgressAttempts } from './invalidation.js';
 
 // Raised when an admin patch fails the "choice questions need >=2 options"
 // rule against the *effective* type (existing DB value merged with the
@@ -88,7 +89,7 @@ export const createQuestion = (input: CreateQuestionInput) =>
 export const updateQuestion = async (id: string, input: UpdateQuestionInput) => {
   const existing = await prisma.certificationQuestion.findUnique({
     where: { id },
-    select: { type: true },
+    select: { type: true, isActive: true },
   });
   if (!existing) return null;
 
@@ -96,6 +97,12 @@ export const updateQuestion = async (id: string, input: UpdateQuestionInput) => 
   if (input.options && questionTypeRequiresOptions(effectiveType) && input.options.length < 2) {
     throw invalidOptions();
   }
+
+  // A question that was active, or becomes active, changes the scoring
+  // surface (see scoreAttempt) for every candidate mid-session — whichever
+  // side of the edit is active is what matters, not just the "before".
+  const willBeActive = input.isActive ?? existing.isActive;
+  const affectsScoring = existing.isActive || willBeActive;
 
   const { options, ...questionData } = input;
 
@@ -108,6 +115,10 @@ export const updateQuestion = async (id: string, input: UpdateQuestionInput) => 
         await tx.certificationOption.createMany({
           data: options.map((option) => ({ ...option, questionId: id })),
         });
+      }
+
+      if (affectsScoring) {
+        await invalidateInProgressAttempts(tx);
       }
 
       return tx.certificationQuestion.findUniqueOrThrow({

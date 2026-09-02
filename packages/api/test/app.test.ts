@@ -116,7 +116,7 @@ describe('app', () => {
   });
 
   describe('optionalAuth visibility, end-to-end', () => {
-    it("lets the owner see their own not-yet-approved profile, but hides it from an anonymous request", async () => {
+    it('lets the owner see their own not-yet-approved profile, but hides it from an anonymous request', async () => {
       const created = await request(app)
         .post('/api/profiles/me')
         .set('Authorization', `Bearer ${applicantToken}`)
@@ -124,6 +124,7 @@ describe('app', () => {
 
       expect(created.status).toBe(200);
       expect(created.body.moderationStatus).toBe('PENDING');
+      expect(created.body).toMatchObject({ firstName: 'Applicant', lastName: 'Test' });
       const profileId = created.body.id as string;
 
       const asOwner = await request(app)

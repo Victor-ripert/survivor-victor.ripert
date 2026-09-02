@@ -43,8 +43,7 @@ export const requireAuth = (req: Request, _res: Response, next: NextFunction): v
  * would make the profile/video services' `viewerId` parameter dead code.
  */
 export const optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(' ')[1];
+  const token = readBearerToken(req.headers.authorization);
 
   if (!token) {
     next();

@@ -17,6 +17,7 @@ import { interactionsRouter } from './routes/interactions.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { profilesRouter } from './routes/profiles.js';
 import { recruiterRouter } from './routes/recruiter.js';
+import { skillsRouter } from './routes/skills.js';
 import { videosRouter } from './routes/videos.js';
 
 const JSON_BODY_LIMIT = '64kb';
@@ -43,6 +44,7 @@ export const createApp = (): Express => {
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/profiles', profilesRouter);
   app.use('/api/recruiter', recruiterRouter);
+  app.use('/api/skills', skillsRouter);
   // Bare /api, not /api/videos — its two routes live under two different
   // top-level paths (/profiles/:profileId/videos and /videos/:videoId), so
   // there's no single prefix that fits both. See routes/videos.ts.

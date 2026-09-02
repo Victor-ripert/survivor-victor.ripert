@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Router, type Request, type Response } from 'express';
+import { Router, type NextFunction, type Request, type Response } from 'express';
 
 /**
  * Swagger UI over the repo's own `openapi.yaml`, served entirely from disk.
@@ -99,10 +99,28 @@ docsRouter.get(`/${INITIALIZER_FILENAME}`, (_req: Request, res: Response): void 
   res.type('js').send(INITIALIZER_JS);
 });
 
+/**
+ * `sendFile` reports a missing or unreadable file through its callback rather
+ * than by throwing, so without one the request hangs until the client gives
+ * up. Forwarding to `next` turns it into the uniform error shape instead —
+ * and only when nothing has been written yet, since a failure part-way through
+ * a stream cannot be answered with a status line any more.
+ */
+const forwardSendFileError =
+  (res: Response, next: NextFunction, what: string) =>
+  (error?: Error): void => {
+    if (!error) return;
+
+    console.error(`[api] could not serve ${what}`, error);
+    if (!res.headersSent) next(error);
+  };
+
 /** The contract itself, so a client generator can consume it straight from a
  *  running instance instead of needing a checkout. */
-docsRouter.get(`/${SPEC_FILENAME}`, (_req: Request, res: Response): void => {
-  res.type('application/yaml').sendFile(OPENAPI_PATH);
+docsRouter.get(`/${SPEC_FILENAME}`, (_req: Request, res: Response, next: NextFunction): void => {
+  res
+    .type('application/yaml')
+    .sendFile(OPENAPI_PATH, forwardSendFileError(res, next, SPEC_FILENAME));
 });
 
 // One literal route per allowed file, rather than a `:asset` parameter reading
@@ -115,7 +133,7 @@ const ASSET_MAX_AGE = '1h';
 for (const asset of SWAGGER_ASSETS) {
   const absolutePath = path.join(ASSET_DIR, asset);
 
-  docsRouter.get(`/${asset}`, (_req: Request, res: Response): void => {
-    res.sendFile(absolutePath, { maxAge: ASSET_MAX_AGE });
+  docsRouter.get(`/${asset}`, (_req: Request, res: Response, next: NextFunction): void => {
+    res.sendFile(absolutePath, { maxAge: ASSET_MAX_AGE }, forwardSendFileError(res, next, asset));
   });
 }

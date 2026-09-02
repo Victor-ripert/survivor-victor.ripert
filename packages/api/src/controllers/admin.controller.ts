@@ -1,48 +1,59 @@
 import type { Request, Response } from 'express';
-import { paginationQuerySchema } from '../validators/pagination.js';
-import { moderateEntitySchema } from '../validators/moderation.js';
-import * as moderationService from '../services/moderation.service.js';
 import { getAdminDashboard } from '../services/dashboard.service.js';
+import * as moderationService from '../services/moderation.service.js';
+import { currentUser } from '../utils/current-user.js';
+import { paginationQuerySchema, parseId } from '../validators/common.js';
+import {
+  moderateEntitySchema,
+  videoModerationQuerySchema,
+  videoModerationSchema,
+} from '../validators/moderation.js';
+
+export const getDashboard = async (_req: Request, res: Response): Promise<void> => {
+  res.status(200).json(await getAdminDashboard());
+};
 
 /** `GET /admin/moderation/profiles` — the review queue, oldest-pending-first. */
 export const listPendingProfiles = async (req: Request, res: Response): Promise<void> => {
-  const parsed = paginationQuerySchema.safeParse(req.query);
-  if (!parsed.success) {
-    res.status(400).json({
-      error: 'validation_error',
-      message: parsed.error.issues[0]?.message ?? 'Invalid query',
-      statusCode: 400,
-    });
-    return;
-  }
-
-  const result = await moderationService.listPendingProfiles(parsed.data);
-  res.status(200).json(result);
+  res
+    .status(200)
+    .json(await moderationService.listPendingProfiles(paginationQuerySchema.parse(req.query)));
 };
 
 /** `POST /admin/profiles/:id/moderate`. */
 export const moderateProfile = async (req: Request, res: Response): Promise<void> => {
-  const parsed = moderateEntitySchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({
-      error: 'validation_error',
-      message: parsed.error.issues[0]?.message ?? 'Invalid input',
-      statusCode: 400,
-    });
-    return;
-  }
+  const { action, reason, notes } = moderateEntitySchema.parse(req.body);
 
   await moderationService.applyModeration(
     'profile',
-    req.params.id as string,
-    req.user!.id,
-    parsed.data.action,
-    parsed.data.reason,
-    parsed.data.notes,
+    parseId(req.params.id),
+    currentUser(req).id,
+    action,
+    reason || undefined,
+    notes || undefined,
   );
-  res.status(200).json({ message: 'Profile moderated' });
+
+  res.status(200).json({ message: 'Profil modéré' });
 };
 
-export const getDashboard = async (_req: Request, res: Response): Promise<void> => {
-  res.status(200).json(await getAdminDashboard());
+/** `GET /admin/moderation/videos` — pending by default, any status on request. */
+export const listVideoModerationQueue = async (req: Request, res: Response): Promise<void> => {
+  res
+    .status(200)
+    .json(
+      await moderationService.listVideosForModeration(videoModerationQuerySchema.parse(req.query)),
+    );
+};
+
+/** `POST /admin/videos/:videoId/moderate` — approve or reject, reason mandatory. */
+export const moderateVideoDecision = async (req: Request, res: Response): Promise<void> => {
+  res
+    .status(200)
+    .json(
+      await moderationService.moderateVideo(
+        parseId(req.params.videoId),
+        currentUser(req).id,
+        videoModerationSchema.parse(req.body),
+      ),
+    );
 };

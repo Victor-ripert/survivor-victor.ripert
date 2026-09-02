@@ -30,6 +30,15 @@ export const startOrResumeAttempt = async (
           if (existing) return { attempt: existing, created: false };
 
           const created = await tx.certificationAttempt.create({ data: { userId } });
+
+          // The profile mirrors the questionnaire's state so the candidate's
+          // space and the catalogue read "in progress" without a join; a
+          // completed certification is never downgraded by a retake.
+          await tx.profile.updateMany({
+            where: { userId, certificationStatus: { in: ['PENDING', 'REJECTED'] } },
+            data: { certificationStatus: 'IN_PROGRESS' },
+          });
+
           return { attempt: created, created: true };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },

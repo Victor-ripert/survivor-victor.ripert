@@ -1,5 +1,6 @@
-import { ModerationStatus, Prisma, UserRole } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import type { CatalogueSort } from '@profils-actifs/shared';
+import { publishedVideoFilter, visibleProfileFilter } from './visibility.js';
 
 export interface CatalogueFilters {
   q?: string;
@@ -13,37 +14,7 @@ export interface CatalogueFilters {
   restrictToUserIds?: string[];
 }
 
-/**
- * Profiles a recruiter is allowed to see: an active job-seeker account whose
- * profile has not been rejected by moderation. Profiles still awaiting review
- * stay visible — the platform is opt-in for job-seekers and a moderation
- * backlog must not silently hide them — while a rejected profile disappears
- * from every recruiter-facing surface.
- */
-export const visibleProfileFilter: Prisma.ProfileWhereInput = {
-  moderationStatus: { not: ModerationStatus.REJECTED },
-  user: { isActive: true, role: UserRole.APPLICANT },
-};
-
-/**
- * Videos a recruiter — or the public — is allowed to see: approved ones, and
- * nothing else.
- *
- * This is deliberately stricter than `visibleProfileFilter` above, and the
- * asymmetry is the point. A profile awaiting review stays listed, because a
- * moderation backlog must not silently hide a job-seeker who opted in. A video
- * awaiting review does not, because §7.9.2 of the addendum makes moderation
- * *a priori*: the ministry answers for a video from the moment it is online,
- * so nothing is online before someone approved it.
- *
- * It used to read `{ not: REJECTED }`, which let a PENDING video through — its
- * URL was served in `previewVideo`, it counted in `videoCount`, and it matched
- * `hasVideo`. See docs/preuves/SOIR-2-video-en-attente.txt for the before and
- * after on the same row.
- */
-export const publishedVideoFilter: Prisma.VideoWhereInput = {
-  moderationStatus: ModerationStatus.APPROVED,
-};
+export { publishedVideoFilter, visibleProfileFilter };
 
 const insensitive = (value: string): Prisma.StringFilter => ({
   contains: value,

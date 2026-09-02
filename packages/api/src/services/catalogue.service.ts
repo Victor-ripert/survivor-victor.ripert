@@ -12,10 +12,9 @@ import { prisma } from '../config/prisma.js';
 import {
   buildCatalogueOrderBy,
   buildCatalogueWhere,
-  publishedVideoFilter,
-  visibleProfileFilter,
   type CatalogueFilters,
 } from './catalogue.filters.js';
+import { publishedVideoFilter, visibleProfileFilter } from './visibility.js';
 
 const MAX_SKILLS_PER_ROW = 12;
 const MAX_FACET_VALUES = 25;
@@ -41,10 +40,7 @@ const catalogueSelect = {
   videos: {
     where: publishedVideoFilter,
     select: { id: true, title: true, url: true },
-    // `Video` has no `createdAt` (dropped by the video-consent migration —
-    // see `Video.acceptedAt`, timestamped at submission, which is now the
-    // closest equivalent of "when this video was added").
-    orderBy: { acceptedAt: 'asc' },
+    orderBy: { createdAt: 'asc' },
     take: 1,
   },
   _count: { select: { videos: { where: publishedVideoFilter } } },

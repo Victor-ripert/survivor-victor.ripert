@@ -10,5 +10,6 @@ export default {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { useESM: true }],
   },
+  setupFiles: ['<rootDir>/test/setup/polyfills.ts'],
   setupFilesAfterEnv: ['@testing-library/jest-dom'],
 };

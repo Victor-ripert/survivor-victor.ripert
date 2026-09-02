@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import type { VideoType } from '@profils-actifs/shared';
+import { getEnv } from '../utils/env.js';
 import styles from './VideoEmbed.module.css';
 
 export interface VideoEmbedProps {
@@ -16,16 +17,11 @@ const DEFAULT_API_ORIGIN = 'http://localhost:3000';
  * by the web app itself. Read once from `VITE_API_URL` (already declared
  * in `.env.example`, e.g. `http://localhost:3000/api`) and reduced to just
  * its origin, since the `/uploads` mount sits outside the `/api` prefix.
- *
- * Wrapped in try/catch because `import.meta.env` is a Vite-only feature:
- * under Jest (no Vite involved) it's simply absent at runtime even though
- * the `vite/client` types claim it's always there, and reading a property
- * off `undefined` throws rather than returning `undefined`.
  */
 function getApiOrigin(): string {
+  const configured = getEnv('VITE_API_URL', `${DEFAULT_API_ORIGIN}/api`);
   try {
-    const configured = import.meta.env.VITE_API_URL;
-    return new URL(configured ?? `${DEFAULT_API_ORIGIN}/api`).origin;
+    return new URL(configured).origin;
   } catch {
     return DEFAULT_API_ORIGIN;
   }

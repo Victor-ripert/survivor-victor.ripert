@@ -22,6 +22,10 @@ export type SkillLevel = (typeof SKILL_LEVELS)[number];
 export const MODERATION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
 export type ModerationStatus = (typeof MODERATION_STATUSES)[number];
 
+/** Mirrors `schema.prisma`'s `ModerationAction` enum — what an admin *does*, distinct from `ModerationStatus` (what the target's state *is*). */
+export const MODERATION_ACTIONS = ['APPROVE', 'REJECT', 'FLAG', 'REQUIRE_CHANGES'] as const;
+export type ModerationAction = (typeof MODERATION_ACTIONS)[number];
+
 /** A skill from the shared catalog (`Skill` in `schema.prisma`). */
 export interface Skill {
   id: string;

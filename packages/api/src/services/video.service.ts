@@ -119,6 +119,36 @@ function extractVimeoId(url: URL): string | null {
 }
 
 /**
+ * `GET /profiles/{profileId}/videos` — public, same visibility rule as
+ * `getProfileById` in `profile.service.ts`: a non-owner gets nothing back
+ * unless the profile is `APPROVED`. Returning an empty array rather than a
+ * 404 covers three different situations identically on purpose — the
+ * profile doesn't exist, it exists but isn't visible to this viewer, or it
+ * exists, is visible, and genuinely has zero videos — so a stranger can't
+ * distinguish "hidden" from "doesn't exist" from this response either.
+ */
+export async function listVideosForProfile(
+  profileId: string,
+  viewerId?: string,
+): Promise<Video[]> {
+  const profile = await prisma.profile.findUnique({
+    where: { id: profileId },
+    select: { userId: true, moderationStatus: true, videos: true },
+  });
+
+  if (!profile) {
+    return [];
+  }
+
+  const isOwner = viewerId !== undefined && viewerId === profile.userId;
+  if (profile.moderationStatus !== 'APPROVED' && !isOwner) {
+    return [];
+  }
+
+  return profile.videos.map(toVideoDto);
+}
+
+/**
  * `POST /profiles/{profileId}/videos` when `type: 'EXTERNAL_LINK'`.
  *
  * The issue describes this as `addExternalVideo(profileId, input)`, but

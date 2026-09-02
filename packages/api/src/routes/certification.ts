@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import { Router } from 'express';
 import {
   getQuestions,
@@ -15,18 +16,23 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 export const certificationRouter = Router();
 
 certificationRouter.get('/questions', getQuestions);
-certificationRouter.post('/attempt', requireAuth, requireRole('APPLICANT'), postAttempt);
-certificationRouter.get('/attempt/:attemptId', requireAuth, requireRole('APPLICANT'), getAttempt);
+certificationRouter.post('/attempt', requireAuth, requireRole(UserRole.APPLICANT), postAttempt);
+certificationRouter.get(
+  '/attempt/:attemptId',
+  requireAuth,
+  requireRole(UserRole.APPLICANT),
+  getAttempt,
+);
 certificationRouter.post(
   '/attempt/:attemptId/answer',
   requireAuth,
-  requireRole('APPLICANT'),
+  requireRole(UserRole.APPLICANT),
   postAnswer,
 );
 certificationRouter.post(
   '/attempt/:attemptId/submit',
   requireAuth,
-  requireRole('APPLICANT'),
+  requireRole(UserRole.APPLICANT),
   postSubmit,
 );
 
@@ -37,18 +43,18 @@ export const certificationAdminRouter = Router();
 certificationAdminRouter.get(
   '/certification/questions',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole(UserRole.ADMIN),
   getAdminQuestions,
 );
 certificationAdminRouter.post(
   '/certification/questions',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole(UserRole.ADMIN),
   postQuestion,
 );
 certificationAdminRouter.patch(
   '/certification/questions/:id',
   requireAuth,
-  requireRole('ADMIN'),
+  requireRole(UserRole.ADMIN),
   patchQuestion,
 );

@@ -1,7 +1,16 @@
 import { z } from 'zod';
+import type { SignOptions } from 'jsonwebtoken';
 import { loadRepoEnv } from '@profils-actifs/shared/node';
 
 loadRepoEnv();
+
+/** `z.custom` carries jsonwebtoken's own literal union through instead of a
+ *  bare `string`, so the parsed value drops straight into `sign` without a
+ *  cast — and a malformed duration fails at boot rather than at first login. */
+const jwtExpiry = z.custom<NonNullable<SignOptions['expiresIn']>>(
+  (value) => typeof value === 'string' && /^\d+(ms|s|m|h|d|w|y)$/.test(value),
+  { error: 'JWT_EXPIRY must be a duration such as 3600s, 24h or 7d' },
+);
 
 const csv = z
   .string()
@@ -19,6 +28,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16, {
     error: 'JWT_SECRET must be at least 16 characters',
   }),
+  JWT_EXPIRY: jwtExpiry.default('7d'),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   API_HOST: z.string().min(1).default('localhost'),
   CORS_ORIGIN: csv.default(['http://localhost:5173']),

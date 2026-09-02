@@ -692,7 +692,10 @@ paths:
                   type: string
                 role:
                   type: string
-                  enum: [APPLICANT, RECRUITER, ADMIN]
+                  # ADMIN is deliberately not self-assignable: this endpoint is
+                  # unauthenticated, so accepting it would let anyone mint an
+                  # administrator. Admin accounts come from the seed.
+                  enum: [APPLICANT, RECRUITER]
               required: [email, password, firstName, lastName, role]
       responses:
         '201':
@@ -1712,7 +1715,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
 
   /admin/moderation/profiles:
     get:

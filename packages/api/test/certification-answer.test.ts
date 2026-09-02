@@ -10,8 +10,16 @@ const app = createApp();
 
 const applicantId = 'test-applicant-answer';
 const otherApplicantId = 'test-applicant-answer-2';
-const applicantToken = signToken({ id: applicantId, email: 'applicant-answer@test.local', role: 'APPLICANT' });
-const recruiterToken = signToken({ id: 'test-recruiter-answer', email: 'recruiter-answer@test.local', role: 'RECRUITER' });
+const applicantToken = signToken({
+  id: applicantId,
+  email: 'applicant-answer@test.local',
+  role: 'APPLICANT',
+});
+const recruiterToken = signToken({
+  id: 'test-recruiter-answer',
+  email: 'recruiter-answer@test.local',
+  role: 'RECRUITER',
+});
 
 let mcQuestionId: string;
 let mcOptionAId: string;
@@ -26,8 +34,22 @@ let attemptId: string;
 beforeAll(async () => {
   await prisma.user.createMany({
     data: [
-      { id: applicantId, email: 'applicant-answer@test.local', passwordHash: 'x', firstName: 'T', lastName: 'A', role: 'APPLICANT' },
-      { id: otherApplicantId, email: 'other-answer@test.local', passwordHash: 'x', firstName: 'T', lastName: 'B', role: 'APPLICANT' },
+      {
+        id: applicantId,
+        email: 'applicant-answer@test.local',
+        passwordHash: 'x',
+        firstName: 'T',
+        lastName: 'A',
+        role: 'APPLICANT',
+      },
+      {
+        id: otherApplicantId,
+        email: 'other-answer@test.local',
+        passwordHash: 'x',
+        firstName: 'T',
+        lastName: 'B',
+        role: 'APPLICANT',
+      },
     ],
     skipDuplicates: true,
   });
@@ -39,7 +61,12 @@ beforeAll(async () => {
       text: 'test MC question',
       weight: 1,
       maxPoints: 10,
-      options: { create: [{ text: 'A', points: 0, order: 1 }, { text: 'B', points: 10, order: 2 }] },
+      options: {
+        create: [
+          { text: 'A', points: 0, order: 1 },
+          { text: 'B', points: 10, order: 2 },
+        ],
+      },
     },
     include: { options: true },
   });
@@ -68,12 +95,24 @@ beforeAll(async () => {
   checkboxOptionIds = checkboxQuestion.options.map((o) => o.id);
 
   const shortTextQuestion = await prisma.certificationQuestion.create({
-    data: { order: 902, type: 'SHORT_TEXT', text: 'test SHORT_TEXT question', weight: 1, maxPoints: 5 },
+    data: {
+      order: 902,
+      type: 'SHORT_TEXT',
+      text: 'test SHORT_TEXT question',
+      weight: 1,
+      maxPoints: 5,
+    },
   });
   shortTextQuestionId = shortTextQuestion.id;
 
   const likertQuestion = await prisma.certificationQuestion.create({
-    data: { order: 903, type: 'LIKERT_SCALE', text: 'test LIKERT_SCALE question', weight: 1, maxPoints: 10 },
+    data: {
+      order: 903,
+      type: 'LIKERT_SCALE',
+      text: 'test LIKERT_SCALE question',
+      weight: 1,
+      maxPoints: 10,
+    },
   });
   likertQuestionId = likertQuestion.id;
 
@@ -84,7 +123,12 @@ beforeAll(async () => {
       text: 'unrelated question',
       weight: 1,
       maxPoints: 10,
-      options: { create: [{ text: 'X', points: 0, order: 1 }, { text: 'Y', points: 10, order: 2 }] },
+      options: {
+        create: [
+          { text: 'X', points: 0, order: 1 },
+          { text: 'Y', points: 10, order: 2 },
+        ],
+      },
     },
     include: { options: true },
   });
@@ -92,7 +136,9 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await prisma.certificationAttempt.deleteMany({ where: { userId: { in: [applicantId, otherApplicantId] } } });
+  await prisma.certificationAttempt.deleteMany({
+    where: { userId: { in: [applicantId, otherApplicantId] } },
+  });
   const attempt = await prisma.certificationAttempt.create({ data: { userId: applicantId } });
   attemptId = attempt.id;
 });
@@ -109,7 +155,9 @@ const answerUrl = () => `/api/certification/attempt/${attemptId}/answer`;
 
 describe('POST /certification/attempt/:attemptId/answer — auth & ownership', () => {
   it('rejects unauthenticated requests', async () => {
-    const res = await request(app).post(answerUrl()).send({ questionId: mcQuestionId, optionId: mcOptionAId });
+    const res = await request(app)
+      .post(answerUrl())
+      .send({ questionId: mcQuestionId, optionId: mcOptionAId });
     expect(res.status).toBe(401);
   });
 
@@ -130,7 +178,11 @@ describe('POST /certification/attempt/:attemptId/answer — auth & ownership', (
   });
 
   it("returns 403 for someone else's attempt", async () => {
-    const otherToken = signToken({ id: otherApplicantId, email: 'other-answer@test.local', role: 'APPLICANT' });
+    const otherToken = signToken({
+      id: otherApplicantId,
+      email: 'other-answer@test.local',
+      role: 'APPLICANT',
+    });
     const res = await request(app)
       .post(answerUrl())
       .set('Authorization', `Bearer ${otherToken}`)
@@ -199,7 +251,10 @@ describe('CHECKBOX', () => {
     const res = await request(app)
       .post(answerUrl())
       .set('Authorization', `Bearer ${applicantToken}`)
-      .send({ questionId: checkboxQuestionId, optionIds: [checkboxOptionIds[0], checkboxOptionIds[1]] });
+      .send({
+        questionId: checkboxQuestionId,
+        optionIds: [checkboxOptionIds[0], checkboxOptionIds[1]],
+      });
 
     expect(res.status).toBe(201);
     expect(res.body).toHaveLength(2);
@@ -254,7 +309,9 @@ describe('LIKERT_SCALE', () => {
 
 describe('attempt lifecycle', () => {
   it('bumps lastActivityAt on the attempt', async () => {
-    const before = await prisma.certificationAttempt.findUniqueOrThrow({ where: { id: attemptId } });
+    const before = await prisma.certificationAttempt.findUniqueOrThrow({
+      where: { id: attemptId },
+    });
 
     await new Promise((resolve) => setTimeout(resolve, 5));
     await request(app)
@@ -267,7 +324,10 @@ describe('attempt lifecycle', () => {
   });
 
   it('rejects saving an answer once the attempt is no longer IN_PROGRESS', async () => {
-    await prisma.certificationAttempt.update({ where: { id: attemptId }, data: { status: 'COMPLETED', completedAt: new Date() } });
+    await prisma.certificationAttempt.update({
+      where: { id: attemptId },
+      data: { status: 'COMPLETED', completedAt: new Date() },
+    });
 
     const res = await request(app)
       .post(answerUrl())

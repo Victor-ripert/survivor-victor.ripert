@@ -3,55 +3,40 @@
   "tasks": {
     "dev": {
       "cache": false,
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "persistent": true
     },
     "build": {
-      "outputs": [
-        "dist/**",
-        ".next/**"
-      ],
+      "outputs": ["dist/**", ".next/**"],
       "cache": true,
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "test": {
-      "outputs": [
-        "coverage/**"
-      ],
+      "outputs": ["coverage/**"],
       "cache": true,
-      "inputs": [
-        "src/**",
-        "test/**",
-        "package.json"
-      ],
-      "dependsOn": [
-        "^build"
-      ]
+      "inputs": ["src/**", "test/**", "package.json", "jest.config.js", "tsconfig.json"],
+      "dependsOn": ["^build"]
     },
     "lint": {
       "outputs": [],
-      "cache": false
+      "cache": true,
+      "inputs": ["src/**", "package.json", "eslint.config.js", "tsconfig.json"]
     },
     "db:migrate": {
       "cache": false,
-      "inputs": [
-        "prisma/**"
-      ],
+      "inputs": ["prisma/**"],
       "dependsOn": []
     },
     "db:seed": {
       "cache": false,
-      "dependsOn": [
-        "db:migrate"
-      ]
+      "dependsOn": ["db:migrate"]
     }
   },
   "globalDependencies": [
     ".env.local",
-    ".env"
+    ".env",
+    "jest.preset.mjs",
+    "eslint.base.mjs",
+    "tsconfig.json"
   ]
 }

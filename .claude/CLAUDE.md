@@ -58,7 +58,8 @@ npm run db:studio -w @profils-actifs/db   # browse/edit rows in the browser
 
 `.env.local` is required before the API boots — `packages/api/src/services/jwt.ts` throws at import time if `JWT_SECRET` is missing. Copy `.env.example` as a starting point.
 
-**API Documentation:** Once the API is running, view the OpenAPI spec and interactive Swagger UI at `http://localhost:3000/api/docs`.
+**API Documentation:** The contract is `packages/api/openapi.yaml`, read directly or through any
+OpenAPI client. There is no `/api/docs` route — the API serves no Swagger UI.
 
 ## Architecture
 
@@ -66,16 +67,16 @@ npm run db:studio -w @profils-actifs/db   # browse/edit rows in the browser
 
 Four workspaces under `packages/`:
 
-| Package | Role |
-|---|---|
-| `api` | Express + TypeScript backend |
-| `web` | React + Vite frontend |
+| Package  | Role                                             |
+| -------- | ------------------------------------------------ |
+| `api`    | Express + TypeScript backend                     |
+| `web`    | React + Vite frontend                            |
 | `shared` | Types/constants imported by both `api` and `web` |
-| `db` | Prisma schema, migrations, seed |
+| `db`     | Prisma schema, migrations, seed                  |
 
 ### Ownership is vertical, not layered
 
-Work is split by **feature domain**, each owned end-to-end (backend routes *and* the React pages that consume them) by one person:
+Work is split by **feature domain**, each owned end-to-end (backend routes _and_ the React pages that consume them) by one person:
 
 - **A — Auth & notifications**: the three roles, permission middleware, notifying an applicant when a recruiter interacts. Also arbitrates the API contract when domains disagree.
 - **B — Profiles & video**: profile CRUD, iframe video embeds, the public profile page, the paginated feed, profile/video moderation.
@@ -97,7 +98,7 @@ Where the database and the contract disagree, `schema.prisma` carries an inline 
 - **At most one `IN_PROGRESS` `CertificationAttempt` per user** — this is what makes "resume where you left off" work; a new attempt must never be created while one is open. Resume must survive a server restart, so this lives in `CertificationAttempt`/`Answer`, never in browser storage.
 - **100 MB video cap** for `VideoType.UPLOAD` (`Video.fileSizeBytes` records it, the app rejects over-size), enforced server-side. Verify uploaded file type from file content, not the extension or the client-supplied MIME type, and store uploads outside the application code directory.
 - **Feed pagination is capped at 20 profiles per page**, server-side (no infinite-scroll-loads-everything). An out-of-range page must return a clean empty result, not error.
-- `Answer` is intentionally *not* uniquely keyed on `(attemptId, questionId)`: a `CHECKBOX` question emits one row per selected option.
+- `Answer` is intentionally _not_ uniquely keyed on `(attemptId, questionId)`: a `CHECKBOX` question emits one row per selected option.
 - Scoring is a backend concern — `CertificationAttempt.score` and the `CertificationLevel` band that resolves the badge are computed server-side, never trusted from the client.
 
 `ModerationLog` exists so moderation decisions stay auditable instead of overwriting `Profile.moderationStatus` in place — write a log row alongside every status change.

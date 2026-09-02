@@ -14,28 +14,65 @@ const applicantId = 'test-applicant-attempt';
 const otherApplicantId = 'test-applicant-attempt-2';
 const recruiterId = 'test-recruiter-attempt';
 
-const applicantToken = signToken({ id: applicantId, email: 'applicant-attempt@test.local', role: 'APPLICANT' });
-const otherApplicantToken = signToken({ id: otherApplicantId, email: 'other-attempt@test.local', role: 'APPLICANT' });
-const recruiterToken = signToken({ id: recruiterId, email: 'recruiter-attempt@test.local', role: 'RECRUITER' });
+const applicantToken = signToken({
+  id: applicantId,
+  email: 'applicant-attempt@test.local',
+  role: 'APPLICANT',
+});
+const otherApplicantToken = signToken({
+  id: otherApplicantId,
+  email: 'other-attempt@test.local',
+  role: 'APPLICANT',
+});
+const recruiterToken = signToken({
+  id: recruiterId,
+  email: 'recruiter-attempt@test.local',
+  role: 'RECRUITER',
+});
 
 beforeAll(async () => {
   await prisma.user.createMany({
     data: [
-      { id: applicantId, email: 'applicant-attempt@test.local', passwordHash: 'x', firstName: 'T', lastName: 'A', role: 'APPLICANT' },
-      { id: otherApplicantId, email: 'other-attempt@test.local', passwordHash: 'x', firstName: 'T', lastName: 'B', role: 'APPLICANT' },
-      { id: recruiterId, email: 'recruiter-attempt@test.local', passwordHash: 'x', firstName: 'T', lastName: 'C', role: 'RECRUITER' },
+      {
+        id: applicantId,
+        email: 'applicant-attempt@test.local',
+        passwordHash: 'x',
+        firstName: 'T',
+        lastName: 'A',
+        role: 'APPLICANT',
+      },
+      {
+        id: otherApplicantId,
+        email: 'other-attempt@test.local',
+        passwordHash: 'x',
+        firstName: 'T',
+        lastName: 'B',
+        role: 'APPLICANT',
+      },
+      {
+        id: recruiterId,
+        email: 'recruiter-attempt@test.local',
+        passwordHash: 'x',
+        firstName: 'T',
+        lastName: 'C',
+        role: 'RECRUITER',
+      },
     ],
     skipDuplicates: true,
   });
 });
 
 afterEach(async () => {
-  await prisma.certificationAttempt.deleteMany({ where: { userId: { in: [applicantId, otherApplicantId] } } });
+  await prisma.certificationAttempt.deleteMany({
+    where: { userId: { in: [applicantId, otherApplicantId] } },
+  });
 });
 
 afterAll(async () => {
   // Cascades any leftover CertificationAttempt rows too.
-  await prisma.user.deleteMany({ where: { id: { in: [applicantId, otherApplicantId, recruiterId] } } });
+  await prisma.user.deleteMany({
+    where: { id: { in: [applicantId, otherApplicantId, recruiterId] } },
+  });
   await prisma.$disconnect();
 });
 
@@ -46,39 +83,55 @@ describe('POST /certification/attempt', () => {
   });
 
   it('rejects non-applicant roles', async () => {
-    const res = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${recruiterToken}`);
+    const res = await request(app)
+      .post('/api/certification/attempt')
+      .set('Authorization', `Bearer ${recruiterToken}`);
     expect(res.status).toBe(403);
   });
 
   it('creates a new attempt on first call (201)', async () => {
-    const res = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
+    const res = await request(app)
+      .post('/api/certification/attempt')
+      .set('Authorization', `Bearer ${applicantToken}`);
     expect(res.status).toBe(201);
     expect(res.body.status).toBe('IN_PROGRESS');
     expect(res.body.userId).toBe(applicantId);
   });
 
   it('resumes the same attempt on a second call (200, same id)', async () => {
-    const first = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
-    const second = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
+    const first = await request(app)
+      .post('/api/certification/attempt')
+      .set('Authorization', `Bearer ${applicantToken}`);
+    const second = await request(app)
+      .post('/api/certification/attempt')
+      .set('Authorization', `Bearer ${applicantToken}`);
 
     expect(first.status).toBe(201);
     expect(second.status).toBe(200);
     expect(second.body.id).toBe(first.body.id);
 
-    const count = await prisma.certificationAttempt.count({ where: { userId: applicantId, status: 'IN_PROGRESS' } });
+    const count = await prisma.certificationAttempt.count({
+      where: { userId: applicantId, status: 'IN_PROGRESS' },
+    });
     expect(count).toBe(1);
   });
 
   it('never creates two IN_PROGRESS attempts under concurrent requests', async () => {
     const [first, second] = await Promise.all([
-      request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`),
-      request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`),
+      request(app)
+        .post('/api/certification/attempt')
+        .set('Authorization', `Bearer ${applicantToken}`),
+      request(app)
+        .post('/api/certification/attempt')
+        .set('Authorization', `Bearer ${applicantToken}`),
     ]);
 
     expect([first.status, second.status].sort()).toEqual([200, 201]);
     expect(first.body.id).toBe(second.body.id);
 
-    const count = await prisma.certificationAttempt.count({ where: { userId: applicantId, status: 'IN_PROGRESS' } });
+    const count = await prisma.certificationAttempt.count({
+      where: { userId: applicantId, status: 'IN_PROGRESS' },
+    });
     expect(count).toBe(1);
   });
 });
@@ -92,7 +145,9 @@ describe('GET /certification/attempt/:attemptId', () => {
   });
 
   it('returns 403 when the attempt belongs to someone else', async () => {
-    const created = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
+    const created = await request(app)
+      .post('/api/certification/attempt')
+      .set('Authorization', `Bearer ${applicantToken}`);
 
     const res = await request(app)
       .get(`/api/certification/attempt/${created.body.id}`)
@@ -101,7 +156,9 @@ describe('GET /certification/attempt/:attemptId', () => {
   });
 
   it('returns the attempt with no pointsEarned on answers while IN_PROGRESS', async () => {
-    const created = await request(app).post('/api/certification/attempt').set('Authorization', `Bearer ${applicantToken}`);
+    const created = await request(app)
+      .post('/api/certification/attempt')
+      .set('Authorization', `Bearer ${applicantToken}`);
 
     const res = await request(app)
       .get(`/api/certification/attempt/${created.body.id}`)

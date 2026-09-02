@@ -4,6 +4,7 @@ import { resolveBadgeLevel, isBadgeEarned } from './badge.js';
 import { notifyBadgeEarned } from '../notifications.js';
 import { attemptForbidden, attemptNotFound } from './attempts.js';
 import { attemptNotInProgress } from './answers.js';
+import { conflict } from '../../utils/http-error.js';
 
 export const submitAttempt = async (attemptId: string, userId: string) => {
   const attempt = await prisma.certificationAttempt.findUnique({ where: { id: attemptId } });
@@ -70,10 +71,12 @@ export const submitAttempt = async (attemptId: string, userId: string) => {
       data: { status: 'COMPLETED', score: totalScore, completedAt: new Date() },
     });
 
-    // Assumes the applicant already has a Profile (Domain B's concern to
-    // create one) — throws if not, rather than silently no-op-ing on a
-    // completed certification that would otherwise be invisible anywhere.
-    await tx.profile.update({
+    // The badge lives on the Profile, so there has to be one to write it to
+    // (creating it is Domain B's concern). `updateMany` reports the miss
+    // instead of raising Prisma's P2025, which the error middleware would
+    // turn into a bare 404 "Ressource introuvable" — unreadable on a submit
+    // call, where the caller needs to be told to fill in their profile.
+    const { count } = await tx.profile.updateMany({
       where: { userId },
       data: {
         certificationStatus: earned ? 'COMPLETED' : 'REJECTED',
@@ -81,6 +84,10 @@ export const submitAttempt = async (attemptId: string, userId: string) => {
         certificationBadge: earned ? badgeLevel.name : null,
       },
     });
+
+    if (count === 0) {
+      throw conflict('Complétez votre profil avant de valider la certification');
+    }
 
     // In the same transaction as the score, so a failed write never leaves
     // someone congratulated for a badge they were not awarded.

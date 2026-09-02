@@ -17,6 +17,9 @@ import type { ModerationStatus } from './moderation.js';
 export const VIDEO_TYPES = ['EXTERNAL_LINK', 'UPLOAD'] as const;
 export type VideoType = (typeof VIDEO_TYPES)[number];
 
+export const VIDEO_TITLE_MAX_LENGTH = 120;
+export const VIDEO_DESCRIPTION_MAX_LENGTH = 500;
+
 /** A video as returned by the API. */
 export interface Video {
   id: string;
@@ -32,12 +35,20 @@ export interface Video {
    * `moderation.ts` for why the two aren't the same field.
    */
   moderationStatus: ModerationStatus;
+  /**
+   * The reason recorded with the last moderation decision, only when the
+   * video is `REJECTED` and only on the owner's own view (`GET /profiles/me`).
+   * Brief §7.9.2: the refusal reason is surfaced to the candidate.
+   */
+  moderationReason?: string;
+  createdAt: string;
 }
 
 /**
  * Payload for `POST /profiles/{profileId}/videos`. Deliberately excludes
  * moderation/id/profileId fields — those are server-assigned, never
- * client-supplied.
+ * client-supplied. `consentAccepted` must be `true`: submitting the video is
+ * the consent act the API logs with `CONSENT_TEXT_VERSION` (brief §7.1).
  */
 export interface VideoInput {
   title: string;
@@ -45,4 +56,5 @@ export interface VideoInput {
   type: VideoType;
   url: string;
   duration?: number;
+  consentAccepted: true;
 }

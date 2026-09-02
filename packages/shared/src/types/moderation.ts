@@ -21,7 +21,8 @@ export type ModerationAction = (typeof MODERATION_ACTIONS)[number];
  * trace naming who took it and when.
  */
 
-export type VideoModerationAction = 'APPROVE' | 'REJECT';
+export const VIDEO_MODERATION_ACTIONS = ['APPROVE', 'REJECT'] as const;
+export type VideoModerationAction = (typeof VIDEO_MODERATION_ACTIONS)[number];
 
 /** One video waiting in the queue.
  *

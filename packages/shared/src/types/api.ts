@@ -32,11 +32,15 @@ export type ApiErrorCode =
   | 'unprocessable_entity'
   | 'conflict'
   | 'too_many_requests'
-  // Video upload (video.service.ts): a file over the 100MB cap, or one
-  // whose actual content isn't a recognized video format.
-  | 'unprocessable_entity'
+  // Video upload (video.service.ts): a file over the 100MB cap.
   | 'payload_too_large'
-  | 'internal_error';
+  // A documented capability the server does not provide yet (direct upload).
+  | 'not_implemented'
+  | 'internal_error'
+  // The API is up but a dependency it needs is not — the database refused a
+  // connection, or the pool timed out. Distinct from `internal_error` because
+  // it is worth retrying, and the client can say so.
+  | 'service_unavailable';
 
 export interface ApiErrorResponse {
   error: ApiErrorCode;

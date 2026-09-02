@@ -25,8 +25,24 @@ export const visibleProfileFilter: Prisma.ProfileWhereInput = {
   user: { isActive: true, role: UserRole.APPLICANT },
 };
 
+/**
+ * Videos a recruiter — or the public — is allowed to see: approved ones, and
+ * nothing else.
+ *
+ * This is deliberately stricter than `visibleProfileFilter` above, and the
+ * asymmetry is the point. A profile awaiting review stays listed, because a
+ * moderation backlog must not silently hide a job-seeker who opted in. A video
+ * awaiting review does not, because §7.9.2 of the addendum makes moderation
+ * *a priori*: the ministry answers for a video from the moment it is online,
+ * so nothing is online before someone approved it.
+ *
+ * It used to read `{ not: REJECTED }`, which let a PENDING video through — its
+ * URL was served in `previewVideo`, it counted in `videoCount`, and it matched
+ * `hasVideo`. See docs/preuves/SOIR-2-video-en-attente.txt for the before and
+ * after on the same row.
+ */
 export const publishedVideoFilter: Prisma.VideoWhereInput = {
-  moderationStatus: { not: ModerationStatus.REJECTED },
+  moderationStatus: ModerationStatus.APPROVED,
 };
 
 const insensitive = (value: string): Prisma.StringFilter => ({

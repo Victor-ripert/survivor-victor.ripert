@@ -1,4 +1,8 @@
-import { buildCatalogueOrderBy, buildCatalogueWhere } from './catalogue.filters.js';
+import {
+  buildCatalogueOrderBy,
+  buildCatalogueWhere,
+  publishedVideoFilter,
+} from './catalogue.filters.js';
 
 const conditions = (where: ReturnType<typeof buildCatalogueWhere>) =>
   (where.AND ?? []) as Record<string, unknown>[];
@@ -58,9 +62,12 @@ describe('buildCatalogueWhere', () => {
     });
   });
 
-  it('only counts videos that moderation has not rejected', () => {
+  // §7.9.2: moderation is a priori. A video awaiting review is not "not yet
+  // rejected", it is simply not published, and `hasVideo` must not surface a
+  // profile on the strength of one.
+  it('only counts videos moderation has approved', () => {
     expect(conditions(buildCatalogueWhere({ hasVideo: true }))).toContainEqual({
-      videos: { some: { moderationStatus: { not: 'REJECTED' } } },
+      videos: { some: { moderationStatus: 'APPROVED' } },
     });
   });
 
@@ -80,6 +87,17 @@ describe('buildCatalogueWhere', () => {
     expect(conditions(buildCatalogueWhere({ restrictToUserIds: [] }))).toContainEqual({
       userId: { in: [] },
     });
+  });
+});
+
+describe('publishedVideoFilter', () => {
+  it('admits approved videos only', () => {
+    expect(publishedVideoFilter).toEqual({ moderationStatus: 'APPROVED' });
+  });
+
+  it.each([['PENDING'], ['REJECTED']])('keeps a %s video out', (status) => {
+    expect(publishedVideoFilter).not.toEqual({ moderationStatus: status });
+    expect(JSON.stringify(publishedVideoFilter)).not.toContain('not');
   });
 });
 

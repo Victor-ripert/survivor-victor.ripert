@@ -6,7 +6,7 @@ import { prisma } from './client.js';
 import type { ApplicantSeed } from './seed-data/applicants.js';
 import { applicants } from './seed-data/applicants.js';
 import { certificationLevels } from './seed-data/certification-levels.js';
-import { certificationQuestions } from './seed-data/certification-questions.js';
+import { certificationQuestions } from './seed-data/certification-questions/index.js';
 import { CONTACT_MESSAGE, interactionPlan } from './seed-data/interactions.js';
 import { skills } from './seed-data/skills.js';
 import { DEMO_PASSWORD, primaryRecruiter, staff } from './seed-data/staff.js';

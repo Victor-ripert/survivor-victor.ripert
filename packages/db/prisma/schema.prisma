@@ -22,12 +22,12 @@ model User {
   isActive     Boolean  @default(true)
   birthDate    DateTime?
 
-  profile               Profile?
-  attempts              CertificationAttempt[]
-  notifications         Notification[]
-  moderationLogs        ModerationLog[]
-  interactionsCreated   Interaction[]          @relation("InteractionCreatedBy")
-  interactionsReceived  Interaction[]          @relation("InteractionRecipient")
+  profile              Profile?
+  attempts             CertificationAttempt[]
+  notifications        Notification[]
+  moderationLogs       ModerationLog[]
+  interactionsCreated  Interaction[]          @relation("InteractionCreatedBy")
+  interactionsReceived Interaction[]          @relation("InteractionRecipient")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -38,6 +38,9 @@ model User {
 enum NotificationType {
   NEW_INTERACTION_RECEIVED
   CERTIFICATION_BADGE_EARNED
+  // Sent when an admin edits an active question while the candidate has an
+  // IN_PROGRESS attempt — see services/certification/invalidation.ts.
+  CERTIFICATION_ATTEMPT_INVALIDATED
 }
 
 model Notification {
@@ -348,8 +351,8 @@ model Interaction {
 
   type       InteractionType
   message    String? // set for CONTACT/MESSAGE
-  isViewed   Boolean @default(false)
-  isFavorite Boolean @default(false)
+  isViewed   Boolean         @default(false)
+  isFavorite Boolean         @default(false)
 
   notifications Notification[]
 

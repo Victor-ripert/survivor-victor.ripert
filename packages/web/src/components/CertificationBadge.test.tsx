@@ -23,4 +23,10 @@ describe('CertificationBadge', () => {
 
     expect(screen.getByText(label)).toBeInTheDocument();
   });
+
+  it('exposes itself to assistive tech as a status region', () => {
+    render(<CertificationBadge status="PENDING" badge={null} score={null} />);
+
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
 });

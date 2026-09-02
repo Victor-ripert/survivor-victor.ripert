@@ -1,5 +1,6 @@
 import { NotificationType, UserRole, VideoType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
 import { prisma } from './client.js';
 import type { ApplicantSeed } from './seed-data/applicants.js';
 import { applicants } from './seed-data/applicants.js';
@@ -146,6 +147,11 @@ const seedApplicant = async (applicant: ApplicantSeed, passwordHash: string) => 
         url: entry.url,
         duration: entry.duration,
         moderationStatus: applicant.moderationStatus,
+        // GDPR consent logging (brief §7.1) — a seeded video still needs a
+        // valid acceptance record, same as one added through the real API
+        // (see packages/api/src/services/video-consent.ts).
+        acceptedAt: new Date(),
+        consentTextVersion: CONSENT_TEXT_VERSION,
       },
     });
   }

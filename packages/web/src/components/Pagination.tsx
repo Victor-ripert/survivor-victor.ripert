@@ -5,6 +5,12 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
+/**
+ * Purely presentational: a `PaginationMeta` in, `onPageChange` out. Takes
+ * the whole `pagination` object rather than separate `page`/`totalPages`
+ * primitives, since every caller already holds exactly that object from
+ * its last fetch — no destructuring needed at the call site.
+ */
 export const Pagination = ({ pagination, onPageChange }: PaginationProps) => {
   const { page, pages } = pagination;
 

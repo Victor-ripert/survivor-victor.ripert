@@ -118,9 +118,6 @@ model Profile {
   certificationScore  Int? // 0-100, set when an attempt completes
   certificationBadge  String? // resolved from CertificationLevel at scoring time
 
-  // Not yet surfaced by the Profile schema in openapi.yaml (contract gap vs
-  // brief §2.1 "Modération des profils") — kept here because the admin
-  // moderation endpoints need something to filter/act on.
   moderationStatus ModerationStatus @default(PENDING)
   moderationLogs   ModerationLog[]
 
@@ -151,8 +148,8 @@ model Video {
 
   fileSizeBytes Int? // set for UPLOAD only; app layer enforces the 100MB cap (brief §3.2)
 
-  // Same contract-gap note as Profile.moderationStatus.
   moderationStatus ModerationStatus @default(PENDING)
+  moderationLogs   ModerationLog[]
 
   acceptedAt        DateTime
   consentTextVersion String
@@ -171,13 +168,26 @@ enum ModerationAction {
   REQUIRE_CHANGES
 }
 
+// Covers both Profile and Video moderation, which is why exactly one of
+// profileId/videoId is set per row, never both, never neither — Prisma has
+// no declarative "exactly one of these columns" constraint, so this
+// invariant is enforced in the app layer (moderation.service.ts), the same
+// way CLAUDE.md documents other rules the schema itself can't express
+// (e.g. at most one IN_PROGRESS CertificationAttempt per user). Real
+// foreign keys on both columns (rather than a generic entityType +
+// string entityId pair) keep referential integrity and cascading deletes
+// working normally for whichever one is actually set.
 model ModerationLog {
   id String @id @default(cuid())
 
   adminId String
   admin   User   @relation(fields: [adminId], references: [id])
-  profileId String
-  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  profileId String?
+  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  videoId String?
+  video   Video? @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   action ModerationAction
   reason String?
@@ -186,6 +196,7 @@ model ModerationLog {
   createdAt DateTime @default(now())
 
   @@index([profileId])
+  @@index([videoId])
   @@index([adminId])
 }
 

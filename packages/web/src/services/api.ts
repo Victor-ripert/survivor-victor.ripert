@@ -1,10 +1,14 @@
 import axios, { AxiosError } from 'axios';
 import type { ApiErrorCode, ApiErrorResponse } from '@profils-actifs/shared';
+import { getEnv } from '../utils/env.js';
 import { clearToken, readToken } from './auth-storage.js';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
-
-export const api = axios.create({ baseURL: BASE_URL });
+// `getEnv` (not a bare `import.meta.env.VITE_API_URL ?? ...`) because
+// `import.meta.env` is a Vite-only feature: under Jest, this module is
+// imported by virtually every service-layer test, so a bare read that
+// throws when `import.meta.env` itself is absent at runtime would take
+// down the whole suite rather than just this one file.
+export const api = axios.create({ baseURL: getEnv('VITE_API_URL', 'http://localhost:3000/api') });
 
 api.interceptors.request.use((config) => {
   const token = readToken();

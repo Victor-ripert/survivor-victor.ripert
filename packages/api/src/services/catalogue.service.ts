@@ -41,7 +41,10 @@ const catalogueSelect = {
   videos: {
     where: publishedVideoFilter,
     select: { id: true, title: true, url: true },
-    orderBy: { createdAt: 'asc' },
+    // `Video` has no `createdAt` (dropped by the video-consent migration —
+    // see `Video.acceptedAt`, timestamped at submission, which is now the
+    // closest equivalent of "when this video was added").
+    orderBy: { acceptedAt: 'asc' },
     take: 1,
   },
   _count: { select: { videos: { where: publishedVideoFilter } } },

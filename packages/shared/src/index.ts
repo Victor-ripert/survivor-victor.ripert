@@ -1,8 +1,12 @@
 export * from './constants/age.js';
-
 export * from './constants/consent.js';
 export * from './constants/interactions.js';
 export * from './constants/pagination.js';
+export * from './types/pagination.js';
+export * from './types/moderation.js';
+export * from './types/user.js';
+export * from './types/video.js';
+export * from './types/profile.js';
 export * from './types/api.js';
 export * from './types/domain.js';
 export * from './types/recruiter.js';

@@ -16,9 +16,7 @@ const toPublicUser = (user: User) => ({
 });
 
 export const register = async (req: Request, res: Response): Promise<void> => {
-  const { email, password, firstName, lastName, role, birthDate } = registerSchema.parse(
-    req.body
-  );
+  const { email, password, firstName, lastName, role, birthDate } = registerSchema.parse(req.body);
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) throw conflict('Cette adresse e-mail est déjà utilisée');

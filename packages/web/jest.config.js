@@ -4,6 +4,7 @@ export default {
   testEnvironment: 'jsdom',
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: {
+    '\\.module\\.css$': '<rootDir>/test/mocks/styleMock.js',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {

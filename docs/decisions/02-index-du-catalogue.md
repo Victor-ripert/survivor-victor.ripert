@@ -92,10 +92,16 @@ Deux précautions ont changé les résultats et méritent d'être écrites :
 
 | Critère              |    Avant |       Après | Plan retenu après                                   |
 | -------------------- | -------: | ----------: | --------------------------------------------------- |
-| secteur (2,5 %)      |  22,1 ms | **1,41 ms** | parcours ordonné `Profile_updatedAt_idx` + filtre   |
-| localisation (0,5 %) |  24,6 ms | **2,53 ms** | `Profile_location_idx` (trigramme)                  |
-| compétences          |  4,98 ms |     5,15 ms | `ProfileSkill_skillId_profileId_idx`, en index seul |
-| recherche libre `q`  | 307,9 ms | **4,15 ms** | parcours ordonné + index seul sur les compétences   |
+| secteur (2,5 %)      |  23,8 ms | **1,56 ms** | parcours ordonné `Profile_updatedAt_idx` + filtre   |
+| localisation (0,5 %) |  24,0 ms | **2,76 ms** | `Profile_location_idx` (trigramme)                  |
+| compétences          |  6,16 ms | **4,99 ms** | `ProfileSkill_skillId_profileId_idx`, en index seul |
+| recherche libre `q`  | 444,9 ms | **4,38 ms** | parcours ordonné + index seul sur les compétences   |
+
+Les temps absolus varient d'une exécution à l'autre selon la charge de la
+machine ; ce sont les plans retenus, pas les millisecondes, qui portent la
+conclusion. La transcription est produite contre l'état fusionné du dépôt, et le
+banc applique désormais **toutes** les migrations sauf celle qu'il mesure — donc
+le modèle réel, date de naissance et consentement vidéo compris.
 
 Un mot sur la ligne « compétences » : elle ne bouge pas, et c'est la lecture
 honnête. Le composite passe bien le sous-select en `Index Only Scan` — visible

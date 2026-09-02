@@ -4,14 +4,20 @@
 **Référence** JEB/DNI/2026-003 §8.2 · **Échéance** vendredi 4 septembre, 17h00
 **Tâche** EW-6 · **Rédacteur** Ewan — domaine D, contrat d'API et intégration
 
-**État décrit** commit `75ccee1` · PostgreSQL 16 · migrations
-`20260831150606_init` et `20260902093737_catalogue_search_indexes`
+**État décrit** commit `1d44bad` · PostgreSQL 16 · cinq migrations appliquées :
 
-> ⚠️ **Ce document sera régénéré après le gel de jeudi 18h00.** Deux migrations
-> imposées par les exigences juridiques ne sont pas encore passées — la date de
-> naissance (§7.3, tâche AD-1) et le consentement vidéo journalisé (§7.1,
-> tâche AD-3). Le §6 les annonce. La version envoyée vendredi décrira la base
-> figée, pas celle-ci.
+| Migration                                 | Ce qu'elle apporte                                             |
+| ----------------------------------------- | -------------------------------------------------------------- |
+| `20260831150606_init`                     | le modèle initial                                              |
+| `20260902093737_catalogue_search_indexes` | les index de recherche du catalogue (§2)                       |
+| `20260902093932_add_user_birth_date`      | `User.birthDate` — vérification d'âge (§7.3, §7.9.1)           |
+| `20260902133533_add_video_consent`        | `Video.acceptedAt`, `.consentTextVersion`, `.revokedAt` (§7.1) |
+| `20260902142731_restore_video_created_at` | réintroduit `Video.createdAt` — voir §0.1                      |
+
+> ⚠️ **Ce document sera régénéré après le gel de jeudi 18h00.** Les migrations
+> juridiques sont passées, mais une reste attendue : `ModerationLog.videoId`
+> (tâche VI-10), sans laquelle une décision de modération portant sur une vidéo
+> ne peut pas être tracée. Le §6 la détaille.
 
 ---
 
@@ -33,6 +39,34 @@ le dossier de migrations ne reconstruit plus rien ; le second l'attrape.
 
 Il s'exécute avec `./scripts/preuves/schema-conforme.sh`, qui crée et supprime
 lui-même la base jetable dont il a besoin.
+
+### 0.1 Une anomalie visible dans l'historique, et son explication
+
+Un relecteur qui interroge `_prisma_migrations` verra **deux lignes** pour
+`20260902133533_add_video_consent` : une en échec, sans date de fin, et une
+marquée appliquée. Ce n'est pas une corruption, et nous préférons l'expliquer
+que de laisser la question ouverte.
+
+Cette migration ajoute `Video.acceptedAt` et `Video.consentTextVersion` en
+`NOT NULL` **sans valeur par défaut**. Sur une base vide — celle de
+l'intégration continue — elle passe. Sur une base qui contient déjà des vidéos,
+PostgreSQL la refuse :
+
+```
+ERROR: column "acceptedAt" of relation "Video" contains null values
+```
+
+Et une migration en échec bloque toutes les suivantes. La réparation employée
+n'a pas été de vider la base : `scripts/reparer-migration-consentement.sh`
+applique ce que la migration aurait fait si elle avait été écrite pour une
+table non vide — colonnes en nullable, remplissage depuis `createdAt`, puis
+pose de la contrainte — avant de marquer la migration comme appliquée. Aucun
+horodatage n'a été perdu : `20260902142731_restore_video_created_at` reprend
+la valeur depuis `acceptedAt`.
+
+La ligne en échec est la trace de cette histoire. Elle est conservée plutôt
+qu'effacée, parce qu'un historique de migrations qu'on retouche ne vaut plus
+rien.
 
 ---
 
@@ -88,6 +122,18 @@ Quatre ensembles, reliés par `User`.
 | `User` → `Notification`                         | 1 → 0..n                | cascade                |                                                                                                                                                                                                                                       |
 | `Interaction` → `Notification`                  | 1 → 0..n                | `SetNull`              | Une notification survit à l'interaction qui l'a déclenchée, sans lien mort.                                                                                                                                                           |
 | `CertificationLevel`                            | —                       | —                      | Table de correspondance score → badge. Aucune clé étrangère : le badge est **copié** dans `Profile.certificationBadge` au moment du calcul, pour qu'un changement de barème ne réécrive pas rétroactivement les badges déjà délivrés. |
+
+### Les champs ajoutés par les exigences juridiques
+
+Ils ne changent aucune cardinalité, mais ils changent ce que la base contient.
+
+| Champ                      | Type        | Ce qu'il porte                                                                                                                                                                                                                                                     |
+| -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `User.birthDate`           | `DateTime?` | Date de naissance déclarée. **Nullable à dessein** : les comptes créés avant la mesure n'en ont pas, et le modèle doit pouvoir les représenter plutôt que de les rendre illisibles. Le refus des moins de 16 ans est appliqué à l'inscription, pas par la colonne. |
+| `Video.acceptedAt`         | `DateTime`  | Date et heure du consentement à la publication.                                                                                                                                                                                                                    |
+| `Video.consentTextVersion` | `String`    | Version du texte accepté — c'est ce qui distingue un consentement journalisé d'une case cochée.                                                                                                                                                                    |
+| `Video.revokedAt`          | `DateTime?` | Date de révocation, nulle tant que le consentement tient.                                                                                                                                                                                                          |
+| `Video.createdAt`          | `DateTime`  | Date de dépôt. Voir §0.1 pour son aller-retour.                                                                                                                                                                                                                    |
 
 ### Énumérations
 
@@ -167,10 +213,13 @@ Sur 50 000 profils, requêtes émises par Prisma et non réécrites
 
 | Critère         |    Avant |       Après |
 | --------------- | -------: | ----------: |
-| secteur         |  22,1 ms | **1,41 ms** |
-| localisation    |  24,6 ms | **2,53 ms** |
-| compétences     |  4,98 ms |     5,15 ms |
-| recherche libre | 307,9 ms | **4,15 ms** |
+| secteur         |  23,8 ms | **1,56 ms** |
+| localisation    |  24,0 ms | **2,76 ms** |
+| compétences     |  6,16 ms | **4,99 ms** |
+| recherche libre | 444,9 ms | **4,38 ms** |
+
+Les temps absolus varient d'une exécution à l'autre ; la transcription porte les
+plans d'exécution, qui sont la partie stable de la mesure.
 
 Les temps absolus varient d'une exécution à l'autre ; la transcription porte les
 plans d'exécution, qui sont la partie stable de la mesure.
@@ -222,6 +271,10 @@ mieux vaut l'écrire ici que de le laisser passer pour un oubli.
 - **Cascade** sur les clés étrangères, à une exception près :
   `ModerationLog.adminId` est restreinte, pour que la trace survive au départ de
   l'administrateur qui l'a écrite.
+- **La révocation d'un consentement est datée, pas silencieuse.** `Video.revokedAt`
+  porte la date ; en intégration par lien, supprimer la ligne retire l'adresse
+  de chez nous mais laisse le contenu chez l'hébergeur — limite déclarée par
+  écrit dans `docs/remontees/05-lien-externe-inaccessibilite.md`.
 - **Aucune purge, aucune expiration.** `CertificationAttempt.expiresAt` existe
   et n'est alimenté par rien. Aucune donnée n'est effacée par le temps. Les
   durées de conservation proposées au dossier juridique
@@ -233,14 +286,17 @@ mieux vaut l'écrire ici que de le laisser passer pour un oubli.
 
 ## 6. Ce que le gel de jeudi ajoutera
 
-Deux migrations attendues, imposées par les exigences juridiques. Elles ne sont
-pas dans la base décrite ici.
+Les deux migrations juridiques sont passées et sont décrites ci-dessus. Une
+seule reste attendue.
 
-| Migration          | Ce qu'elle ajoute                                      | Tâche | Échéance    |
-| ------------------ | ------------------------------------------------------ | ----- | ----------- |
-| Vérification d'âge | `User.birthDate`, contrôle à l'inscription (§7.3)      | AD-1  | jeudi 12h00 |
-| Consentement vidéo | `acceptedAt`, `consentTextVersion`, `revokedAt` (§7.1) | AD-3  | jeudi 12h00 |
+| Migration                 | Ce qu'elle ajoute                                                                                                                                    | Tâche | Échéance    |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----------- |
+| Trace de modération vidéo | `ModerationLog.videoId` — le journal est aujourd'hui clé sur `profileId` seul et ne peut donc pas tracer une décision portant sur une vidéo (§7.9.2) | VI-10 | jeudi matin |
+
+C'est le dernier écart entre le modèle et ce que l'addendum du 2 septembre
+exige : la modération _a priori_ des vidéos suppose de savoir **qui a décidé et
+quand**, et cette trace n'a pas encore de colonne où s'écrire.
 
 **Après le gel :** rejouer `./scripts/preuves/schema-conforme.sh`, vérifier que
-les deux diffs restent vides, et régénérer les §1, §2 et §6 de ce document. La
-version envoyée vendredi 17h00 est celle-là, pas celle-ci.
+les deux diffs restent vides, et régénérer l'en-tête, le §1, le §2 et le §6 de
+ce document. La version envoyée vendredi 17h00 est celle-là, pas celle-ci.

@@ -27,15 +27,13 @@ BASE_MESURE="${BASE_MESURE:-profils_actifs_bench}"
 PROFILS="${PROFILS:-50000}"
 SORTIE="$RACINE/docs/preuves/EW-5-index-catalogue.txt"
 
-MIGRATION_INIT="$RACINE/packages/db/prisma/migrations/20260831150606_init/migration.sql"
-MIGRATION_INDEX="$RACINE/packages/db/prisma/migrations/20260902093737_catalogue_search_indexes/migration.sql"
+MIGRATIONS="$RACINE/packages/db/prisma/migrations"
+MIGRATION_INDEX="$MIGRATIONS/20260902093737_catalogue_search_indexes/migration.sql"
 
-for fichier in "$MIGRATION_INIT" "$MIGRATION_INDEX"; do
-  [ -f "$fichier" ] || {
-    echo "Migration introuvable : $fichier" >&2
-    exit 1
-  }
-done
+[ -f "$MIGRATION_INDEX" ] || {
+  echo "Migration d'index introuvable : $MIGRATION_INDEX" >&2
+  exit 1
+}
 
 psql_bench() {
   docker compose -f "$RACINE/docker-compose.yml" exec -T "$SERVICE_BASE" \
@@ -90,8 +88,14 @@ echo "Construction de la base de mesure $BASE_MESURE ($PROFILS profils)…"
 
 psql_admin -q -c "DROP DATABASE IF EXISTS \"$BASE_MESURE\";" -c "CREATE DATABASE \"$BASE_MESURE\";"
 
-# Le schéma d'avant : la migration initiale seule, sans les index mesurés.
-psql_bench -q <"$MIGRATION_INIT"
+# Le schéma d'avant : toutes les migrations du dépôt **sauf** celle qui pose les
+# index mesurés. Les prendre toutes plutôt que la seule migration initiale
+# garantit que la mesure porte sur le modèle réellement en vigueur, y compris
+# ce qu'y ajoutent les autres domaines après coup.
+for fichier in "$MIGRATIONS"/*/migration.sql; do
+  [ "$fichier" = "$MIGRATION_INDEX" ] && continue
+  psql_bench -q <"$fichier"
+done
 
 psql_bench -q <<SQL
 -- Graine fixe : les dates ci-dessous sont tirées au hasard mais le tirage est

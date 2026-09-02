@@ -3,8 +3,8 @@
 **Destinataire** Florine Pontaillac, conseillère juridique
 **Référence** JEB/DNI/2026-003 §7.7.1 · **Échéance** vendredi 4 septembre, 12h00
 **Tâche** EW-7 · **Rédacteur** Ewan — domaine D, contrat d'API
-**État du modèle décrit** commit `75ccee1`, migrations `20260831150606_init` et
-`20260902093737_catalogue_search_indexes`
+**État du modèle décrit** commit `1d44bad`, cinq migrations appliquées (détail dans
+`docs/livrables/schema-de-base-de-donnees.md`)
 
 ---
 
@@ -24,28 +24,29 @@ absences et qu'une absence ne se voit pas dans un tableau :
    ne les présentons pas comme acquises — voir §3.
 2. **Il n'y a pas de journal de connexion.** Votre liste en cite un ; il n'existe
    pas. L'authentification est un JWT sans état : aucune session n'est stockée,
-   aucune connexion n'est horodatée. Le §2.8 explique ce qui existe à la place.
-3. **Deux traitements que vos exigences imposent ne sont pas encore au modèle** —
-   la date de naissance (§7.3) et le consentement vidéo journalisé (§7.1). Ils
-   sont en cours (tâches AD-1 et AD-3, migrations attendues jeudi midi) et
-   figurent au §4 avec les noms de champs convenus, clairement séparés de ce qui
-   existe. Ce registre n'est **pas définitif** tant que ces deux migrations ne
-   sont pas passées.
+   aucune connexion n'est horodatée. Le §2.9 explique ce qui existe à la place.
+3. **Les deux traitements que vos exigences imposaient sont désormais au
+   modèle** — la date de naissance (§7.3, §7.9.1) et le consentement vidéo
+   journalisé (§7.1). Ils figurent aux §2.8 et §2.3 avec leurs vrais noms de
+   champs. Un seul écart subsiste : la trace « qui a décidé et quand » sur une
+   décision de modération **vidéo**, qui n'a pas encore de colonne où s'écrire
+   (§4).
 
 ---
 
 ## 1. Vue d'ensemble
 
-| #   | Traitement                     | Finalité                                | Base légale                           | Tables                                                                                                 |
-| --- | ------------------------------ | --------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 1   | Compte utilisateur             | Créer et authentifier un compte         | Exécution du contrat (CGU)            | `User`                                                                                                 |
-| 2   | Profil professionnel           | Publier une candidature consultable     | Consentement                          | `Profile`, `ProfileSkill`, `Skill`                                                                     |
-| 3   | Vidéo de présentation          | Diffuser une présentation filmée        | Consentement explicite, révocable     | `Video`                                                                                                |
-| 4   | Questionnaire de certification | Évaluer l'aptitude, délivrer le badge   | Exécution du contrat                  | `CertificationAttempt`, `Answer`, `CertificationQuestion`, `CertificationOption`, `CertificationLevel` |
-| 5   | Contact et suivi recruteur     | Mettre en relation, tracer les échanges | Intérêt légitime du recruteur         | `Interaction`                                                                                          |
-| 6   | Notification du candidat       | Informer d'un contact ou d'un badge     | Exécution du contrat                  | `Notification`                                                                                         |
-| 7   | Modération                     | Contrôler les contenus publiés          | Obligation légale et intérêt légitime | `ModerationLog`, `Profile.moderationStatus`, `Video.moderationStatus`                                  |
-| —   | Journal de connexion           | **N'existe pas** — voir §2.8            | —                                     | —                                                                                                      |
+| #   | Traitement                     | Finalité                                               | Base légale                           | Tables                                                                                                 |
+| --- | ------------------------------ | ------------------------------------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1   | Compte utilisateur             | Créer et authentifier un compte                        | Exécution du contrat (CGU)            | `User`                                                                                                 |
+| 2   | Profil professionnel           | Publier une candidature consultable                    | Consentement                          | `Profile`, `ProfileSkill`, `Skill`                                                                     |
+| 3   | Vidéo de présentation          | Diffuser une présentation filmée                       | Consentement explicite, révocable     | `Video`                                                                                                |
+| 4   | Questionnaire de certification | Évaluer l'aptitude, délivrer le badge                  | Exécution du contrat                  | `CertificationAttempt`, `Answer`, `CertificationQuestion`, `CertificationOption`, `CertificationLevel` |
+| 5   | Contact et suivi recruteur     | Mettre en relation, tracer les échanges                | Intérêt légitime du recruteur         | `Interaction`                                                                                          |
+| 6   | Notification du candidat       | Informer d'un contact ou d'un badge                    | Exécution du contrat                  | `Notification`                                                                                         |
+| 7   | Modération                     | Contrôler les contenus publiés                         | Obligation légale et intérêt légitime | `ModerationLog`, `Profile.moderationStatus`, `Video.moderationStatus`                                  |
+| 8   | Vérification d'âge             | Refuser les moins de 16 ans, appliquer le régime 16-18 | Obligation légale                     | `User.birthDate`                                                                                       |
+| —   | Journal de connexion           | **N'existe pas** — voir §2.9                           | —                                     | —                                                                                                      |
 
 ---
 
@@ -79,17 +80,18 @@ absences et qu'une absence ne se voit pas dans un tableau :
 
 ### 2.3 Vidéo de présentation
 
-|                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Finalité**                 | Diffuser une présentation filmée du candidat sur son profil et dans le fil.                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| **Base légale**              | Consentement explicite, spécifique et révocable (§7.1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| **Personnes concernées**     | Candidats, et toute personne apparaissant ou s'exprimant dans la vidéo.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| **Catégories de données**    | **Image et voix — donnée personnelle identifiante** ; titre et description ; adresse de la ressource.                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| **Champs réels**             | `Video.title`, `Video.description`, `Video.type`, `Video.url`, `Video.duration`, `Video.fileSizeBytes`, `Video.moderationStatus`, `Video.createdAt`                                                                                                                                                                                                                                                                                                                                                                        |
-| **Conservation**             | _Proposition_ : jusqu'à révocation du consentement ou suppression du profil. Non appliquée aujourd'hui.                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| **Destinataires**            | Recruteurs ; **le public** ; administrateurs ; **et l'hébergeur de la plateforme vidéo tierce** — voir ci-dessous.                                                                                                                                                                                                                                                                                                                                                                                                         |
-| **Point d'attention majeur** | Les vidéos sont des **intégrations iframe** (`VideoType.EXTERNAL_LINK`) : `Video.url` pointe une ressource YouTube ou Vimeo. La vidéo n'est donc pas hébergée par la plateforme, et **c'est un transfert vers un tiers**, avec ce que cela implique côté RGPD, y compris hors Union européenne. Le §8.3 impose par ailleurs de dire quelles données quittent l'infrastructure : la note de déploiement le détaille. Nous appelons votre attention dessus explicitement.                                                    |
-| **Révocation**               | La journalisation du consentement et l'effet réel de la révocation sont la tâche AD-3/AD-4, non encore au modèle — §4. En intégration iframe, il n'y a **aucun fichier à supprimer côté plateforme** : la révocation supprime la ligne `Video` et le lien, mais la vidéo continue d'exister chez l'hébergeur tiers tant que le candidat ne l'y supprime pas. La preuve « répertoire de stockage avant et après » que vous demandez ne s'applique pas telle quelle, et ce point doit être écrit noir sur blanc dans la CGU. |
+|                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Finalité**                 | Diffuser une présentation filmée du candidat sur son profil et dans le fil.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Base légale**              | Consentement explicite, spécifique et révocable (§7.1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **Personnes concernées**     | Candidats, et toute personne apparaissant ou s'exprimant dans la vidéo.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **Catégories de données**    | **Image et voix — donnée personnelle identifiante** ; titre et description ; adresse de la ressource.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Champs réels**             | `Video.title`, `Video.description`, `Video.type`, `Video.url`, `Video.duration`, `Video.fileSizeBytes`, `Video.moderationStatus`, `Video.createdAt`                                                                                                                                                                                                                                                                                                                                                                                                |
+| **Conservation**             | _Proposition_ : jusqu'à révocation du consentement ou suppression du profil. Non appliquée aujourd'hui.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **Destinataires**            | Recruteurs ; **le public** ; administrateurs ; **et l'hébergeur de la plateforme vidéo tierce** — voir ci-dessous.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Point d'attention majeur** | Les vidéos sont des **intégrations iframe** (`VideoType.EXTERNAL_LINK`) : `Video.url` pointe une ressource YouTube ou Vimeo. La vidéo n'est donc pas hébergée par la plateforme, et **c'est un transfert vers un tiers**, avec ce que cela implique côté RGPD, y compris hors Union européenne. Le §8.3 impose par ailleurs de dire quelles données quittent l'infrastructure : la note de déploiement le détaille. Nous appelons votre attention dessus explicitement.                                                                            |
+| **Consentement**             | Journalisé, pas coché : `Video.acceptedAt` porte la date et l'heure, `Video.consentTextVersion` la version du texte accepté. Les deux colonnes sont `NOT NULL` — une vidéo ne peut pas exister sans son consentement, fixtures de démonstration comprises, qui ne bénéficient d'aucune exemption.                                                                                                                                                                                                                                                  |
+| **Révocation**               | `Video.revokedAt` porte la date ; l'effet réel de la révocation est la tâche AD-4. En intégration iframe, il n'y a **aucun fichier à supprimer côté plateforme** : la révocation retire la ligne `Video` et le lien, mais la vidéo continue d'exister chez l'hébergeur tiers tant que le candidat ne l'y supprime pas. La preuve « répertoire de stockage avant et après » que vous demandez ne s'applique donc pas telle quelle — limite déclarée par écrit dans `docs/remontees/05-lien-externe-inaccessibilite.md`, et à reprendre dans la CGU. |
 
 ### 2.4 Questionnaire de certification
 
@@ -144,7 +146,21 @@ absences et qu'une absence ne se voit pas dans un tableau :
 | **Destinataires**         | Administrateurs. Le candidat n'a pas accès à `ModerationLog.notes`.                                                                                                                                                                                    |
 | **À signaler**            | `notes` est un champ libre renseigné par un administrateur **à propos d'une personne**, non visible d'elle, et pourtant couvert par son droit d'accès. C'est le champ le plus exposé du modèle sur ce point, et il mérite une consigne d'usage écrite. |
 
-### 2.8 Journal de connexion — ce qui existe à la place
+### 2.8 Vérification d'âge
+
+|                           |                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Finalité**              | Refuser l'inscription aux moins de 16 ans et appliquer aux 16-18 ans le régime qui leur est propre (§7.9.1).                                                                                                                                                                                                                                                 |
+| **Base légale**           | Obligation légale.                                                                                                                                                                                                                                                                                                                                           |
+| **Personnes concernées**  | Toute personne s'inscrivant.                                                                                                                                                                                                                                                                                                                                 |
+| **Catégories de données** | Date de naissance déclarative.                                                                                                                                                                                                                                                                                                                               |
+| **Champs réels**          | `User.birthDate`                                                                                                                                                                                                                                                                                                                                             |
+| **Conservation**          | _Proposition_ : identique au compte. Non appliquée aujourd'hui.                                                                                                                                                                                                                                                                                              |
+| **Destinataires**         | La personne elle-même ; les administrateurs. **Jamais les recruteurs** : l'âge n'est exposé par aucune réponse d'API et n'est filtrable nulle part — voir `note-criteres-de-filtrage.md` §2.2.                                                                                                                                                               |
+| **À signaler**            | La colonne est **nullable**, à dessein : les comptes créés avant la mesure n'ont pas de date, et le modèle doit pouvoir les représenter plutôt que de les rendre illisibles. Le refus des moins de 16 ans est appliqué à l'inscription, pas par une contrainte de la base. Le sort des comptes déjà créés sans date est traité par le domaine A (note AD-2). |
+| **Déclarative**           | La date est saisie par la personne et n'est vérifiée contre aucune pièce. C'est ce que votre addendum demande — « date de naissance déclarative » — et cela vaut d'être écrit : le dispositif écarte une inscription de bonne foi, il n'empêche pas une fausse déclaration.                                                                                  |
+
+### 2.9 Journal de connexion — ce qui existe à la place
 
 Votre liste attend une ligne « journal de connexion ». Nous préférons écrire
 qu'elle n'existe pas plutôt que de la remplir.
@@ -194,17 +210,21 @@ tâche AD-2 traite leur cas.
 
 ---
 
-## 4. Traitements attendus, non encore au modèle
+## 4. Le seul écart qui subsiste
 
-Ces deux lignes complètent le registre dès que les migrations correspondantes
-sont passées. Elles figurent ici avec les noms de champs convenus pour que vous
-puissiez lire la CGU en face dès maintenant, mais **elles décrivent un modèle
-qui n'existe pas encore au moment où ce document est écrit**.
+Les deux traitements que vous imposiez sont au modèle et décrits ci-dessus. Il
+reste une lacune, et elle porte sur votre propre addendum.
 
-| Traitement                        | Finalité                                                                | Base légale       | Champs prévus                                   | Tâche      |
-| --------------------------------- | ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------- | ---------- |
-| Vérification d'âge                | Identifier le régime applicable aux 16-18 ans (§7.3)                    | Obligation légale | `User.birthDate`                                | AD-1       |
-| Consentement à la diffusion vidéo | Recueillir, journaliser et permettre de révoquer le consentement (§7.1) | Consentement      | `acceptedAt`, `consentTextVersion`, `revokedAt` | AD-3, AD-4 |
+| Traitement                               | Ce qui manque                                                                                                                                                                       | Tâche | Échéance    |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----------- |
+| Décision de modération sur une **vidéo** | `ModerationLog` est clé sur `profileId` seul. Il ne peut donc pas porter la trace « qui a décidé et quand » pour une vidéo, que le §7.9.2 exige. Il y faut `ModerationLog.videoId`. | VI-10 | jeudi matin |
+
+En attendant, `Video.moderationStatus` porte l'**état** d'une vidéo — et depuis
+le 2 septembre une vidéo en attente n'est plus servie nulle part
+(`docs/preuves/SOIR-2-video-en-attente.txt`) — mais pas l'**historique** des
+décisions qui l'ont produit. C'est exactement la partie de votre exigence qui
+n'est pas encore tenue, et nous préférons vous la nommer que de vous laisser la
+découvrir.
 
 Le texte de consentement v1.0 et le projet de CGU sont rédigés par le domaine A
 (tâche AD-8). Vous annoncez lire le registre et la CGU côte à côte : la relecture
@@ -217,7 +237,7 @@ avant l'envoi.
 
 1. **Les durées de conservation** du §1, à valider ou corriger, avant qu'on
    écrive la purge qui les appliquera.
-2. **Le journal de connexion** (§2.8) : le créer, ou acter par écrit qu'il n'y
+2. **Le journal de connexion** (§2.9) : le créer, ou acter par écrit qu'il n'y
    en a pas.
 3. **L'intégration vidéo par iframe** (§2.3), qui fait sortir de l'image et de
    la voix vers un hébergeur tiers, possiblement hors UE.

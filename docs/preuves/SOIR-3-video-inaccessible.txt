@@ -1,11 +1,11 @@
 SOIR-3 — inaccessibilité d'une vidéo en attente (§7.9.2)
 ProfilsActifs — JEB/DNI/2026-003
 
-date    : 2026-09-02T16:19:59+02:00
-commit  : f29c7a60d48c78094bd50d285ee9223e332ff7c7
+date    : 2026-09-02T16:29:27+02:00
+commit  : 1d44bad09414964c62887dfe335ec7549d1b004a
 branche : feat/api-contract-and-deliverables
 
-Vidéo sujet : cmtisrjz50011y5io6vabpaio
+Vidéo sujet : cmtk6zlhu001107iodjy1eqou
 Statut      : PENDING
 Adresse     : https://www.youtube.com/embed/kJQP7kiw5Fk
 
@@ -48,7 +48,7 @@ ROUTE                                          APPELANT       CODE   ADRESSE PR�
 
 L'adresse de la ressource sur notre plateforme :
 
-$ curl -i http://localhost:3000/api/videos/cmtisrjz50011y5io6vabpaio
+$ curl -i http://localhost:3000/api/videos/cmtk6zlhu001107iodjy1eqou
 HTTP/1.1 404 Not Found
 Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
 Cross-Origin-Opener-Policy: same-origin
@@ -64,23 +64,23 @@ X-Permitted-Cross-Domain-Policies: none
 X-XSS-Protection: 0
 Vary: Origin
 Access-Control-Allow-Credentials: true
-RateLimit: "100-in-15min"; r=65; t=793
+RateLimit: "100-in-15min"; r=67; t=899
 RateLimit-Policy: "100-in-15min"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:
 Content-Type: application/json; charset=utf-8
 Content-Length: 109
-ETag: W/"6d-2rqJTuM43ZKsm/pYFIER5xZDLoE"
-Date: Wed, 02 Sep 2026 14:19:59 GMT
+ETag: W/"6d-NF9O76hc/Ns1BcLOqo6AMZld2UE"
+Date: Wed, 02 Sep 2026 14:29:27 GMT
 Connection: keep-alive
 Keep-Alive: timeout=5
 
-{"error":"not_found","message":"Route inconnue : GET /api/videos/cmtisrjz50011y5io6vabpaio","statusCode":404}
+{"error":"not_found","message":"Route inconnue : GET /api/videos/cmtk6zlhu001107iodjy1eqou","statusCode":404}
 
 ==============================================================================
 2. Navigation privée, sans session
 ==============================================================================
 
 Capture : SOIR-3-navigation-privee.png
-Adresse ouverte : http://localhost:3000/api/videos/cmtisrjz50011y5io6vabpaio
+Adresse ouverte : http://localhost:3000/api/videos/cmtk6zlhu001107iodjy1eqou
 
 Le navigateur est lancé en mode incognito, sans profil, donc sans jeton
 ni témoin de connexion — c'est la posture d'un visiteur qui aurait
@@ -113,4 +113,4 @@ rouvre l'intégralité du §8.5 et ne tient pas dans la semaine.
 Ce point est remonté par écrit à Florine Pontaillac plutôt que masqué :
 docs/remontees/05-lien-externe-inaccessibilite.md
 
-Fin de la transcription — 2026-09-02T16:20:02+02:00
+Fin de la transcription — 2026-09-02T16:29:29+02:00

@@ -14,6 +14,7 @@ const NAVIGATION: NavigationEntry[] = [
   { to: '/recruteur/favoris', label: 'Ma sélection', roles: ['RECRUITER', 'ADMIN'] },
   { to: '/recruteur/interactions', label: 'Historique', roles: ['RECRUITER', 'ADMIN'] },
   { to: '/admin', label: 'Administration', roles: ['ADMIN'] },
+  { to: '/admin/moderation-videos', label: 'Modération vidéo', roles: ['ADMIN'] },
 ];
 
 export const AppLayout = () => {
@@ -34,7 +35,7 @@ export const AppLayout = () => {
 
         <nav className="app-nav" aria-label="Navigation principale">
           {entries.map((entry) => (
-            <NavLink key={entry.to} to={entry.to} end={entry.to === '/recruteur'}>
+            <NavLink key={entry.to} to={entry.to} end>
               {entry.label}
             </NavLink>
           ))}

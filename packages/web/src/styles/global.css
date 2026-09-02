@@ -881,3 +881,108 @@ dialog::backdrop {
   font-size: 0.82rem;
   color: var(--text-muted);
 }
+
+/* ---------------------------------------------------------------------------
+   Modération vidéo (§7.9.2)
+   Une file de décisions, pas une galerie : chaque carte porte la vidéo, le
+   candidat, l'historique de la décision précédente et le formulaire qui en
+   produit une nouvelle.
+   --------------------------------------------------------------------------- */
+
+.filters--inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.moderation__list {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.moderation__item {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.moderation__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.moderation__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.moderation__applicant {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+}
+
+.moderation__meta,
+.moderation__description {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* 16/9 sans hauteur figée : la carte reste lisible sur un écran étroit. */
+.moderation__player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.moderation__history {
+  margin: 0;
+  padding: var(--space-3);
+  border-left: 3px solid var(--border-strong);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.moderation__decision {
+  display: grid;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.moderation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.field__optional {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.badge--pending {
+  color: var(--status-warning);
+  border-color: color-mix(in srgb, var(--status-warning) 40%, var(--border));
+}
+
+.badge--approved {
+  color: var(--status-good);
+  border-color: color-mix(in srgb, var(--status-good) 40%, var(--border));
+}
+
+.button--danger {
+  color: var(--status-critical);
+  border-color: color-mix(in srgb, var(--status-critical) 45%, var(--border));
+}
+
+.button--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--status-critical) 8%, var(--surface-1));
+}

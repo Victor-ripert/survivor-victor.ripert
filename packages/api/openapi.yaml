@@ -303,6 +303,74 @@ components:
           required: [status]
       required: [status, version, environment, uptimeSeconds, database]
 
+    VideoModerationItem:
+      type: object
+      description: One row of the video moderation queue.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        url:
+          type: string
+          description: >-
+            Disclosed on this admin-only route even while the video is PENDING,
+            because moderating it means watching it. Never present on any
+            recruiter- or public-facing response.
+        durationSeconds:
+          type: integer
+          nullable: true
+        moderationStatus:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        submittedAt:
+          type: string
+          format: date-time
+        applicant:
+          type: object
+          properties:
+            profileId:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            headline:
+              type: string
+              nullable: true
+          required: [profileId, firstName, lastName]
+        lastDecision:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/VideoModerationDecision'
+      required: [id, title, url, moderationStatus, submittedAt, applicant]
+
+    VideoModerationDecision:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [APPROVE, REJECT]
+        reason:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+        decidedBy:
+          type: object
+          properties:
+            id:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+          required: [id, firstName, lastName]
+      required: [action, reason, decidedAt, decidedBy]
+
     ErrorResponse:
       type: object
       description: >-
@@ -1823,6 +1891,101 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /admin/moderation/videos:
+    get:
+      tags: [Administration]
+      summary: Videos awaiting an administrator's decision (admin only)
+      description: >-
+        The queue behind the *a priori* moderation the addendum of 2 September
+        requires (§7.9.2). No video reaches a recruiter or the public before it
+        is approved here.
+
+        This is the one response that carries the address of a video that is not
+        published: an administrator cannot decide on a video without watching
+        it. The route is admin-only, and every other surface — catalogue, feed,
+        public profile — filters on APPROVED.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          description: Defaults to PENDING, the queue itself.
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED, ALL]
+            default: PENDING
+      responses:
+        '200':
+          description: A page of videos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VideoModerationItem'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+                required: [data, pagination]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/videos/{videoId}/moderate:
+    post:
+      tags: [Administration]
+      summary: Approve or reject a video, with a recorded reason (admin only)
+      description: >-
+        Writes the decision and a ModerationLog row naming who decided and when.
+        The reason is mandatory in both directions — a rejected video whose
+        author is told nothing is, in the legal adviser's words, litigation
+        starting — and it is surfaced to the candidate in their own space.
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [APPROVE, REJECT]
+                reason:
+                  type: string
+                  minLength: 10
+                  maxLength: 500
+                  description: Shown to the candidate. Required for both actions.
+                notes:
+                  type: string
+                  description: Internal, never shown to the candidate.
+              required: [action, reason]
+      responses:
+        '200':
+          description: The video with its new status and the decision that set it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoModerationItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /admin/moderation/profiles:
     get:

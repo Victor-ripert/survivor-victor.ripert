@@ -12,6 +12,11 @@ const AdminDashboardPage = lazy(() =>
     default: module.AdminDashboardPage,
   })),
 );
+const VideoModerationPage = lazy(() =>
+  import('./pages/Admin/VideoModerationPage.js').then((module) => ({
+    default: module.VideoModerationPage,
+  })),
+);
 const CataloguePage = lazy(() =>
   import('./pages/Recruiter/CataloguePage.js').then((module) => ({
     default: module.CataloguePage,
@@ -80,6 +85,15 @@ export const App = () => (
           element={
             <ProtectedRoute roles={['ADMIN']}>
               <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/moderation-videos"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <VideoModerationPage />
             </ProtectedRoute>
           }
         />

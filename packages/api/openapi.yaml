@@ -1445,7 +1445,10 @@ paths:
         - $ref: '#/components/parameters/LimitParam'
         - name: q
           in: query
-          description: Free-text search over headline, bio, sector, location, name and skills.
+          description: >-
+            Free-text search over headline, bio, sector, location and skills.
+            Deliberately not over the candidate's first or last name — see
+            docs/livrables/note-criteres-de-filtrage.md.
           schema:
             type: string
             maxLength: 100

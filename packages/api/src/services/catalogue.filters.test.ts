@@ -15,17 +15,24 @@ describe('buildCatalogueWhere', () => {
     expect(conditions(buildCatalogueWhere({}))).toHaveLength(1);
   });
 
-  it('searches across the profile, its owner and its skills', () => {
+  it('searches across the profile and its skills', () => {
     const [, search] = conditions(buildCatalogueWhere({ q: 'soudure' }));
     const clauses = search.OR as Record<string, unknown>[];
 
     expect(clauses).toContainEqual({ headline: { contains: 'soudure', mode: 'insensitive' } });
     expect(clauses).toContainEqual({
-      user: { lastName: { contains: 'soudure', mode: 'insensitive' } },
-    });
-    expect(clauses).toContainEqual({
       skills: { some: { skill: { name: { contains: 'soudure', mode: 'insensitive' } } } },
     });
+  });
+
+  // Art. L1132-1: a surname is a proxy for origin, so it is not a criterion a
+  // recruiter may narrow the catalogue by.
+  it('never matches on the candidate`s name', () => {
+    const [, search] = conditions(buildCatalogueWhere({ q: 'soudure' }));
+    const clauses = search.OR as Record<string, unknown>[];
+
+    expect(JSON.stringify(clauses)).not.toContain('firstName');
+    expect(JSON.stringify(clauses)).not.toContain('lastName');
   });
 
   it('requires every requested skill rather than any of them', () => {

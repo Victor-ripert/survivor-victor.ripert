@@ -34,14 +34,23 @@ const insensitive = (value: string): Prisma.StringFilter => ({
   mode: 'insensitive',
 });
 
+/**
+ * Free text, restricted to what the candidate wrote about their work.
+ *
+ * `user.firstName` and `user.lastName` used to be part of this OR and were
+ * removed: a surname is a documented proxy for origin, and a catalogue that
+ * lets a recruiter narrow the population by name offers a selection criterion
+ * that Art. L1132-1 of the Code du travail does not allow. Looking up a
+ * candidate already known by name is a real need, but it is a different
+ * feature from browsing the catalogue and it does not justify exposing the
+ * filter here. See docs/livrables/note-criteres-de-filtrage.md.
+ */
 const searchFilter = (term: string): Prisma.ProfileWhereInput => ({
   OR: [
     { headline: insensitive(term) },
     { bio: insensitive(term) },
     { sector: insensitive(term) },
     { location: insensitive(term) },
-    { user: { firstName: insensitive(term) } },
-    { user: { lastName: insensitive(term) } },
     { skills: { some: { skill: { name: insensitive(term) } } } },
   ],
 });

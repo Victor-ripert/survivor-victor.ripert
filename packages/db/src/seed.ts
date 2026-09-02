@@ -1,4 +1,5 @@
 import { NotificationType, UserRole, VideoType } from '@prisma/client';
+import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
 import bcrypt from 'bcryptjs';
 import { prisma } from './client.js';
 import type { ApplicantSeed } from './seed-data/applicants.js';
@@ -146,6 +147,11 @@ const seedApplicant = async (applicant: ApplicantSeed, passwordHash: string) => 
         url: entry.url,
         duration: entry.duration,
         moderationStatus: applicant.moderationStatus,
+        // Both are required since 20260902133533_add_video_consent: a video
+        // cannot exist without the consent that authorises publishing it, and
+        // the demo fixtures get no exemption (brief §7.8, last bullet).
+        acceptedAt: new Date(),
+        consentTextVersion: CONSENT_TEXT_VERSION,
       },
     });
   }

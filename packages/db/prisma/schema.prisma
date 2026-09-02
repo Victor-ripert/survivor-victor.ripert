@@ -169,9 +169,18 @@ model Video {
   // Same contract-gap note as Profile.moderationStatus.
   moderationStatus ModerationStatus @default(PENDING)
 
-  acceptedAt        DateTime
+  // Consent to publication is logged, not merely ticked: the moment it was
+  // given and the version of the text that was accepted (brief §7.1).
+  acceptedAt         DateTime
   consentTextVersion String
-  revokedAt         DateTime?
+  revokedAt          DateTime?
+
+  // Restored after 20260902133533_add_video_consent dropped it. That migration
+  // announces the drop in its own header ("All the data in the column will be
+  // lost"), which reads as collateral rather than intent: every other table
+  // carries createdAt, the catalogue orders a profile's preview video by it,
+  // and a consent record without a deposit date is a poor audit trail.
+  createdAt DateTime @default(now())
 
   @@index([profileId])
 }

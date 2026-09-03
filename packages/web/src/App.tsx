@@ -4,7 +4,6 @@ import { AppLayout } from './components/AppLayout.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { EmptyState, LoadingRow } from './components/StatusMessages.js';
 import { LoginPage } from './pages/Auth/LoginPage.js';
-import { LoginPage } from './pages/Auth/LoginPage.js';
 import { RegisterPage } from './pages/Auth/RegisterPage.js';
 
 // One bundle per route: opening the catalogue does not download the
@@ -41,6 +40,7 @@ export const App = () => (
   <Suspense fallback={<LoadingRow />}>
     <Routes>
       <Route path="/connexion" element={<LoginPage />} />
+      <Route path="/inscription" element={<RegisterPage />} />
 
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to="/recruteur" replace />} />
@@ -92,8 +92,6 @@ export const App = () => (
             <EmptyState title="Page introuvable" description="Ce lien ne mène nulle part." />
           }
         />
-        <Route path="/connexion" element={<LoginPage />} />
-        <Route path="/inscription" element={<RegisterPage />} />
       </Route>
     </Routes>
   </Suspense>

@@ -1,0 +1,39 @@
+VI-6 (1 & 2/3) — parcours clavier, page profil public (§7.4)
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-03T14:19:43.836Z
+commit      : 0f0f5d3af5e243779d4570232ad1dfbdaa4d56b7
+branche     : Victor-part-2
+web         : http://localhost:5173
+compte      : recruteur@profils-actifs.fr (vue recruteur, pour atteindre l’action de contact)
+
+profil visité : cmtlcxhh600218iocyhyw7lrd
+
+chaque ligne : arrêt Tab, élément focalisé, dans #contenu ?, :focus-visible ?, anneau visible ?
+
+#01 <a.skip-link> "Aller au contenu" — dans #contenu=false :focus-visible=true anneau=true
+#02 <a.brand-block> "Ministèredu Jobet BonheurProfilsActifsProfils vidéo et certi" — dans #contenu=false :focus-visible=true anneau=true
+#03 <button.button.button--subtle> "Déconnexion" — dans #contenu=false :focus-visible=true anneau=true
+#04 <a> "Profils" — dans #contenu=false :focus-visible=true anneau=true
+#05 <a> "Tableau de bord" — dans #contenu=false :focus-visible=true anneau=true
+#06 <a> "Catalogue" — dans #contenu=false :focus-visible=true anneau=true
+#07 <a> "Ma sélection" — dans #contenu=false :focus-visible=true anneau=true
+#08 <a> "Historique" — dans #contenu=false :focus-visible=true anneau=true
+#09 <a> "Notifications" — dans #contenu=false :focus-visible=true anneau=true
+#10 <a.back-link> "Retour aux profils" — dans #contenu=true :focus-visible=true anneau=true
+#11 <button.video-poster> "Refonte accessible1:58" — dans #contenu=true :focus-visible=true anneau=true
+   après Enter sur la vignette : focus = <body> (perdu)
+   ⚠ le bouton-vignette est démonté à l’activation (l’iframe le remplace dans le DOM) et rien ne reprend le focus : le clavier revient à <body>, un Tab suivant repart du tout début du document plutôt que de la carte vidéo. À signaler pour AD-6.
+#12 — focus revenu sur <body> (fin de page ?)
+#13 <iframe.video-frame> "" — dans #contenu=true :focus-visible=false anneau=false
+   ⚠ anneau de focus absent ou non visible à cet arrêt
+   … même élément inchangé pendant 43 appui(s) Tab supplémentaire(s) — le focus semble « coincé » à la frontière du cadre embarqué intersite : limite connue de l’automatisation clavier sur un iframe cross-origin, à revérifier à la main au clavier réel.
+#57 <button.button.button--primary.button--lg> "Contacter" — dans #contenu=true :focus-visible=true anneau=true
+   après Enter sur Contacter : dialogue ouvert, focus = <textarea> ""
+
+lien d’évitement rencontré : true
+« Retour aux profils » rencontré : true
+vidéo activée au clavier : true
+bouton « Contacter » atteint et activé au clavier : true
+
+fin — 2026-09-03T14:19:54.523Z

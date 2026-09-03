@@ -1,0 +1,80 @@
+VI-3 — pagination hors bornes sur le flux public (§8.6)
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-03T15:25:47+02:00
+commit      : 5e5f977c98d1a6b8fadd1ae8bd902f2b1ec02f8c
+branche     : 56-victor
+API         : http://localhost:3000/api
+version API : 1.0.0
+
+
+==============================================================================
+GET /profiles?page=1 — page de référence
+attendu : 200, data non vide, pagination.total = nombre réel de profils publics
+------------------------------------------------------------------------------
+$ curl -i 'http://localhost:3000/api/profiles?page=1'
+
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+RateLimit: "2000-in-15min"; r=1949; t=354
+RateLimit-Policy: "2000-in-15min"; q=2000; w=900; pk=:MTJjYTE3YjQ5YWYy:
+Content-Type: application/json; charset=utf-8
+Content-Length: 9815
+ETag: W/"2657-tq4TMfAS3OoLgNkh6E4ET3tkhEE"
+Date: Thu, 03 Sep 2026 13:25:47 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"data":[{"id":"cmtlcxhh600218iocyhyw7lrd","userId":"cmtlcxhh300208iocqzuag4w7","firstName":"Leïla","lastName":"Sassi","headline":"Designer UI junior","bio":"Portfolio orienté accessibilité, formée en design de services publics.","location":"Lyon","sector":"Design","skills":[{"id":"cmtljtxwi001nryocnbrqop4b","skillId":"cmtlcxhae000h8ioclxdiwr31","skillName":"Design UI","level":"ADVANCED"},{"id":"cmtljtxwm001oryocf9onfkqv","skillId":"cmtlcxh8900048iock754yrv3","skillName":"React","level":"BEGINNER"}],"videos":[{"id":"cmtljtxwr001pryoc72vhhy7c","profileId":"cmtlcxhh600218iocyhyw7lrd","title":"Refonte accessible","type":"EXTERNAL_LINK","url":"https://www.youtube.com/embed/YykjpeuMNEk","duration":118,"moderationStatus":"APPROVED","createdAt":"2026-09-03T13:16:37.227Z"}],"certificationStatus":"COMPLETED","certificationScore":79,"certificationBadge":"Certifié JEB Confirmé","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.242Z","updatedAt":"2026-09-03T13:16:37.212Z"},{"id":"cmtlcxhgm001w8ioc9x1nhe3y","userId":"cmtlcxhgi001v8iock0llweux","firstName":"Bastien","lastName":"Colin","headline":"Conseiller clientèle","bio":"Cinq ans en centre de relation client, formé aux outils CRM.","location":"Marseille","sector":"Relation client","skills":[{"id":"cmtljtxw1001jryoc6fv9w8t2","skillId":"cmtlcxha9000g8iocyrsl4iak","skillName":"Anglais","level":"INTERMEDIATE"},{"id":"cmtljtxvy001iryoczvndtges","skillId":"cmtlcxh9h000b8iocpg1zg8rr","skillName":"Relation client","level":"EXPERT"}],"videos":[{"id":"cmtljtxw5001kryocg7zvaf5v","profileId":"cmtlcxhgm001w8ioc9x1nhe3y","title":"Ma manière de gérer un litige","type":"EXTERNAL_LINK","url":"https://www.youtube.com/embed/CevxZvSJLk8","duration":95,"moderationStatus":"APPROVED","createdAt":"2026-09-03T13:16:37.205Z"}],"certificationStatus":"PENDING","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.222Z","updatedAt":"2026-09-03T13:16:37.191Z"},{"id":"cmtlcxhg6001s8ioczj3w0483","userId":"cmtlcxhg4001r8ioc03gmkxqh","firstName":"Nadia","lastName":"Lefèvre","headline":"Rédactrice web SEO","bio":"Freelance pendant quatre ans, cherche un poste salarié en interne.","location":"Paris","sector":"Communication","skills":[{"id":"cmtljtxvk001fryockvarikg1","skillId":"cmtlcxha9000g8iocyrsl4iak","skillName":"Anglais","level":"ADVANCED"},{"id":"cmtljtxvg001eryocjkdo1o64","skillId":"cmtlcxhaj000i8iocwt0udscp","skillName":"Rédaction web","level":"EXPERT"}],"videos":[],"certificationStatus":"IN_PROGRESS","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.206Z","updatedAt":"2026-09-03T13:16:37.174Z"},{"id":"cmtlcxhfp001n8iocyswjuh7r","userId":"cmtlcxhfm001m8ioc4z5tflw6","firstName":"Thomas","lastName":"Rivière","headline":"Analyste de données junior","bio":"Reconversion via une formation intensive en data, à l’aise en SQL et Python.","location":"Nantes","sector":"Informatique","skills":[{"id":"cmtljtxuy0019ryocxcp1ui3c","skillId":"cmtlcxh8t00078iocwct743dm","skillName":"Python","level":"INTERMEDIATE"},{"id":"cmtljtxv2001aryoctcrod4ag","skillId":"cmtlcxh8z00088iocgdhl5lql","skillName":"SQL","level":"ADVANCED"}],"videos":[{"id":"cmtljtxv6001bryocvh3uwpha","profileId":"cmtlcxhfp001n8iocyswjuh7r","title":"Mon projet de fin de formation","type":"EXTERNAL_LINK","url":"https://www.youtube.com/embed/RgKAFK5djSk","duration":130,"moderationStatus":"APPROVED","createdAt":"2026-09-03T13:16:37.170Z"}],"certificationStatus":"COMPLETED","certificationScore":63,"certificationBadge":"Certifié JEB","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.189Z","updatedAt":"2026-09-03T13:16:37.157Z"},{"id":"cmtlcxhf3001i8iocu23ir0qs","userId":"cmtlcxhf1001h8ioc7kcd8o3s","firstName":"Élise","lastName":"Marchand","headline":"Cheffe de partie","bio":"Cuisine de brasserie et restauration collective, sept ans de métier.","location":"Bordeaux","sector":"Restauration","skills":[{"id":"cmtljtxug0014ryocxf66qt4d","skillId":"cmtlcxha4000f8ioc9m1ljw2u","skillName":"Cuisine","level":"EXPERT"},{"id":"cmtljtxuj0015ryochgotuf3w","skillId":"cmtlcxh9h000b8iocpg1zg8rr","skillName":"Relation client","level":"INTERMEDIATE"}],"videos":[{"id":"cmtljtxun0016ryoc46gxfzwg","profileId":"cmtlcxhf3001i8iocu23ir0qs","title":"En cuisine avec Élise","type":"EXTERNAL_LINK","url":"https://www.youtube.com/embed/e-ORhEE9VVg","duration":110,"moderationStatus":"APPROVED","createdAt":"2026-09-03T13:16:37.151Z"}],"certificationStatus":"COMPLETED","certificationScore":81,"certificationBadge":"Certifié JEB Confirmé","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.167Z","updatedAt":"2026-09-03T13:16:37.138Z"},{"id":"cmtlcxhe6001a8ioc22h9wi4r","userId":"cmtlcxhe300198ioc151mb179","firstName":"Claire","lastName":"Fontaine","headline":"Cheffe de projet junior","bio":"Master en management de projet, expérience associative en coordination.","location":"Paris","sector":"Gestion de projet","skills":[{"id":"cmtljtxtl000xryocwgeo02oe","skillId":"cmtlcxha9000g8iocyrsl4iak","skillName":"Anglais","level":"ADVANCED"},{"id":"cmtljtxti000wryoctf8bgdnv","skillId":"cmtlcxh9c000a8ioc4zarjrtp","skillName":"Gestion de projet","level":"INTERMEDIATE"}],"videos":[],"certificationStatus":"COMPLETED","certificationScore":57,"certificationBadge":"Certifié JEB","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.134Z","updatedAt":"2026-09-03T13:16:37.104Z"},{"id":"cmtlcxhdi00148iocodl5u4n2","userId":"cmtlcxhdd00138ioc4lxlkyhj","firstName":"Yanis","lastName":"Oubrahim","headline":"Développeur back-end Node.js","bio":"Autodidacte, deux projets open source en production, disponible immédiatement.","location":"Lyon","sector":"Informatique","skills":[{"id":"cmtljtxst000qryocsxmmh6zq","skillId":"cmtlcxh8n00068iocz4ojeepg","skillName":"Node.js","level":"ADVANCED"},{"id":"cmtljtxsx000rryocasy1ie93","skillId":"cmtlcxh8z00088iocgdhl5lql","skillName":"SQL","level":"INTERMEDIATE"},{"id":"cmtljtxt2000sryocx0zor3wt","skillId":"cmtlcxh8g00058ioc8vnec2sj","skillName":"TypeScript","level":"ADVANCED"}],"videos":[{"id":"cmtljtxt7000tryocvvssx4wg","profileId":"cmtlcxhdi00148iocodl5u4n2","title":"Démonstration de projet","type":"EXTERNAL_LINK","url":"https://www.youtube.com/embed/ZXsQAXx_ao0","duration":140,"moderationStatus":"APPROVED","createdAt":"2026-09-03T13:16:37.099Z"}],"certificationStatus":"IN_PROGRESS","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.110Z","updatedAt":"2026-09-03T13:16:37.079Z"},{"id":"cmtlcxhct000y8iocrza87i07","userId":"cmtlcxhcr000x8iocyf31fxds","firstName":"Sofia","lastName":"Nguyen","headline":"Chargée de gestion administrative","bio":"Reconversion après dix ans dans l'hôtellerie, formée en comptabilité générale.","location":"Marseille","sector":"Administration","skills":[{"id":"cmtljtxsc000mryoclcb5kmlg","skillId":"cmtlcxha9000g8iocyrsl4iak","skillName":"Anglais","level":"INTERMEDIATE"},{"id":"cmtljtxs5000kryoczru860w6","skillId":"cmtlcxh9700098ioc73358qju","skillName":"Comptabilité","level":"INTERMEDIATE"},{"id":"cmtljtxs8000lryocitplks7o","skillId":"cmtlcxh9h000b8iocpg1zg8rr","skillName":"Relation client","level":"ADVANCED"}],"videos":[{"id":"cmtljtxsg000nryocwbw773uk","profileId":"cmtlcxhct000y8iocrza87i07","title":"Pourquoi la reconversion","type":"EXTERNAL_LINK","url":"https://www.youtube.com/embed/aqz-KE-bpKQ","duration":105,"moderationStatus":"APPROVED","createdAt":"2026-09-03T13:16:37.072Z"}],"certificationStatus":"COMPLETED","certificationScore":68,"certificationBadge":"Certifié JEB","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.085Z","updatedAt":"2026-09-03T13:16:37.054Z"},{"id":"cmtlcxhc8000t8iocbbn2t32t","userId":"cmtlcxhc5000s8iocdqx4hwh5","firstName":"Marc","lastName":"Delaunay","headline":"Technicien de maintenance industrielle","bio":"Quinze ans en maintenance de lignes de production, habilitations électriques à jour.","location":"Lille","sector":"Industrie","skills":[{"id":"cmtljtxro000gryocykegr7bu","skillId":"cmtlcxh9u000d8iocjm4nui3l","skillName":"Soudure","level":"ADVANCED"},{"id":"cmtljtxrk000fryocqvybueto","skillId":"cmtlcxh9z000e8ioc73ni0vf4","skillName":"Électricité","level":"EXPERT"}],"videos":[{"id":"cmtljtxrt000hryocg7l6os7z","profileId":"cmtlcxhc8000t8iocbbn2t32t","title":"Mon parcours en atelier","type":"EXTERNAL_LINK","url":"https://www.youtube.com/embed/ScMzIvxBSi4","duration":120,"moderationStatus":"APPROVED","createdAt":"2026-09-03T13:16:37.049Z"}],"certificationStatus":"COMPLETED","certificationScore":74,"certificationBadge":"Certifié JEB Confirmé","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.064Z","updatedAt":"2026-09-03T13:16:37.032Z"},{"id":"cmtlcxhb6000n8iochneyx53u","userId":"cmtlcxhb2000m8ioc6ej8ypwz","firstName":"Amina","lastName":"Berthier","headline":"Développeuse front-end React","bio":"Trois ans d'alternance en agence, à la recherche d'un premier CDI.","location":"Lyon","sector":"Informatique","skills":[{"id":"cmtljtxqx000bryocl0qhchj2","skillId":"cmtlcxhae000h8ioclxdiwr31","skillName":"Design UI","level":"INTERMEDIATE"},{"id":"cmtljtxqo0009ryoc23q9jxte","skillId":"cmtlcxh8900048iock754yrv3","skillName":"React","level":"ADVANCED"},{"id":"cmtljtxqt000aryocaiagw0ct","skillId":"cmtlcxh8g00058ioc8vnec2sj","skillName":"TypeScript","level":"INTERMEDIATE"}],"videos":[{"id":"cmtljtxr6000cryocf7z1zvss","profileId":"cmtlcxhb6000n8iochneyx53u","title":"Présentation en 90 secondes","type":"EXTERNAL_LINK","url":"https://www.youtube.com/embed/dQw4w9WgXcQ","duration":92,"moderationStatus":"APPROVED","createdAt":"2026-09-03T13:16:37.026Z"}],"certificationStatus":"COMPLETED","certificationScore":93,"certificationBadge":"Certifié JEB Expert","moderationStatus":"APPROVED","createdAt":"2026-09-03T10:03:25.026Z","updatedAt":"2026-09-03T13:25:05.912Z"}],"pagination":{"page":1,"limit":20,"total":10,"pages":1}}
+
+==============================================================================
+GET /profiles?page=9999 — page hors bornes
+attendu : 200, data: [], pagination.total = 10 (inchangé), pas d'erreur
+------------------------------------------------------------------------------
+$ curl -i 'http://localhost:3000/api/profiles?page=9999'
+
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin
+Access-Control-Allow-Credentials: true
+RateLimit: "2000-in-15min"; r=1947; t=354
+RateLimit-Policy: "2000-in-15min"; q=2000; w=900; pk=:MTJjYTE3YjQ5YWYy:
+Content-Type: application/json; charset=utf-8
+Content-Length: 70
+ETag: W/"46-7DJazsUkwgJWsF/k+DZOV2h+ASA"
+Date: Thu, 03 Sep 2026 13:25:47 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"data":[],"pagination":{"page":9999,"limit":20,"total":10,"pages":1}}
+constat :
+  data: []                         : true
+  pagination.total inchangé        : oui (10)
+  pagination.page reflète la requête : oui (9999)
+
+==============================================================================
+Fin de la transcription — 2026-09-03T15:25:47+02:00

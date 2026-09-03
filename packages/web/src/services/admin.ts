@@ -1,4 +1,9 @@
-import type { ModerationAction, Paginated, PaginationParams, Profile } from '@profils-actifs/shared';
+import type {
+  ModerationAction,
+  Paginated,
+  PaginationParams,
+  Profile,
+} from '@profils-actifs/shared';
 import { api } from './api.js';
 
 export interface ModerateProfileInput {
@@ -21,6 +26,9 @@ export async function fetchPendingProfiles(params: PaginationParams): Promise<Pa
 }
 
 /** `POST /admin/profiles/{id}/moderate`, admin only. */
-export async function moderateProfile(profileId: string, input: ModerateProfileInput): Promise<void> {
+export async function moderateProfile(
+  profileId: string,
+  input: ModerateProfileInput,
+): Promise<void> {
   await api.post(`/admin/profiles/${profileId}/moderate`, input);
 }

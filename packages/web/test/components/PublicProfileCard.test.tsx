@@ -62,7 +62,11 @@ describe('PublicProfileCard', () => {
   });
 
   it('shows the certification status', () => {
-    renderCard({ ...baseProfile, certificationStatus: 'COMPLETED', certificationBadge: 'Certifié JEB' });
+    renderCard({
+      ...baseProfile,
+      certificationStatus: 'COMPLETED',
+      certificationBadge: 'Certifié JEB',
+    });
     expect(screen.getByRole('status')).toHaveTextContent('Certifié JEB');
   });
 });

@@ -117,10 +117,7 @@ export async function getProfileByUserId(userId: string): Promise<Profile | null
  * to be absent, not `null`; that's a real gap, not an oversight, and would
  * need `upsertProfileSchema` to accept `.nullable()` if it's needed.
  */
-export async function upsertMyProfile(
-  userId: string,
-  input: UpsertProfileInput,
-): Promise<Profile> {
+export async function upsertMyProfile(userId: string, input: UpsertProfileInput): Promise<Profile> {
   const profile = await prisma.profile.upsert({
     where: { userId },
     create: { userId, ...input },

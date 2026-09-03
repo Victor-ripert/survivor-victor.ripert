@@ -41,15 +41,17 @@ export function MyProfilePage(): JSX.Element {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [form, setForm] = useState<MyProfileFormValues>(EMPTY_FORM);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof MyProfileFormValues, string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<keyof MyProfileFormValues, string>>
+  >({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const [videoForm, setVideoForm] = useState<AddVideoFormValues>(EMPTY_VIDEO_FORM);
-  const [videoFieldErrors, setVideoFieldErrors] = useState<Partial<Record<keyof AddVideoFormValues, string>>>(
-    {},
-  );
+  const [videoFieldErrors, setVideoFieldErrors] = useState<
+    Partial<Record<keyof AddVideoFormValues, string>>
+  >({});
   const [addingVideo, setAddingVideo] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
 
@@ -184,7 +186,9 @@ export function MyProfilePage(): JSX.Element {
     setVideoError(null);
     try {
       await deleteVideo(videoId);
-      setProfile((prev) => (prev ? { ...prev, videos: prev.videos.filter((v) => v.id !== videoId) } : prev));
+      setProfile((prev) =>
+        prev ? { ...prev, videos: prev.videos.filter((v) => v.id !== videoId) } : prev,
+      );
     } catch {
       setVideoError('Impossible de supprimer cette vidéo pour le moment.');
     }
@@ -295,8 +299,8 @@ export function MyProfilePage(): JSX.Element {
           <p className={styles.hint}>Aucune compétence renseignée pour le moment.</p>
         )}
         <p className={styles.hint}>
-          La gestion des compétences n’est pas encore disponible ici — elle arrive dans une prochaine mise à
-          jour.
+          La gestion des compétences n’est pas encore disponible ici — elle arrive dans une
+          prochaine mise à jour.
         </p>
       </section>
 
@@ -304,7 +308,9 @@ export function MyProfilePage(): JSX.Element {
         <h2 id="my-profile-videos-heading">Vidéos</h2>
 
         {!profile ? (
-          <p className={styles.hint}>Enregistrez d’abord votre profil ci-dessus pour pouvoir ajouter des vidéos.</p>
+          <p className={styles.hint}>
+            Enregistrez d’abord votre profil ci-dessus pour pouvoir ajouter des vidéos.
+          </p>
         ) : (
           <>
             {profile.videos.length === 0 ? (
@@ -322,7 +328,11 @@ export function MyProfilePage(): JSX.Element {
               </ul>
             )}
 
-            <form className={styles.form} onSubmit={(event) => void handleAddVideo(event)} noValidate>
+            <form
+              className={styles.form}
+              onSubmit={(event) => void handleAddVideo(event)}
+              noValidate
+            >
               <div className={styles.field}>
                 <label htmlFor="video-title">Titre de la vidéo</label>
                 <input

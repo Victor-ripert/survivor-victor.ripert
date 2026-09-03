@@ -69,7 +69,12 @@ const IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-presentation allow
 export function VideoEmbed({ type, url }: VideoEmbedProps): JSX.Element {
   if (type === 'UPLOAD') {
     return (
-      <video className={styles.player} src={resolveUploadedVideoSrc(url)} controls preload="metadata">
+      <video
+        className={styles.player}
+        src={resolveUploadedVideoSrc(url)}
+        controls
+        preload="metadata"
+      >
         Votre navigateur ne prend pas en charge la lecture de cette vidéo.
       </video>
     );

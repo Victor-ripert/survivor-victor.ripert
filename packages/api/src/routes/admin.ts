@@ -1,6 +1,10 @@
 import { UserRole } from '@prisma/client';
 import { Router } from 'express';
-import { getDashboard, listPendingProfiles, moderateProfile } from '../controllers/admin.controller.js';
+import {
+  getDashboard,
+  listPendingProfiles,
+  moderateProfile,
+} from '../controllers/admin.controller.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 
 export const adminRouter = Router();

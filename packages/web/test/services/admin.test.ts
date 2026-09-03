@@ -37,7 +37,11 @@ describe('moderateProfile', () => {
   it('posts the action, reason and notes to the moderate endpoint', async () => {
     jest.spyOn(api, 'post').mockResolvedValue({ data: { message: 'Profile moderated' } });
 
-    await moderateProfile('profile-1', { action: 'APPROVE', reason: 'Looks good', notes: undefined });
+    await moderateProfile('profile-1', {
+      action: 'APPROVE',
+      reason: 'Looks good',
+      notes: undefined,
+    });
 
     expect(api.post).toHaveBeenCalledWith('/admin/profiles/profile-1/moderate', {
       action: 'APPROVE',

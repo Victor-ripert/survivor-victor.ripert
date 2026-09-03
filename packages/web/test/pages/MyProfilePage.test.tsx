@@ -45,8 +45,13 @@ describe('MyProfilePage', () => {
 
     renderPage();
 
-    expect(screen.getByText('Vous devez être connecté(e) pour modifier votre profil.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Se connecter' })).toHaveAttribute('href', '/connexion');
+    expect(
+      screen.getByText('Vous devez être connecté(e) pour modifier votre profil.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Se connecter' })).toHaveAttribute(
+      'href',
+      '/connexion',
+    );
     expect(getSpy).not.toHaveBeenCalled();
   });
 
@@ -58,7 +63,9 @@ describe('MyProfilePage', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Localisation')).toHaveValue(''));
     expect(
-      screen.getByText('Enregistrez d’abord votre profil ci-dessus pour pouvoir ajouter des vidéos.'),
+      screen.getByText(
+        'Enregistrez d’abord votre profil ci-dessus pour pouvoir ajouter des vidéos.',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -127,7 +134,9 @@ describe('MyProfilePage', () => {
     renderPage();
     await waitFor(() => expect(screen.getByLabelText('Localisation')).toHaveValue('Lyon'));
 
-    fireEvent.change(screen.getByLabelText('Titre de la vidéo'), { target: { value: 'Ma présentation' } });
+    fireEvent.change(screen.getByLabelText('Titre de la vidéo'), {
+      target: { value: 'Ma présentation' },
+    });
     fireEvent.change(screen.getByLabelText('Lien YouTube ou Vimeo'), {
       target: { value: 'https://www.youtube.com/embed/abc123' },
     });
@@ -169,7 +178,9 @@ describe('MyProfilePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
 
-    await waitFor(() => expect(screen.queryByTitle('Vidéo de présentation')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByTitle('Vidéo de présentation')).not.toBeInTheDocument(),
+    );
     expect(api.delete).toHaveBeenCalledWith('/videos/video-1');
   });
 });

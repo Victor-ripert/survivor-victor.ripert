@@ -35,7 +35,8 @@ export const addVideo = async (req: Request, res: Response): Promise<void> => {
   if (parsed.data.type === 'UPLOAD') {
     res.status(501).json({
       error: 'not_implemented',
-      message: 'Direct video upload is not available yet — use an EXTERNAL_LINK (YouTube/Vimeo) instead.',
+      message:
+        'Direct video upload is not available yet — use an EXTERNAL_LINK (YouTube/Vimeo) instead.',
       statusCode: 501,
     });
     return;

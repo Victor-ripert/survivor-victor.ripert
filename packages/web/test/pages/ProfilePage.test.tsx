@@ -78,7 +78,9 @@ describe('ProfilePage', () => {
     renderAt('/profiles/does-not-exist');
 
     await waitFor(() =>
-      expect(screen.getByText('Ce profil n’existe pas, ou n’est plus disponible.')).toBeInTheDocument(),
+      expect(
+        screen.getByText('Ce profil n’existe pas, ou n’est plus disponible.'),
+      ).toBeInTheDocument(),
     );
     expect(screen.getByRole('link', { name: 'Retour à la liste des profils' })).toHaveAttribute(
       'href',

@@ -1,4 +1,4 @@
-# Terms of Service — draft (AD-8)
+# Terms of Service — draft
 
 **Status: draft, not published.** To be reviewed by Florine Pontaillac alongside
 the processing register (EW-7) before any sending or publication, as she requested.

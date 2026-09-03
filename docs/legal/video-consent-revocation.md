@@ -1,4 +1,4 @@
-# Video consent revocation (AD-4)
+# Video consent revocation
 
 Videos are embedded via iframe (YouTube/Vimeo), not uploaded — the platform never stores a video
 file of its own. The "storage directory before/after revocation" proof requested for revocation

@@ -1,4 +1,4 @@
-# Accounts without a birth date (AD-2)
+# Accounts without a birth date
 
 `birthDate` is nullable at the database level: a real account created before this update keeps
 an empty birth date, is neither suspended nor retroactively deleted, and is treated as an adult

@@ -1,20 +1,104 @@
 # Répartition jusqu'au dépôt
 
-**Référence** : JEB/DNI/2026-003 (version 1.1) · **Révisé le** : mercredi 2 septembre 2026, 16h30
-**Base** : état de `main` au commit `eb72ba6`, courriel de Thomas Vignal du 2 septembre, addendum de
+**Référence** : JEB/DNI/2026-003 (version 1.1) · **Révisé le** : jeudi 3 septembre 2026, 9h00
+**Base** : état de `feat/demo-ready` au commit `5214fb2`, courriels de Jean-Eudes Berlier (3 sept.
+7h15) et de Benjamin Sellami (3 sept. 8h05), par-dessus le courriel de Thomas Vignal et l'addendum de
 Florine Pontaillac du 2 septembre 15h40 (CdC §7.9).
 
-| Échéance                 | Contenu                                                                                                                                              |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Ce soir**              | Bloquant démo : blocage des moins de 16 ans, état d'attente des vidéos et sa preuve d'inaccessibilité.                                               |
-| **Jeu. — démonstration** | Démonstration publique confirmée par l'addendum (« y compris celle de demain »). Heure non confirmée : la traiter comme jeudi matin.                 |
-| **Ven. 12h00**           | Dépôt légal (§7.7 + §7.9) : registre, déclaration d'accessibilité, CGU, note critères de filtrage, comptes existants, retrait complet des compteurs. |
-| **Ven. 17h00**           | Dépôt technique (§8) : schéma et index, Swagger UI, preuves curl, sondes de santé, notes écrites.                                                    |
-| **76,5 h / 80 h**        | Charge planifiée après coupes appliquées (section 7). Adrien est à 20 h sur 20 : c'est là que la marge manque.                                       |
+| Échéance       | Contenu                                                                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Jeu. 12h00** | Remise au Ministre : artefact de build récupérable sur `main`, données de démonstration tenables, prototype documenté, guide, vidéo, plan B.         |
+| **Jeu. 12h30** | Deck de huit slides en PDF chez Benjamin, six captures de l'application telle qu'elle tourne ce matin.                                               |
+| **Jeu. 13h00** | Journal télévisé, en direct. Nous ne sommes pas sur le plateau ; la vidéo et le plan B y vont à notre place.                                         |
+| **Ven. matin** | Présentation devant le cabinet, six minutes, deux voix, répétée une fois.                                                                            |
+| **Ven. 12h00** | Dépôt légal (§7.7 + §7.9) : registre, déclaration d'accessibilité, CGU, note critères de filtrage, comptes existants, retrait complet des compteurs. |
+| **Ven. 17h00** | Dépôt technique (§8) : schéma et index, Swagger UI, preuves curl, sondes de santé, notes écrites.                                                    |
+| **+ 14,25 h**  | Charge ajoutée ce matin par les deux courriels, sur une capacité de 14 h avant 12h30. Détail et arbitrage en section 0.                              |
+
+**État de la recette au moment de cette révision**, vérifié et non déclaré :
+build, lint et format verts ; 275 tests API, 95 tests web, 18 tests partagés, tous
+passants. La CI construit et teste, mais **ne publie aucun artefact de build** — c'est
+la tâche JT-0, et le seul blocage réel de la matinée.
 
 ---
 
-## 1. Ce que les deux courriels changent
+## 0. Jeudi 3 septembre — la remise de midi
+
+Deux courriels sont arrivés ce matin. Ils ne modifient pas le produit ; ils
+ajoutent une remise à 12h00, une autre à 12h30, et un passage télévisé à 13h00.
+
+**Ce que demande le Ministre (7h15), pour 12h00** : le prototype récupérable par
+Thomas depuis la branche par défaut, avec un workflow vert qui publie un
+artefact de build et des comptes de démonstration remplis ; des données de
+démonstration qui tiennent debout sur **chaque** écran ; un prototype documenté
+de deux pages ; un guide d'utilisation numéroté avec une capture par étape ; une
+vidéo de moins de trois minutes, sous-titrée et sans musique ; un plan B écrit.
+
+**Ce que demande Benjamin (8h05), pour 12h30** : un deck de huit slides en PDF,
+six captures issues de l'application telle qu'elle tourne ce matin, un
+recensement chiffré pour la slide 6, et une répétition chronométrée à deux voix
+avant la présentation de vendredi.
+
+### L'arithmétique, posée une fois
+
+Le Ministre écrit « une heure de travail, deux au maximum si vous êtes lents ».
+Le relevé poste par poste ci-dessous donne **14,25 heures**. Nous sommes quatre,
+il est 9h00, la première remise est à 12h00 et la seconde à 12h30 : la capacité
+disponible est de **14 heures**.
+
+Cela ne tient que pour deux raisons, et il faut les dire :
+
+1. **Trois pièces sont déjà écrites** — le recensement, le prototype documenté
+   et le plan B — ce qui libère 1,75 h.
+2. **Rien d'autre ne se fait aujourd'hui.** Tout ce qui était prévu ce jeudi
+   pour le dépôt légal de vendredi 12h00 bascule à vendredi matin. C'est écrit
+   au §7, et c'est remonté par écrit dans `remontees/03-echeances.md`.
+
+### Les tâches
+
+| ID    | Qui    | Tâche                                                                                                                                                                                                                                                                                                                                            | Échéance  | Preuve à joindre                                                                     | h    |
+| ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------ | ---- |
+| JT-0  | Ewan   | **Le seul blocage réel.** Fusionner `feat/demo-ready` sur `main`, et ajouter au workflow la publication d'un artefact de build — aujourd'hui la CI construit et teste, mais ne publie que la couverture. Sans cet artefact, la procédure de Thomas n'a rien à récupérer.                                                                         | 10h30     | Exécution verte sur le dernier commit de `main`, artefact téléchargé et décompressé. | 1,5  |
+| JT-1  | Ewan   | Recensement chiffré, compté ce matin, en deux colonnes : build propre et machine de développement. Source de la slide 6.                                                                                                                                                                                                                         | 9h30      | `livrables/recensement-du-3-septembre.md` — **fait**.                                | 1    |
+| JT-2  | Victor | Remplacer les dix URL de vidéos de démonstration. Elles pointent vers de vrais clips musicaux connus ; `dQw4w9WgXcQ`, intitulé « Présentation en 90 secondes », est le « rickroll ». Sur un plateau, le journaliste clique et une chanson démarre.                                                                                               | 11h00     | Les dix identifiants relus un par un, et la mention de la licence de chacun.         | 1    |
+| JT-3  | Marin  | Remplir les écrans que le recensement a trouvés vides : deux décisions de modération journalisées (une validation, un refus motivé), une passation de questionnaire réellement à mi-parcours, un historique pour le second recruteur — ou son retrait des comptes livrés. Masquer le lien « Notifications » aux rôles qui n'en reçoivent aucune. | 11h00     | Les quatorze écrans du §2 du recensement, parcourus un par un.                       | 1,5  |
+| JT-4  | Ewan   | Prototype documenté, deux pages, sans jargon : ce qui est fait, ce qui ne l'est pas, ce qui arrive.                                                                                                                                                                                                                                              | 9h30      | `livrables/prototype-documente.md` — **fait**.                                       | 0,5  |
+| JT-5  | Adrien | Guide d'utilisation, douze étapes numérotées, **une capture par étape**, prises ce matin sur la version qui part à midi. Si un libellé diffère, corriger le texte, pas la capture.                                                                                                                                                               | 11h30     | Les douze fichiers dans `preuves/guide/`.                                            | 1,5  |
+| JT-6  | Ewan   | Plan B d'une demi-page : cinq pannes probables, la conduite à tenir et la phrase à dire.                                                                                                                                                                                                                                                         | 9h30      | `livrables/plan-b-direct.md` — **fait**.                                             | 0,25 |
+| JT-7  | Victor | Vidéo de démonstration : tournage, voix, sous-titres, export 1080p horizontal, sans musique, sous les trois minutes. Le script et le fichier `.srt` sont écrits ; il reste la prise. **Ne se tourne qu'après JT-2.**                                                                                                                             | 11h45     | Durée du fichier exporté, et sous-titres lus son coupé.                              | 2    |
+| JT-8  | Marin  | Deck de huit slides, PDF, 16:9, trente mots par slide. Slides 3, 6 et 7 en premier — ce sont celles sur lesquelles Benjamin ne transige pas. Six captures dans `preuves/deck/`.                                                                                                                                                                  | 12h30     | Le PDF, et le compte de mots slide par slide.                                        | 2,5  |
+| JT-9  | Tous   | Répétition chronométrée, six minutes, deux voix. Une, pas zéro.                                                                                                                                                                                                                                                                                  | jeu. soir | Le chronomètre, et la slide qui a débordé.                                           | 1    |
+| JT-10 | Ewan   | Les trois remontées parties **avant 11h00** : les échéances (03), la charte jamais reçue (07), l'artefact qui ne tourne pas sur une tablette (09).                                                                                                                                                                                               | 11h00     | Mails partis, horodatés.                                                             | 0,5  |
+| JT-11 | Tous   | Rejouer la procédure de Thomas **depuis un dossier vide** : récupérer l'artefact, installer, migrer, semer, ouvrir les quatorze écrans. Le Ministre l'exige nommément, et c'est la seule vérification qui distingue « ça marche » de « ça marche chez nous ».                                                                                    | 12h00     | Transcription de la session, du `git clone` au premier écran.                        | 1    |
+
+### L'ordre dans lequel ça se fait
+
+`JT-0` d'abord et seul : tant que l'artefact n'existe pas, les dix autres
+tâches produisent des pièces qui accompagnent un livrable manquant. Puis `JT-2`
+avant `JT-7` — tourner la vidéo sur les mauvaises données obligerait à la
+retourner. Puis `JT-3` avant `JT-5` et `JT-8`, pour la même raison : on ne
+capture pas un écran qu'on va remplir dans l'heure.
+
+`JT-11` ferme la matinée. S'il échoue, c'est lui qui décide de ce qu'on envoie à
+12h00, pas l'horloge.
+
+### Ce que nous ne ferons pas, même pour tenir midi
+
+Trois refus, énoncés maintenant pour ne pas avoir à les improviser à 11h50 :
+
+- **pas de capture retouchée** pour montrer une charte graphique que nous
+  n'avons jamais reçue ;
+- **pas de chiffre inventé** sur la slide 1 : il sera projeté devant un cabinet
+  puis peut-être répété à l'antenne, il lui faut une source publique et datée ;
+- **pas de conformité déclarée** sans mesure, y compris sur l'accessibilité.
+
+Chacun de ces trois points est remonté par écrit ce matin, avec la question qui
+va avec. Un livrable manquant s'explique ; un livrable faux se découvre en
+direct.
+
+---
+
+## 1. Ce que les courriels du 2 septembre ont changé
 
 **Thomas Vignal (matin).** L'arbitrage sur le questionnaire est accepté : c'est un engagement à
 implémenter. Les index catalogue et l'authenticité des sorties curl deviennent des critères de recette.
@@ -49,9 +133,12 @@ d'origine ne connaissait pas. Le gel du schéma reste jeudi 18h00, donc **après
 
 ---
 
-## 2. Ce soir — bloquant pour la démonstration de demain
+## 2. Mercredi soir — bloquant pour la démonstration _(fait)_
 
-Quatre lignes, trois personnes. Rien d'autre ne compte tant que celles-ci ne sont pas dans `main`.
+Quatre lignes, trois personnes. **Les quatre sont passées** : elles sont sur
+`feat/demo-ready`, avec leurs preuves dans `docs/preuves/`. La section reste ici
+parce que le dépôt de vendredi s'appuie sur ces preuves, et qu'une preuve produite
+contre un commit qui n'est plus dans `main` se rejoue.
 
 | ID     | Qui    | Tâche                                                                                                                                                                                                                            | Réf    | Preuve à joindre                                                   | h   |
 | ------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------ | --- |
@@ -134,7 +221,20 @@ fonctionnalité sans capture ne compte pas vendredi.
 
 ## 4. Séquence
 
-**Mercredi 2 septembre, ce soir — les deux bloquants.**
+**Jeudi 3 septembre, 9h00 – 12h30 — la remise de midi.**
+La matinée entière y passe, dans l'ordre du §0 : l'artefact d'abord (JT-0), les données
+ensuite (JT-2, JT-3), les pièces écrites et les captures par-dessus, la recette depuis un
+dossier vide en dernier (JT-11). Les remontées partent avant 11h00. **Rien d'autre ne se
+fait aujourd'hui** — voir §7.
+
+**Jeudi 3 septembre, 13h00 — journal télévisé.** Hors de notre main. Ce qui y va, c'est
+l'artefact, le guide, la vidéo et le plan B.
+
+**Jeudi 3 septembre, 18h00 — GEL du schéma.** Inchangé, et tenable : les deux migrations
+attendues (consentement, `ModerationLog.videoId`) sont passées. Le gel ne dépend plus de
+la matinée.
+
+**Mercredi 2 septembre, ce soir — les deux bloquants** _(fait)_**.**
 SOIR-1 à SOIR-4 dans `main` avant la fin de soirée. Ewan envoie les remontées écrites ce soir : une
 réponse de Florine met vingt-quatre heures, et deux des huit points de la section 6 conditionnent ce
 qu'on montre demain.
@@ -173,6 +273,12 @@ questionnaire.
 ## 5. Chemin critique
 
 ```
+JT-0                 →   JT-2 · JT-3       →   JT-5 · JT-7 · JT-8   →   JT-11
+artefact publié          données de             guide, vidéo, deck       recette depuis
+et `main` verte          démonstration          — on ne capture pas      un dossier vide
+                         tenables               un écran qu'on va
+                                                remplir dans l'heure
+
 SOIR-1               →   VI-9              →   démo jeu. matin
 date de naissance        mineurs hors           blocage <16 ans démontrable
 et blocage <16           feed public
@@ -291,5 +397,16 @@ ci-dessous ne sont plus conditionnelles : elles sont appliquées dans les charge
 3. **L'édition du profil côté candidat reste une API sans écran.** `PATCH /profiles/me` répond, le seed alimente la démo.
 4. **Les tris secondaires du feed sautent.** `sort=name` et les affinages d'ordre ; le tri par défaut suffit à démontrer la pagination serveur.
 
-**Ne se coupent pas** : les quatre lignes de ce soir, tout ce qui porte une preuve, et les pièces du
-vendredi 12h00. Une preuve manquante se voit ; une fonctionnalité manquante s'explique.
+5. **Toute la journée de jeudi bascule à vendredi matin.** EW-13, MA-11, AD-9, AD-5 et AD-6 étaient
+   prévus aujourd'hui ; ils se font vendredi entre 8h00 et 12h00, ou pas. C'est le coût direct de la
+   remise de midi, et il est chiffré : 14,25 h ajoutées sur une capacité de 14 h.
+6. **La répétition du deck se fait jeudi soir, pas vendredi matin.** Vendredi matin est déjà pris par
+   les pièces de Florine, et Benjamin demande une répétition, pas zéro.
+7. **Le guide d'utilisation s'arrête à douze étapes.** Douze captures cohérentes valent mieux que
+   vingt prises à la hâte : le Ministre lira ces phrases à l'antenne, et une étape fausse lui coûte
+   plus qu'une étape absente.
+
+**Ne se coupent pas** : les pièces du vendredi 12h00, qui engagent juridiquement le ministère ; tout
+ce qui porte une preuve ; et les trois refus du §0 — pas de capture retouchée, pas de chiffre inventé,
+pas de conformité déclarée sans mesure. Une preuve manquante se voit ; une fonctionnalité manquante
+s'explique ; un livrable faux se découvre en direct à 13h00.

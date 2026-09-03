@@ -1,0 +1,73 @@
+1
+00:00:00,000 --> 00:00:12,000
+ProfilsActifs. Une plateforme où un demandeur d'emploi
+se présente en vidéo.
+
+2
+00:00:12,000 --> 00:00:22,000
+Voici le fil public. Dix profils,
+visibles sans créer de compte.
+
+3
+00:00:22,000 --> 00:00:32,000
+Un recruteur n'a pas besoin de s'inscrire
+pour découvrir un candidat.
+
+4
+00:00:32,000 --> 00:00:42,000
+Chaque profil porte une présentation,
+des compétences, un badge, et une vidéo.
+
+5
+00:00:42,000 --> 00:00:52,000
+Rien ne se lance tout seul :
+la vidéo ne charge qu'au clic.
+
+6
+00:00:52,000 --> 00:01:02,000
+La certification, c'est cent questions
+sur dix aptitudes.
+
+7
+00:01:02,000 --> 00:01:17,000
+Chaque réponse est enregistrée aussitôt. Je recharge la page :
+on reprend exactement où on s'était arrêté.
+
+8
+00:01:17,000 --> 00:01:29,000
+Côté recruteur : un catalogue, des filtres
+par métier, par ville, par compétence.
+
+9
+00:01:29,000 --> 00:01:40,000
+L'adresse de la page suit la recherche,
+elle se partage telle quelle.
+
+10
+00:01:40,000 --> 00:01:50,000
+Le recruteur prend contact sans jamais
+voir l'adresse du candidat.
+
+11
+00:01:50,000 --> 00:02:00,000
+Le message passe par la plateforme,
+et le candidat en est averti.
+
+12
+00:02:00,000 --> 00:02:12,000
+Rien n'est publié avant d'avoir été validé.
+
+13
+00:02:12,000 --> 00:02:25,000
+Un refus exige un motif écrit, et le candidat
+lit ce motif dans son espace.
+
+14
+00:02:25,000 --> 00:02:35,000
+Le dépôt direct des vidéos et le parcours
+des seize-dix-huit ans arrivent la semaine prochaine.
+
+15
+00:02:35,000 --> 00:02:45,000
+Tout ce que vous venez de voir
+fonctionne aujourd'hui.

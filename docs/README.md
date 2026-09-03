@@ -1,7 +1,7 @@
 # Dossier de recette — ProfilsActifs
 
 **Référence** JEB/DNI/2026-003 · **Domaine D** — espace recruteur, contrat d'API, intégration
-**Tenu par** Ewan · **Dernière mise à jour** mercredi 2 septembre 2026, soir
+**Tenu par** Ewan · **Dernière mise à jour** jeudi 3 septembre 2026, matin
 
 Ce dossier rassemble les livrables des deux dépôts de vendredi et les preuves
 qui les appuient. Chaque document nomme la tâche du plan de répartition dont il
@@ -9,7 +9,38 @@ sort.
 
 ---
 
-## Ce soir — bloquant pour la démonstration de jeudi
+## Ce matin — la remise de midi
+
+Deux courriels du 3 septembre ajoutent deux remises avant le journal télévisé de
+13h00. Le plan de la matinée, son arithmétique et son arbitrage sont dans
+[`../REPARTITION.md`](../REPARTITION.md) §0.
+
+### Jeudi 12h00 — remise au Ministre (Jean-Eudes Berlier)
+
+| Pièce                          | Document                                                                        | Tâche      |
+| ------------------------------ | ------------------------------------------------------------------------------- | ---------- |
+| Prototype documenté, 2 pages   | [`livrables/prototype-documente.md`](livrables/prototype-documente.md)          | JT-4       |
+| Guide d'utilisation, 12 étapes | [`livrables/guide-d-utilisation.md`](livrables/guide-d-utilisation.md)          | JT-5       |
+| Plan B, une demi-page          | [`livrables/plan-b-direct.md`](livrables/plan-b-direct.md)                      | JT-6       |
+| Vidéo de moins de 3 minutes    | [`livrables/video-demonstration.md`](livrables/video-demonstration.md) + `.srt` | JT-7       |
+| Artefact de build récupérable  | _à faire_ — la CI ne publie aujourd'hui que la couverture                       | JT-0       |
+| Données de démonstration       | _à faire_ — cinq écarts relevés au recensement §3                               | JT-2, JT-3 |
+
+### Jeudi 12h30 — deck du cabinet (Benjamin Sellami)
+
+| Pièce                        | Document                                                                             | Tâche |
+| ---------------------------- | ------------------------------------------------------------------------------------ | ----- |
+| Deck de 8 slides, PDF, 16:9  | [`livrables/pitch-deck.md`](livrables/pitch-deck.md)                                 | JT-8  |
+| Recensement chiffré, slide 6 | [`livrables/recensement-du-3-septembre.md`](livrables/recensement-du-3-septembre.md) | JT-1  |
+| Six captures                 | `preuves/deck/` — à prendre ce matin sur la version qui part à midi                  | JT-8  |
+
+**Trois points bloquent et sont remontés par écrit avant 11h00** : la charte
+graphique jamais reçue (07), l'artefact qui ne s'exécute pas sur une tablette
+(09), et l'arbitrage entre la remise de midi et le dépôt légal de vendredi (03).
+
+---
+
+## Hier soir — bloquant pour la démonstration _(fait)_
 
 L'addendum de Florine Pontaillac du 2 septembre 15h40 impose trois mesures avant
 toute démonstration publique. Deux relèvent du domaine D.
@@ -18,7 +49,7 @@ toute démonstration publique. Deux relèvent du domaine D.
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | Une vidéo en attente n'apparaît plus nulle part     | [`preuves/SOIR-2-video-en-attente.txt`](preuves/SOIR-2-video-en-attente.txt)                                                       | SOIR-2 |
 | Aucune route ne divulgue son adresse — et la limite | [`preuves/SOIR-3-video-inaccessible.txt`](preuves/SOIR-3-video-inaccessible.txt) + [capture](preuves/SOIR-3-navigation-privee.png) | SOIR-3 |
-| File de modération vidéo, motif obligatoire         | `packages/web/src/pages/Admin/VideoModerationPage.tsx` — écran et contrat prêts, API attendue (VI-10)                              | EW-13  |
+| File de modération vidéo, motif obligatoire         | Écran, routes `/admin/moderation/videos` et `/admin/videos/{id}/moderate`, et `ModerationLog.videoId` — **passés depuis** (VI-10)  | EW-13  |
 
 **La limite à ne pas cacher** : une vidéo en lien externe est déjà publique chez
 son hébergeur. Nous maîtrisons la divulgation de l'adresse, pas l'existence du
@@ -106,18 +137,19 @@ une paraphrase.
 
 ## Remontées écrites
 
-Les huit points du plan de répartition à faire trancher, rédigés pour envoi.
+Les neuf points du plan de répartition à faire trancher, rédigés pour envoi.
 
 | N°                                                 | Objet                                                      | Destinataire       | Statut                        |
 | -------------------------------------------------- | ---------------------------------------------------------- | ------------------ | ----------------------------- |
 | [01](remontees/01-allocation-et-likes.md)          | Allocation calculée à partir des « likes » (§3)            | Florine Pontaillac | **bloqué — avis écrit exigé** |
 | [02](remontees/02-compteurs-d-engagement.md)       | Compteurs d'engagement : mesure satisfaite, conflit ouvert | Florine Pontaillac | attestation vendredi          |
-| [03](remontees/03-echeances.md)                    | Trois horaires, dont l'heure de la démo                    | Thomas Vignal      | à confirmer ce soir           |
+| [03](remontees/03-echeances.md)                    | Six horaires, et l'arbitrage de la matinée                 | Thomas Vignal      | **arbitrage demandé, 11h00**  |
 | [04](remontees/04-videos-deja-consultees.md)       | Vidéos déjà consultées par un recruteur                    | Florine Pontaillac | choix fait, à valider         |
 | [05](remontees/05-lien-externe-inaccessibilite.md) | Un lien externe ne peut pas être rendu inaccessible        | Florine Pontaillac | limite déclarée               |
 | [06](remontees/06-renommage-jibjob.md)             | Renommage en « JibJob »                                    | Benjamin Sellami   | affichage seulement           |
-| [07](remontees/07-charte-graphique.md)             | Charte de la Direction de la communication (§4.3)          | Benjamin Sellami   | relance                       |
+| [07](remontees/07-charte-graphique.md)             | Charte de la Direction de la communication (§4.3)          | Benjamin Sellami   | **bloque les 6 captures**     |
 | [08](remontees/08-tests-de-charge.md)              | Périmètre des tests de charge (§8.7)                       | Thomas Vignal      | périmètre demandé             |
+| [09](remontees/09-artefact-et-tablette.md)         | L'artefact de build ne tourne pas sur une tablette         | Thomas Vignal      | **réponse demandée, 11h00**   |
 
 ## Coordination
 

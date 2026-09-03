@@ -1,8 +1,18 @@
 # Démonstration du jeudi 3 septembre — déroulé
 
 **Branche** `feat/demo-ready` (main + `feat/api-contract-and-deliverables` + `feat/certif-improvment`,
-puis durcissement et refonte de l'interface). Tout est vert : build, lint, Prettier, 249 tests API,
-86 tests web, 18 tests partagés.
+puis durcissement et refonte de l'interface). Tout est vert, vérifié le 3 septembre au matin : build,
+lint, Prettier, **275 tests API, 95 tests web, 18 tests partagés**.
+
+> **Ce document décrit la démonstration interne de quinze minutes.** Pour la remise de midi au
+> Ministre et le journal de 13h00, la démonstration se fait en douze étapes numérotées :
+> [`livrables/guide-d-utilisation.md`](livrables/guide-d-utilisation.md). Les pannes probables et
+> la phrase à dire sont dans [`livrables/plan-b-direct.md`](livrables/plan-b-direct.md).
+>
+> **Avant toute démonstration publique, rejouer le seed** : cinq écarts sur les données de
+> démonstration sont relevés au §3 de
+> [`livrables/recensement-du-3-septembre.md`](livrables/recensement-du-3-septembre.md), dont dix URL
+> de vidéos qui pointent vers des clips musicaux et non vers des présentations de candidats.
 
 ## Démarrer
 
@@ -24,6 +34,9 @@ Avant une démonstration depuis une seule machine, monter `RATE_LIMIT_MAX_REQUES
 | Recruteuse           | `recruteur@profils-actifs.fr` | `Password123!` |
 | Candidate certifiée  | `amina.berthier@example.fr`   | `Password123!` |
 | Candidat mineur (17) | `lucas.morel@example.fr`      | `Password123!` |
+
+`recruteur2@profils-actifs.fr` existe aussi, mais **ne le donnez à personne** : il n'a ni
+interaction ni favori, son tableau de bord et sa sélection sont vides.
 
 ## Scénario (quinze minutes)
 

@@ -4,6 +4,12 @@ Plateforme JEB de valorisation des compétences pour demandeurs d'emploi.
 
 **Référence** : JEB/DNI/2026-003 | **Durée** : 2 semaines | **Équipe** : 4 personnes
 
+> **Remise du 3 septembre 2026.** Deux courriels du cabinet ajoutent une remise à 12h00 (Ministre) et
+> une à 12h30 (communication), avant un journal télévisé à 13h00. Le plan de la matinée est dans
+> [`REPARTITION.md`](REPARTITION.md) §0, les pièces dans [`docs/livrables/`](docs/livrables/), et
+> l'état chiffré du produit dans
+> [`docs/livrables/recensement-du-3-septembre.md`](docs/livrables/recensement-du-3-septembre.md).
+
 ---
 
 ## 📋 Architecture
@@ -48,7 +54,9 @@ profils-actifs/
 - **Database** : PostgreSQL + Prisma
 - **Testing** : Jest + Supertest
 - **Orchestration** : Turborepo 2.0
-- **CI/CD** : GitHub Actions
+- **CI/CD** : GitHub Actions — `.github/workflows/ci.yml` enchaîne migrations, seed, build, lint,
+  format et tests sur PostgreSQL 16. **La publication d'un artefact de build reste à ajouter**
+  (tâche JT-0) : c'est par lui que le cabinet récupère le prototype, sans passer par nos machines.
 - **Security** : Helmet, bcrypt, JWT, rate-limiting
 
 ---
@@ -185,6 +193,9 @@ idempotent et refuse de s'exécuter avec `NODE_ENV=production`.
 | Recruteur                | `recruteur@profils-actifs.fr`             | `Password123!` |
 | Candidat                 | `amina.berthier@example.fr` (+ 12 autres) | `Password123!` |
 | Candidat mineur (17 ans) | `lucas.morel@example.fr`                  | `Password123!` |
+
+Un second compte recruteur, `recruteur2@profils-actifs.fr`, existe pour tester l'isolation entre
+recruteurs : **il n'a aucun historique**, donc ne le donnez pas pour une démonstration.
 
 ### Tests
 
@@ -436,14 +447,19 @@ Exemple : `feat(certification): implement answer saving with partial completion`
 
 ## 📅 Timeline
 
-| Date            | Événement                | Attendu                                                   |
-| --------------- | ------------------------ | --------------------------------------------------------- |
-| J1              | Socle commun             | DB, API spec, auth middleware, CI/CD                      |
-| J2-J4           | Développement parallèle  | Domaines A, B, C (partiel)                                |
-| **Vendredi S1** | **Revue de projet**      | **Feed + profils + questionnaire partiel + présentation** |
-| J6-J8           | Continuation + renfort C | Finition D, complétion C                                  |
-| **Jeudi S2**    | **Revue technique**      | Code quality, tests, docs                                 |
-| **Vendredi S2** | **Keynote**              | Démo finale + rétrospective                               |
+| Date                   | Événement                | Attendu                                                                          |
+| ---------------------- | ------------------------ | -------------------------------------------------------------------------------- |
+| J1                     | Socle commun             | DB, API spec, auth middleware, CI/CD                                             |
+| J2-J4                  | Développement parallèle  | Domaines A, B, C (partiel)                                                       |
+| **Vendredi S1**        | **Revue de projet**      | **Feed + profils + questionnaire partiel + présentation**                        |
+| **Jeu. 3 sept. 12h00** | **Remise au Ministre**   | Artefact de build sur `main`, données, prototype documenté, guide, vidéo, plan B |
+| **Jeu. 3 sept. 12h30** | **Deck du cabinet**      | 8 slides en PDF, six captures de l'application du matin                          |
+| **Jeu. 3 sept. 13h00** | **Journal télévisé**     | Hors de notre main — la vidéo et le plan B y vont à notre place                  |
+| **Ven. 4 sept. matin** | **Présentation cabinet** | 6 minutes, deux voix, répétée une fois                                           |
+| **Ven. 4 sept. 12h00** | **Dépôt légal**          | Registre, CGU, accessibilité, notes                                              |
+| **Ven. 4 sept. 17h00** | **Dépôt technique**      | Schéma, index, preuves, Swagger                                                  |
+| **Jeudi S2**           | **Revue technique**      | Code quality, tests, docs                                                        |
+| **Vendredi S2**        | **Keynote**              | Démo finale + rétrospective                                                      |
 
 ---
 

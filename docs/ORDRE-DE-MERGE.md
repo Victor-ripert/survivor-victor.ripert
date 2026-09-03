@@ -1,11 +1,68 @@
 # Ordre de merge et garde-fous CI
 
-**Tâche** EW-10 · **Révisé le** mercredi 2 septembre 2026, soir · **Tenu par** Ewan (intégration)
-**État constaté** `origin/main` au commit `aa24507`
+**Tâche** EW-10, puis JT-0 · **Révisé le** jeudi 3 septembre 2026, matin · **Tenu par** Ewan (intégration)
+**État constaté** `origin/main` au commit `70710a5` · `feat/demo-ready` **27 commits devant, 0 derrière**
 
 Cinq branches ont circulé aujourd'hui. Trois sont déjà fusionnées, deux restent
 à faire atterrir, et `main` était rouge quand je l'ai récupéré. Ce document dit
 dans quel ordre, ce qui a été réparé, et ce qu'on vérifie entre chaque.
+
+---
+
+## 0. Jeudi 3 septembre — ce que la remise de midi exige de `main`
+
+Le courriel du Ministre relaie une procédure de Thomas Vignal qui déplace le
+centre de gravité de ce document. Jusqu'ici, l'ordre de merge servait la
+démonstration et les deux dépôts de vendredi. À partir de ce matin, il sert
+aussi une récupération par un tiers :
+
+> « Tout doit être poussé sur le dépôt, branche par défaut, avant l'échéance. Le
+> dépôt doit porter un workflow GitHub Actions qui construit l'application de
+> bout en bout et publie le résultat en artefact de build. Le workflow doit
+> passer au vert sur le dernier commit : je récupère l'artefact, pas votre
+> machine. »
+
+**Trois conditions, dont une n'est pas remplie.**
+
+| Condition                                           | État                                                                                                           |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Tout poussé sur la branche par défaut               | **Non.** `feat/demo-ready` est 27 commits devant `origin/main`. La fusion est la première tâche de la matinée. |
+| Un workflow qui construit de bout en bout           | **Oui.** `.github/workflows/ci.yml` enchaîne migrations, seed, build, lint, format et tests sur PostgreSQL 16. |
+| **Le résultat publié en artefact de build**         | **Non.** Le workflow ne publie que la couverture, vers Codecov. Aucune étape `upload-artifact`.                |
+| Comptes de démonstration dans les données de départ | **Oui.** Un administrateur, deux recruteurs, treize candidats, tous remplis, mot de passe commun.              |
+
+La troisième ligne est le seul blocage réel de la matinée. C'est la tâche JT-0,
+et elle passe avant toutes les autres : un guide, une vidéo et un deck qui
+accompagnent un artefact inexistant ne servent à rien.
+
+**Ce que l'artefact doit contenir** pour que la procédure de Thomas aboutisse —
+c'est-à-dire pour qu'il puisse l'installer sans notre machine :
+
+- le serveur compilé et l'interface construite ;
+- le schéma Prisma et ses migrations ;
+- le jeu de données de démonstration ;
+- une procédure d'installation d'une page, du décompressage au premier écran.
+
+**Ce que l'artefact ne permettra pas** : s'exécuter sur une tablette. C'est écrit
+à Thomas et au Ministre dans
+[`remontees/09-artefact-et-tablette.md`](remontees/09-artefact-et-tablette.md),
+avant la remise et non après.
+
+### La recette de JT-0
+
+Elle ne se déclare pas, elle se joue :
+
+1. Fusionner, pousser, attendre le vert **sur le dernier commit de `main`**.
+2. **Télécharger l'artefact depuis l'interface de GitHub**, pas depuis le cache
+   local.
+3. Le décompresser **dans un dossier vide**, sur une machine qui n'a jamais vu
+   ce dépôt si c'est possible.
+4. Suivre la procédure d'installation à la lettre, sans rien corriger de tête.
+5. Ouvrir les quatorze écrans du §2 du recensement.
+
+C'est la tâche JT-11, et c'est elle qui autorise l'envoi de midi. Le Ministre
+l'écrit lui-même : « faites tourner sa procédure vous-mêmes, depuis un dossier
+vide, avant de me dire que c'est prêt ».
 
 ---
 
@@ -200,6 +257,16 @@ seed, build, lint, format, tests avec couverture. Une CI rouge n'est pas un
 détail de style — `format:check` bloque sur un fichier non formaté, et le seed
 bloque sur une colonne obligatoire oubliée. Les deux se sont produits
 aujourd'hui.
+
+**Avant la remise de jeudi 12h00**
+
+- [ ] `feat/demo-ready` fusionnée sur `main`, poussée
+- [ ] CI verte **sur le dernier commit de `main`**, pas sur un commit intermédiaire
+- [ ] Artefact de build publié, téléchargé depuis GitHub, décompressé dans un dossier vide (JT-11)
+- [ ] Données de démonstration reprises : URL de vidéos, décisions de modération, passation à mi-parcours (JT-2, JT-3)
+- [ ] Les douze captures du guide prises sur cette version-là, pas sur une antérieure
+- [ ] Vidéo exportée sous les trois minutes, sous-titres lus son coupé
+- [ ] Les trois remontées parties avant 11h00 (03, 07, 09)
 
 **Avant la démonstration de jeudi matin**
 

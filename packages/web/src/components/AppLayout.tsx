@@ -4,8 +4,8 @@ import { useUnreadNotifications } from '../hooks/useUnreadNotifications.js';
 import { getEnv } from '../utils/env.js';
 import { ROLE_TITLES } from '../utils/format.js';
 import { NAVIGATION } from '../utils/navigation.js';
+import { BrandBlock } from './BrandBlock.js';
 import { ErrorBoundary } from './ErrorBoundary.js';
-import { Icon } from './Icon.js';
 
 const apiOrigin = (): string => {
   try {
@@ -14,15 +14,6 @@ const apiOrigin = (): string => {
     return '';
   }
 };
-
-const BrandMark = () => (
-  <Link className="brand" to="/" translate="no">
-    <span className="brand__mark">
-      <Icon name="play" size={14} />
-    </span>
-    <span>ProfilsActifs</span>
-  </Link>
-);
 
 export const AppLayout = () => {
   const { user, status, logout } = useAuth();
@@ -39,8 +30,36 @@ export const AppLayout = () => {
         Aller au contenu
       </a>
 
+      {/* Two tiers: the bandeau carries the bloc-marque and the account
+          actions, the navigation sits below on its own rule. The split is what
+          leaves the marque a full line and keeps its protection zone clear at
+          every width. */}
       <header className="app-header">
-        <BrandMark />
+        <div className="app-header__top">
+          <BrandBlock />
+
+          {user ? (
+            <div className="app-header__user">
+              <span>
+                {user.firstName} {user.lastName} · {ROLE_TITLES[user.role]}
+              </span>
+              <button type="button" className="button button--subtle" onClick={logout}>
+                Déconnexion
+              </button>
+            </div>
+          ) : (
+            status === 'anonymous' && (
+              <div className="app-header__user">
+                <Link className="button" to="/connexion">
+                  Connexion
+                </Link>
+                <Link className="button button--primary" to="/inscription">
+                  Créer mon profil
+                </Link>
+              </div>
+            )
+          )}
+        </div>
 
         <nav className="app-nav" aria-label="Navigation principale">
           {entries.map((entry) => (
@@ -59,28 +78,6 @@ export const AppLayout = () => {
             </NavLink>
           )}
         </nav>
-
-        {user ? (
-          <div className="app-header__user">
-            <span>
-              {user.firstName} {user.lastName} · {ROLE_TITLES[user.role]}
-            </span>
-            <button type="button" className="button button--subtle" onClick={logout}>
-              Déconnexion
-            </button>
-          </div>
-        ) : (
-          status === 'anonymous' && (
-            <div className="app-header__user">
-              <Link className="button" to="/connexion">
-                Connexion
-              </Link>
-              <Link className="button button--primary" to="/inscription">
-                Créer mon profil
-              </Link>
-            </div>
-          )
-        )}
       </header>
 
       <main className="app-main" id="contenu">
@@ -92,7 +89,10 @@ export const AppLayout = () => {
       </main>
 
       <footer className="app-footer">
-        <span>ProfilsActifs — démonstrateur JEB/DNI/2026-003</span>
+        <span className="app-footer__identity">
+          <span className="app-footer__ministry">Ministère du Job et Bonheur</span>
+          <span>ProfilsActifs — démonstrateur JEB/DNI/2026-003</span>
+        </span>
         <span className="app-footer__links">
           <a href={`${apiOrigin()}/api/docs/`}>Contrat d’API</a>
           <a href={`${apiOrigin()}/api/health`}>Sonde de santé</a>

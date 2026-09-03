@@ -1,42 +1,61 @@
 /*
- * Design tokens. Light values live on :root; the dark block only redefines
- * them, so a colour is never defined in a media query alone. Every text/
- * background pair used for running text measures at least 4.5:1 (RGAA AA):
- * accent on surface 6.3:1, secondary text 7.5:1, muted text 5.0:1, the three
- * status texts between 5.5:1 and 5.9:1.
+ * Design tokens — charte graphique de la Direction de la communication,
+ * reçue le 3 septembre 2026 (cf. docs/remontees/07-charte-graphique.md) :
+ *
+ *   · bleu institutionnel #1B3A6B en primaire, jamais en fond de bouton ;
+ *   · Marianne pour les titres, Spectral pour le corps ;
+ *   · bloc-marque en haut à gauche, zone de protection respectée, jamais
+ *     posé sur une photo.
+ *
+ * Light values live on :root; the dark block only redefines them, so a colour
+ * is never defined in a media query alone. Every text/background pair used for
+ * running text measures at least 4.5:1 (RGAA AA): the institutional blue on
+ * paper 11.3:1, secondary text 7.7:1, muted text 4.9:1, the three status texts
+ * between 5.5:1 and 6.5:1.
+ *
+ * One écart to declare: #1B3A6B measures 1.6:1 on the dark ground, far under
+ * AA, so the dark theme carries a lighter tint of the same hue (216°) instead
+ * of the charte value. The light theme uses #1B3A6B verbatim.
  */
 :root {
   color-scheme: light;
 
-  --surface-page: #f4f4f2;
-  --surface-1: #fcfcfb;
-  --surface-2: #efeeea;
-  --surface-video: #1a1a19;
-  --border: #dcdbd5;
-  --border-strong: #b9b8b0;
+  /* The charte's institutional blue, verbatim. It carries text, rules, marks
+     and data fills — never a button background, which is why
+     `.button--primary` wears it as a rule and a label instead. */
+  --brand-blue: #1b3a6b;
+  --brand-mark: var(--brand-blue);
 
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #6f6e69;
+  --surface-page: #f4f6f9;
+  --surface-1: #ffffff;
+  --surface-2: #eaeef4;
+  --surface-video: #10141b;
+  --border: #d3dae4;
+  --border-strong: #a9b4c4;
+
+  --text-primary: #14181f;
+  --text-secondary: #4a5462;
+  --text-muted: #626d7d;
   --text-on-accent: #ffffff;
   --text-on-video: #ffffff;
 
-  --accent: #1d5fb4;
-  --accent-hover: #174c90;
-  --accent-soft: #dbe7f7;
-  --accent-soft-border: #b7cdf0;
+  --accent: var(--brand-blue);
+  --accent-hover: #12294c;
+  --accent-soft: #e6ecf5;
+  --accent-soft-border: #b9c8de;
 
-  --series-1: #1d5fb4;
-  --grid: #dcdbd5;
+  --series-1: var(--brand-blue);
+  --grid: #d3dae4;
 
   --status-good: #0b7a1e;
   --status-warning: #8a5a00;
-  --status-critical: #b83232;
+  --status-critical: #b3261e;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 8%), 0 4px 12px rgb(0 0 0 / 4%);
+  /* Institutional, not consumer: corners stay close to square. */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 7px;
+  --shadow-1: 0 1px 2px rgb(20 24 31 / 6%), 0 4px 12px rgb(20 24 31 / 4%);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -47,12 +66,29 @@
   --space-7: 48px;
 
   --control-height: 40px;
-  --control-height-lg: 44px;
+  --control-height-lg: 46px;
   --content-width: 1180px;
   --reading-width: 1080px;
   --narrow-width: 760px;
 
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  /* Charte typography. Marianne is declared in `fonts.css` but ships no file
+     in this repo (see packages/web/FONTS.md), so the fallbacks matter: a
+     humanist sans keeps the page colour close when it is absent. */
+  --font-title:
+    'Marianne', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-body:
+    'Spectral', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+  /* Interface chrome — navigation, controls, labels, figures — stays on the
+     charte's sans. The charte assigns Spectral to the body copy; at 14px in a
+     dense table it is a legibility regression, and Marianne is the charte's
+     own family, so the chrome uses it. */
+  --font-ui: var(--font-title);
+
+  /* Zone de protection du bloc-marque. Nothing may come closer than this to
+     the block; every container that holds it keeps padding and gaps at or
+     above this value. */
+  --brand-clearance: 16px;
+
   --focus-ring: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--accent);
 }
 
@@ -60,25 +96,31 @@
   :root {
     color-scheme: dark;
 
-    --surface-page: #121211;
-    --surface-1: #1a1a19;
-    --surface-2: #232322;
+    /* The bloc-marque reverses out in white here: the institutional blue is
+       unreadable on this ground, and a reversed block is the conventional
+       treatment for a dark support. */
+    --brand-mark: #ffffff;
+
+    --surface-page: #10141b;
+    --surface-1: #171d26;
+    --surface-2: #202836;
     --surface-video: #000000;
-    --border: #383835;
-    --border-strong: #55554f;
+    --border: #2f3947;
+    --border-strong: #4a5768;
 
     --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #9a998f;
-    --text-on-accent: #0b0b0b;
+    --text-secondary: #b7c1cf;
+    --text-muted: #94a0b0;
+    --text-on-accent: #10141b;
 
-    --accent: #6aa3ec;
-    --accent-hover: #8ab8f1;
-    --accent-soft: #1b3a63;
-    --accent-soft-border: #2c568e;
+    /* #1B3A6B lands at 1.6:1 on --surface-1. Same hue, lightened to 7.0:1. */
+    --accent: #85a8e0;
+    --accent-hover: #a6c1eb;
+    --accent-soft: #1e2f47;
+    --accent-soft-border: #33486a;
 
-    --series-1: #6aa3ec;
-    --grid: #383835;
+    --series-1: #85a8e0;
+    --grid: #2f3947;
 
     --status-good: #7fd28c;
     --status-warning: #f0c35a;
@@ -96,33 +138,64 @@
 
 body {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.5;
+  /* Spectral for the running text, per the charte. A serif needs more leading
+     and a notch more size than the system sans it replaces. */
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
   color: var(--text-primary);
   background: var(--surface-page);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
   margin: 0;
-  line-height: 1.25;
-  font-weight: 650;
+  font-family: var(--font-title);
+  line-height: 1.22;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
 h1 {
-  font-size: 1.75rem;
-  letter-spacing: -0.02em;
+  font-size: 1.9rem;
 }
 h2 {
-  font-size: 1.2rem;
-  letter-spacing: -0.01em;
+  font-size: 1.3rem;
 }
 h3 {
-  font-size: 1rem;
+  font-size: 1.05rem;
+}
+h4 {
+  font-size: 0.95rem;
+}
+
+/* Interface chrome: anything the reader operates rather than reads. */
+.app-nav,
+.app-header__user,
+.button,
+.chip,
+.badge,
+.field__label,
+.field__hint,
+.field__error,
+.meta,
+.pagination,
+.results-bar,
+.stat-card,
+.save-state,
+.notification__date,
+.hero__eyebrow,
+.likert__legend,
+input,
+select,
+textarea,
+table {
+  font-family: var(--font-ui);
 }
 
 p,
@@ -133,6 +206,8 @@ ol {
 
 a {
   color: var(--accent);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
 }
 
 a:hover {
@@ -178,71 +253,133 @@ a:hover {
   border-radius: var(--radius-sm);
 }
 
+/*
+ * Two-tier institutional header: the bandeau carries the bloc-marque top-left
+ * and the account actions far right, the navigation sits on its own rule
+ * below. Splitting them is what gives the bloc-marque a full line to itself
+ * and keeps its protection zone clear at every width.
+ */
 .app-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-4);
-  min-height: 60px;
-  padding: var(--space-2) var(--space-6);
   background: var(--surface-1);
   border-bottom: 1px solid var(--border);
 }
 
-.brand {
+.app-header__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  /* Both values are >= --brand-clearance: nothing entering from the side or
+     from above can cross into the block's protection zone. The horizontal
+     padding is reduced by the clearance the block already carries itself, so
+     the marque's optical edge still lands on --space-6 like the nav below. */
+  gap: var(--space-6);
+  padding: var(--space-3) calc(var(--space-6) - var(--brand-clearance));
+}
+
+/*
+ * Bloc-marque. Typographic on purpose: the charte named the colours and the
+ * families but shipped no vector logotype, and inventing a State mark is not
+ * ours to do (remontée n° 07). Ministry name on the left, blue rule, product
+ * signature on the right.
+ */
+.brand-block {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--brand-clearance);
+  /* Zone de protection, carried by the block itself so it holds wherever the
+     block is placed rather than depending on each container to remember. */
+  padding: var(--brand-clearance);
+  /* "Jamais posé sur une photo": the block always brings its own opaque
+     ground, so even over media it reads as a reserve and not as an overlay. */
+  background: var(--surface-1);
   color: var(--text-primary);
-  font-weight: 700;
-  font-size: 17px;
-  letter-spacing: -0.01em;
   text-decoration: none;
 }
 
-.brand:hover {
+.brand-block:hover {
   color: var(--text-primary);
 }
 
-.brand__mark {
-  display: inline-flex;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--text-on-accent);
-  align-items: center;
-  justify-content: center;
+.brand-block__state {
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.28;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-mark);
+}
+
+.brand-block__rule {
+  width: 2px;
+  align-self: stretch;
+  min-height: 34px;
+  background: var(--brand-mark);
+}
+
+.brand-block__signature {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.brand-block__name {
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.brand-block__baseline {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+}
+
+@media (max-width: 520px) {
+  .brand-block__baseline {
+    display: none;
+  }
 }
 
 .app-nav {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  flex: 1;
+  padding: 0 var(--space-6);
+  border-top: 1px solid var(--border);
 }
 
 .app-nav a {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: 0 var(--space-3);
+  min-height: 46px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   text-decoration: none;
+  font-size: 0.94rem;
   font-weight: 500;
+  /* An inset rule rather than a border: the tab marker cannot shift the row
+     by a pixel when it appears. */
+  box-shadow: inset 0 -3px 0 transparent;
 }
 
 .app-nav a:hover {
-  background: var(--surface-2);
   color: var(--text-primary);
+  box-shadow: inset 0 -3px 0 var(--border-strong);
 }
 
 .app-nav a[aria-current='page'] {
-  background: var(--accent-soft);
   color: var(--text-primary);
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 var(--accent);
 }
 
 .nav-badge {
@@ -288,16 +425,40 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-5) var(--space-6);
-  border-top: 1px solid var(--border);
+  align-items: flex-start;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border-top: 2px solid var(--accent);
   background: var(--surface-1);
+  font-family: var(--font-ui);
   font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.app-footer__identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.app-footer__ministry {
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-mark);
+}
+
+.app-footer__motto {
+  font-family: var(--font-body);
+  font-style: italic;
   color: var(--text-muted);
 }
 
 .app-footer__links {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-4);
 }
 
@@ -381,8 +542,10 @@ a:hover {
 }
 
 .panel__title {
+  font-family: var(--font-title);
   font-size: 1.1rem;
-  font-weight: 650;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .panel__subtitle {
@@ -394,6 +557,15 @@ a:hover {
   grid-column: 1 / -1;
 }
 
+/*
+ * Buttons never carry the institutional blue as a fill — the charte forbids it
+ * outright. Hierarchy therefore comes from the rule and the label: the primary
+ * action is the only control with a 2px blue border and a blue word on it, a
+ * secondary one keeps a hairline neutral border, a subtle one has no border at
+ * all. The blue appears as a background nowhere in this block, including on
+ * hover, where the tint used (--accent-soft) is a pale derivative and not the
+ * charte colour.
+ */
 .button {
   display: inline-flex;
   touch-action: manipulation;
@@ -403,8 +575,10 @@ a:hover {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   min-height: var(--control-height);
-  font: inherit;
+  font-family: var(--font-ui);
+  font-size: 0.94rem;
   font-weight: 600;
+  line-height: 1.2;
   color: var(--text-primary);
   background: var(--surface-1);
   border: 1px solid var(--border-strong);
@@ -424,20 +598,28 @@ a:hover {
 }
 
 .button--primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--text-on-accent);
+  /* 2px of blue rule, inset so the control keeps the same box as its
+     neighbours and the row does not shift by a pixel. */
+  background: var(--surface-1);
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .button--primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
-  color: var(--text-on-accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.button--primary:active:not(:disabled) {
+  background: var(--accent-soft-border);
 }
 
 .button--lg {
   min-height: var(--control-height-lg);
-  padding: 10px 20px;
+  padding: 10px 22px;
+  font-size: 1rem;
 }
 
 .button--subtle {
@@ -512,7 +694,8 @@ input[type='url'],
 input[type='date'],
 select,
 textarea {
-  font: inherit;
+  font-family: var(--font-ui);
+  font-size: 0.94rem;
   color: var(--text-primary);
   background: var(--surface-1);
   border: 1px solid var(--border-strong);
@@ -605,7 +788,7 @@ legend {
   gap: var(--space-1);
   padding: 3px 10px;
   font-size: 0.82rem;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text-secondary);
@@ -613,16 +796,19 @@ legend {
 
 .chip--toggle {
   cursor: pointer;
-  font: inherit;
+  font-family: var(--font-ui);
   font-size: 0.82rem;
   touch-action: manipulation;
+  /* A filter chip rests on paper, not on --surface-2: the pressed tint below
+     is only two steps away from it, and the selected state would not read. */
+  background: var(--surface-1);
 }
 
 .chip--toggle[aria-pressed='true'] {
   background: var(--accent-soft);
   border-color: var(--accent);
-  color: var(--text-primary);
-  font-weight: 600;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .chip--removable {
@@ -659,16 +845,22 @@ legend {
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  border-radius: 999px;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text-secondary);
   white-space: nowrap;
 }
 
-.badge--certified,
+.badge--certified {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-border);
+}
+
 .badge--approved {
   color: var(--status-good);
   background: color-mix(in srgb, var(--status-good) 12%, var(--surface-1));
@@ -759,6 +951,7 @@ legend {
   margin: -1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }
@@ -816,8 +1009,9 @@ legend {
 
 .progress {
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 
@@ -825,7 +1019,6 @@ legend {
   display: block;
   height: 100%;
   background: var(--accent);
-  border-radius: 999px;
 }
 
 /* ---------------------------------------------------------------- video */
@@ -907,6 +1100,8 @@ legend {
   align-items: center;
   padding: var(--space-6);
   border-radius: var(--radius-lg);
+  /* The one broad stroke of institutional blue on the page. */
+  border-top: 3px solid var(--accent);
   margin-bottom: var(--space-6);
 }
 
@@ -917,21 +1112,23 @@ legend {
 }
 
 .hero__eyebrow {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
 
 .hero__title {
-  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
-  line-height: 1.2;
+  font-size: clamp(1.7rem, 2.7vw, 2.3rem);
+  line-height: 1.18;
 }
 
 .hero__lead {
   color: var(--text-secondary);
-  font-size: 1.05rem;
+  font-size: 1.08rem;
+  line-height: 1.65;
   max-width: 48ch;
 }
 
@@ -973,7 +1170,8 @@ legend {
 }
 
 .hero__step strong {
-  font-weight: 650;
+  font-family: var(--font-title);
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -1027,8 +1225,10 @@ legend {
 }
 
 .feed-card__name {
+  font-family: var(--font-title);
   font-size: 1.1rem;
-  font-weight: 650;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
   text-decoration: none;
 }
@@ -1042,7 +1242,7 @@ legend {
   color: var(--text-secondary);
 }
 
-.feed-card > .badge {
+.feed-card__body > .badge {
   align-self: flex-start;
 }
 
@@ -1098,6 +1298,7 @@ legend {
 }
 
 .skill-table__name {
+  font-family: var(--font-ui);
   font-weight: 600;
 }
 
@@ -1137,6 +1338,7 @@ legend {
 }
 
 .video-row__title {
+  font-family: var(--font-ui);
   font-weight: 600;
 }
 
@@ -1168,7 +1370,8 @@ legend {
 }
 
 .certification-summary__title {
-  font-weight: 650;
+  font-family: var(--font-title);
+  font-weight: 700;
 }
 
 .certification-summary__hint {
@@ -1205,7 +1408,9 @@ legend {
 }
 
 .question-progress__count {
+  font-family: var(--font-ui);
   font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
 }
 
@@ -1218,9 +1423,9 @@ legend {
 }
 
 .question__text {
-  font-size: 1.25rem;
-  line-height: 1.35;
-  font-weight: 650;
+  font-size: 1.3rem;
+  line-height: 1.4;
+  font-weight: 600;
   text-wrap: pretty;
 }
 
@@ -1241,7 +1446,7 @@ legend {
   align-items: center;
   min-height: 52px;
   padding: var(--space-3) var(--space-4);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
   background: var(--surface-1);
   cursor: pointer;
@@ -1270,13 +1475,14 @@ legend {
 
 .likert__value {
   min-height: 48px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
   background: var(--surface-1);
   color: var(--text-primary);
-  font: inherit;
+  font-family: var(--font-ui);
   font-weight: 700;
   font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
 
@@ -1315,10 +1521,12 @@ legend {
 }
 
 .result-score {
+  font-family: var(--font-title);
   font-size: 3rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+  color: var(--accent);
 }
 
 /* ------------------------------------------------------------ notifications */
@@ -1346,6 +1554,7 @@ legend {
 }
 
 .notification__title {
+  font-family: var(--font-ui);
   font-weight: 600;
 }
 
@@ -1459,8 +1668,10 @@ legend {
 }
 
 .profile-card__name {
+  font-family: var(--font-title);
   font-size: 1.05rem;
-  font-weight: 650;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .profile-card__headline {
@@ -1472,6 +1683,10 @@ legend {
   align-self: flex-start;
 }
 
+.profile-card > .chip-list {
+  margin-bottom: var(--space-1);
+}
+
 .profile-card__actions {
   display: flex;
   flex-wrap: wrap;
@@ -1481,8 +1696,8 @@ legend {
   border-top: 1px solid var(--border);
 }
 
-.profile-card__actions .button--primary {
-  margin-left: auto;
+.profile-card__actions .button {
+  flex: 1 1 auto;
 }
 
 .profile-card__contacted {
@@ -1561,8 +1776,9 @@ dialog::backdrop {
 }
 
 .stat-card__value {
+  font-family: var(--font-title);
   font-size: 2rem;
-  font-weight: 680;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
@@ -1598,6 +1814,7 @@ dialog::backdrop {
 }
 
 .contact-list__name {
+  font-family: var(--font-ui);
   font-weight: 600;
 }
 
@@ -1626,6 +1843,7 @@ dialog::backdrop {
   width: 100%;
   height: auto;
   overflow: visible;
+  font-family: var(--font-ui);
 }
 
 .chart__bar {
@@ -1682,6 +1900,7 @@ dialog::backdrop {
   grid-template-columns: minmax(90px, 34%) minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
+  font-family: var(--font-ui);
   font-size: 0.88rem;
 }
 
@@ -1694,7 +1913,7 @@ dialog::backdrop {
 
 .bar-row__track {
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -1702,7 +1921,6 @@ dialog::backdrop {
 .bar-row__fill {
   display: block;
   height: 100%;
-  border-radius: 999px;
   background: var(--series-1);
 }
 

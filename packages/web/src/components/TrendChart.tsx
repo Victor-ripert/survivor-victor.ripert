@@ -106,23 +106,27 @@ export const TrendChart = ({ points, unitLabel, emptyLabel }: TrendChartProps) =
         </div>
       )}
 
-      <table className="visually-hidden">
-        <caption>{`${unitLabel} par jour`}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Date</th>
-            <th scope="col">{unitLabel}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((point) => (
-            <tr key={point.date}>
-              <th scope="row">{formatDay(point.date)}</th>
-              <td>{point.count}</td>
+      {/* Wrapped in a div: `.visually-hidden` cannot clip a table box on its
+          own, and the table would stretch the document past the footer. */}
+      <div className="visually-hidden">
+        <table>
+          <caption>{`${unitLabel} par jour`}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">{unitLabel}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {points.map((point) => (
+              <tr key={point.date}>
+                <th scope="row">{formatDay(point.date)}</th>
+                <td>{point.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

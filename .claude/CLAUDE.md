@@ -257,8 +257,19 @@ A rendering crash is contained by `components/ErrorBoundary.tsx`, mounted twice:
 
 `packages/web` is one React app for the three roles, on a single design system in
 `src/styles/global.css` (tokens on `:root`, dark values redefined under `prefers-color-scheme`,
-every text/background pair at or above 4.5:1). No CSS modules, no third-party UI kit, no external
-font (brief §8.3). Data fetching goes through `hooks/useAsyncResource.ts` and the thin wrappers in
+every text/background pair at or above 4.5:1). No CSS modules, no third-party UI kit.
+
+The Communications Directorate's charte arrived on 2026-09-03 and governs that file: institutional
+blue `#1B3A6B` is `--brand-blue`, and it is **never a button background** — `.button--primary`
+carries it as a 2px rule and a blue label instead, so don't "fix" the primary action by filling it.
+Marianne is the title family and Spectral the body family, both self-hosted under
+`public/fonts/` (§8.3 forbids an external font domain); Spectral is committed, Marianne is not —
+`packages/web/FONTS.md` says why and how to drop it in, and the title stack degrades to a system
+sans without it. The bloc-marque is `components/BrandBlock.tsx`: top left, its protection zone is
+its own `--brand-clearance` padding, and it paints an opaque ground so it can never sit on a photo.
+Two deviations are on the record in `docs/remontees/07-charte-graphique.md` — the dark theme uses a
+lighter tint of the same hue because `#1B3A6B` measures 1.6:1 on a dark ground, and the bloc-marque
+is typographic pending a vector logotype. Data fetching goes through `hooks/useAsyncResource.ts` and the thin wrappers in
 `src/services/`; auth state lives in `context/AuthContext.tsx` and route gating in
 `components/ProtectedRoute.tsx` — never decode the token in the browser. Videos are click-to-load
 (`components/VideoPlayer.tsx`): nothing is requested from YouTube/Vimeo until the viewer asks, and a

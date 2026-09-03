@@ -145,7 +145,12 @@ export function ModerationQueuePage(): JSX.Element {
 
 interface ModerationCardProps {
   profile: Profile;
-  onModerate: (profileId: string, action: ModerationAction, reason: string, notes: string) => Promise<void>;
+  onModerate: (
+    profileId: string,
+    action: ModerationAction,
+    reason: string,
+    notes: string,
+  ) => Promise<void>;
   submitting: boolean;
 }
 
@@ -191,7 +196,12 @@ function ModerationCard({ profile, onModerate, submitting }: ModerationCardProps
 
       <div className={styles.field}>
         <label htmlFor={`reason-${profile.id}`}>Motif (visible par le candidat)</label>
-        <textarea id={`reason-${profile.id}`} value={reason} onChange={handleReasonChange} rows={2} />
+        <textarea
+          id={`reason-${profile.id}`}
+          value={reason}
+          onChange={handleReasonChange}
+          rows={2}
+        />
       </div>
       <div className={styles.field}>
         <label htmlFor={`notes-${profile.id}`}>Notes internes</label>

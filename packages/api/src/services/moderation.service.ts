@@ -95,7 +95,9 @@ export async function applyModeration(
  * so a profile submitted three days ago doesn't keep getting pushed down
  * by newer ones.
  */
-export async function listPendingProfiles(pagination: PaginationQuery): Promise<Paginated<Profile>> {
+export async function listPendingProfiles(
+  pagination: PaginationQuery,
+): Promise<Paginated<Profile>> {
   const window = resolvePageWindow(pagination);
   const where: Prisma.ProfileWhereInput = { moderationStatus: 'PENDING' };
 

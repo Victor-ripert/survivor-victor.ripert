@@ -61,7 +61,9 @@ describe('ModerationQueuePage', () => {
     renderPage();
 
     expect(
-      screen.getByText('Vous devez être connecté(e) en tant qu’administrateur pour accéder à cette page.'),
+      screen.getByText(
+        'Vous devez être connecté(e) en tant qu’administrateur pour accéder à cette page.',
+      ),
     ).toBeInTheDocument();
     expect(getSpy).not.toHaveBeenCalled();
   });
@@ -91,7 +93,9 @@ describe('ModerationQueuePage', () => {
       'src',
       'https://www.youtube.com/embed/abc123',
     );
-    expect(api.get).toHaveBeenCalledWith('/admin/moderation/profiles', { params: { page: 1, limit: 20 } });
+    expect(api.get).toHaveBeenCalledWith('/admin/moderation/profiles', {
+      params: { page: 1, limit: 20 },
+    });
   });
 
   it('approves a profile and removes it from the queue', async () => {
@@ -109,7 +113,9 @@ describe('ModerationQueuePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approuver' }));
 
     await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: 'Développeuse full-stack' })).not.toBeInTheDocument(),
+      expect(
+        screen.queryByRole('heading', { name: 'Développeuse full-stack' }),
+      ).not.toBeInTheDocument(),
     );
     expect(api.post).toHaveBeenCalledWith('/admin/profiles/profile-1/moderate', {
       action: 'APPROVE',

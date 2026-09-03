@@ -17,9 +17,9 @@ describe('normalizeExternalVideoUrl', () => {
     });
 
     it('normalizes a watch link with extra query params', () => {
-      expect(
-        normalizeExternalVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s'),
-      ).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
+      expect(normalizeExternalVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s')).toBe(
+        'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      );
     });
 
     it('normalizes a youtu.be share link', () => {
@@ -47,9 +47,7 @@ describe('normalizeExternalVideoUrl', () => {
     });
 
     it('rejects a YouTube URL with no video id', () => {
-      expect(() => normalizeExternalVideoUrl('https://www.youtube.com/watch')).toThrow(
-        HttpError,
-      );
+      expect(() => normalizeExternalVideoUrl('https://www.youtube.com/watch')).toThrow(HttpError);
     });
   });
 
@@ -81,9 +79,7 @@ describe('normalizeExternalVideoUrl', () => {
 
   describe('rejections', () => {
     it('rejects a non-YouTube, non-Vimeo host', () => {
-      expect(() => normalizeExternalVideoUrl('https://example.com/video.mp4')).toThrow(
-        HttpError,
-      );
+      expect(() => normalizeExternalVideoUrl('https://example.com/video.mp4')).toThrow(HttpError);
     });
 
     it('rejects a host that merely contains "youtube.com" as text', () => {
@@ -93,9 +89,9 @@ describe('normalizeExternalVideoUrl', () => {
     });
 
     it('rejects a URL that smuggles the target host in a query string', () => {
-      expect(() =>
-        normalizeExternalVideoUrl('https://evil.example/?redirect=youtube.com'),
-      ).toThrow(HttpError);
+      expect(() => normalizeExternalVideoUrl('https://evil.example/?redirect=youtube.com')).toThrow(
+        HttpError,
+      );
     });
 
     it('rejects a malformed URL', () => {
@@ -168,10 +164,7 @@ describe('detectVideoContentType', () => {
   });
 
   it('rejects a real image signature (JPEG) renamed to look like a video', () => {
-    const jpegHeader = Buffer.concat([
-      Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
-      Buffer.alloc(8),
-    ]);
+    const jpegHeader = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(8)]);
     expect(detectVideoContentType(jpegHeader)).toBeNull();
   });
 

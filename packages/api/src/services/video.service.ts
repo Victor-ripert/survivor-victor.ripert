@@ -57,11 +57,7 @@ export function normalizeExternalVideoUrl(rawUrl: string): string {
   if (YOUTUBE_HOSTS.has(hostname)) {
     const videoId = extractYoutubeId(parsed);
     if (!videoId) {
-      throw new HttpError(
-        400,
-        'validation_error',
-        "Couldn't find a video id in that YouTube URL.",
-      );
+      throw new HttpError(400, 'validation_error', "Couldn't find a video id in that YouTube URL.");
     }
     return `https://www.youtube.com/embed/${videoId}`;
   }
@@ -69,11 +65,7 @@ export function normalizeExternalVideoUrl(rawUrl: string): string {
   if (VIMEO_HOSTS.has(hostname)) {
     const videoId = extractVimeoId(parsed);
     if (!videoId) {
-      throw new HttpError(
-        400,
-        'validation_error',
-        "Couldn't find a video id in that Vimeo URL.",
-      );
+      throw new HttpError(400, 'validation_error', "Couldn't find a video id in that Vimeo URL.");
     }
     return `https://player.vimeo.com/video/${videoId}`;
   }
@@ -110,9 +102,7 @@ function extractVimeoId(url: URL): string | null {
 
   // player.vimeo.com/video/VIDEO_ID
   const id =
-    url.hostname === 'player.vimeo.com'
-      ? segments[segments.indexOf('video') + 1]
-      : segments[0]; // vimeo.com/VIDEO_ID (optionally /VIDEO_ID/privacy-hash after it)
+    url.hostname === 'player.vimeo.com' ? segments[segments.indexOf('video') + 1] : segments[0]; // vimeo.com/VIDEO_ID (optionally /VIDEO_ID/privacy-hash after it)
 
   // Vimeo ids are numeric — rejects things like vimeo.com/channels/staffpicks,
   // where "channels" would otherwise be mistaken for the id.
@@ -128,10 +118,7 @@ function extractVimeoId(url: URL): string | null {
  * exists, is visible, and genuinely has zero videos — so a stranger can't
  * distinguish "hidden" from "doesn't exist" from this response either.
  */
-export async function listVideosForProfile(
-  profileId: string,
-  viewerId?: string,
-): Promise<Video[]> {
+export async function listVideosForProfile(profileId: string, viewerId?: string): Promise<Video[]> {
   const profile = await prisma.profile.findUnique({
     where: { id: profileId },
     select: { userId: true, moderationStatus: true, videos: true },

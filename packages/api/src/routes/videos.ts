@@ -13,10 +13,5 @@ import { requireAuth, requireRole, optionalAuth } from '../middleware/auth.js';
 export const videosRouter = Router();
 
 videosRouter.get('/profiles/:profileId/videos', optionalAuth, listVideos);
-videosRouter.post(
-  '/profiles/:profileId/videos',
-  requireAuth,
-  requireRole('APPLICANT'),
-  addVideo,
-);
+videosRouter.post('/profiles/:profileId/videos', requireAuth, requireRole('APPLICANT'), addVideo);
 videosRouter.delete('/videos/:videoId', requireAuth, requireRole('APPLICANT'), deleteVideo);

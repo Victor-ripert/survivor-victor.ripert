@@ -15,10 +15,7 @@ export const upsertProfileSchema = z.object({
     .string()
     .max(120, { error: 'Le titre ne peut pas dépasser 120 caractères' })
     .optional(),
-  bio: z
-    .string()
-    .max(2000, { error: 'La bio ne peut pas dépasser 2000 caractères' })
-    .optional(),
+  bio: z.string().max(2000, { error: 'La bio ne peut pas dépasser 2000 caractères' }).optional(),
   location: z.string().min(1, { error: 'Localisation requise' }),
   sector: z.string().min(1, { error: 'Secteur requis' }),
 });

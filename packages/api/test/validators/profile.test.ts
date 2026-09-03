@@ -12,7 +12,7 @@ describe('upsertProfileSchema', () => {
   it('accepts a full payload', () => {
     const parsed = upsertProfileSchema.safeParse({
       headline: 'Développeuse full-stack',
-      bio: 'Trois ans d\'expérience en React et Node.js.',
+      bio: "Trois ans d'expérience en React et Node.js.",
       location: 'Lyon',
       sector: 'Informatique',
     });

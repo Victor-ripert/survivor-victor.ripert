@@ -23,7 +23,7 @@ profils-actifs/
 └── README.md
 ```
 
-**Approche** : chaque domaine fonctionnel possède son bout de code front *et* back
+**Approche** : chaque domaine fonctionnel possède son bout de code front _et_ back
 (verticale, pas par couche) — voir la table ci-dessous. Ça évite les blocages entre
 équipes sur un projet de deux semaines.
 
@@ -31,14 +31,14 @@ profils-actifs/
 
 ## 🎯 Domaines Verticaux
 
-| Domaine | Propriétaire           | Responsabilité                                                                    |
-| ------- | ----------------------- | ---------------------------------------------------------------------------------- |
-| **A**   | Auth & Notifications    | 3 rôles, inscription/connexion, middleware de permissions, notification du candidat lors d'une interaction recruteur — arbitre le contrat d'API en cas de désaccord entre domaines |
-| **B**   | Profils & Vidéo         | CRUD profil, vidéos en iframe, page profil publique, feed paginé, modération       |
-| **C**   | Questionnaire           | Questions/options/pondérations, sauvegarde et reprise, scoring, badge — chemin critique du projet |
-| **D**   | Recruteur & Dashboards  | Catalogue + filtrage, favoris, prise de contact, tableaux de bord recruteur/admin  |
+| Domaine | Propriétaire           | Responsabilité                                                                                                                                                                     |
+| ------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A**   | Auth & Notifications   | 3 rôles, inscription/connexion, middleware de permissions, notification du candidat lors d'une interaction recruteur — arbitre le contrat d'API en cas de désaccord entre domaines |
+| **B**   | Profils & Vidéo        | CRUD profil, vidéos en iframe, page profil publique, feed paginé, modération                                                                                                       |
+| **C**   | Questionnaire          | Questions/options/pondérations, sauvegarde et reprise, scoring, badge — chemin critique du projet                                                                                  |
+| **D**   | Recruteur & Dashboards | Catalogue + filtrage, favoris, prise de contact, tableaux de bord recruteur/admin                                                                                                  |
 
-Chaque propriétaire livre ses routes Express *et* les pages React qui les consomment.
+Chaque propriétaire livre ses routes Express _et_ les pages React qui les consomment.
 
 ---
 
@@ -164,12 +164,12 @@ npm run dev -w @profils-actifs/api
 npm run dev -w @profils-actifs/web
 ```
 
-| Service        | URL                               |
-| -------------- | ---------------------------------- |
-| Front          | http://localhost:5173              |
-| API            | http://localhost:3000/api          |
-| Sonde de santé | http://localhost:3000/api/health   |
-| pgAdmin        | http://localhost:5050              |
+| Service        | URL                              |
+| -------------- | -------------------------------- |
+| Front          | http://localhost:5173            |
+| API            | http://localhost:3000/api        |
+| Sonde de santé | http://localhost:3000/api/health |
+| pgAdmin        | http://localhost:5050            |
 
 Prérequis : `docker compose up -d`, puis `npm run db:migrate && npm run db:seed`
 (voir [Database](#database)). L'API refuse de démarrer sans `.env.local` — copiez
@@ -191,10 +191,10 @@ vidéos, historique d'interactions) avec des upserts déterministes — rejouabl
 créer de doublons, et refuse de tourner avec `NODE_ENV=production`.
 
 | Rôle           | Compte                                 | Mot de passe   |
-| -------------- | --------------------------------------- | --------------- |
-| Administrateur | `admin@profils-actifs.fr`               | `Password123!`  |
-| Recruteur      | `recruteur@profils-actifs.fr`           | `Password123!`  |
-| Candidat       | `amina.berthier@example.fr` (+ autres)  | `Password123!`  |
+| -------------- | -------------------------------------- | -------------- |
+| Administrateur | `admin@profils-actifs.fr`              | `Password123!` |
+| Recruteur      | `recruteur@profils-actifs.fr`          | `Password123!` |
+| Candidat       | `amina.berthier@example.fr` (+ autres) | `Password123!` |
 
 ### Tests
 
@@ -229,11 +229,11 @@ npm run format:check
 JWT stateless, bearer token (`Authorization: Bearer <token>`), expiration 7 jours.
 Mots de passe hashés en bcrypt (12 tours de sel) — voir `packages/api/src/services/password.ts`.
 
-| Méthode | Route                 | Détail                                                                                                                                  |
-| ------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| POST    | `/api/auth/register`   | `email`, `password` (8+ car.), `firstName`, `lastName`, `birthDate`, `role` (`APPLICANT` ou `RECRUITER` uniquement — un compte `ADMIN` n'est jamais auto-inscrit) |
-| POST    | `/api/auth/login`      | `email`, `password`                                                                                                                        |
-| GET     | `/api/auth/me`         | Utilisateur courant (route protégée)                                                                                                        |
+| Méthode | Route                | Détail                                                                                                                                                            |
+| ------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST    | `/api/auth/register` | `email`, `password` (8+ car.), `firstName`, `lastName`, `birthDate`, `role` (`APPLICANT` ou `RECRUITER` uniquement — un compte `ADMIN` n'est jamais auto-inscrit) |
+| POST    | `/api/auth/login`    | `email`, `password`                                                                                                                                               |
+| GET     | `/api/auth/me`       | Utilisateur courant (route protégée)                                                                                                                              |
 
 **Vérification d'âge** : l'inscription est refusée sans `birthDate`, et si l'âge
 calculé est inférieur à `MIN_APPLICANT_AGE` (16 ans, `@profils-actifs/shared`). Les
@@ -258,13 +258,13 @@ supprime directement la ligne `Video`, détaillé dans
 
 ### Parcours web
 
-| Page                            | Route                      | Rôles            |
-| -------------------------------- | ---------------------------- | ------------------ |
-| Tableau de bord recruteur        | `/recruteur`                 | RECRUITER, ADMIN   |
-| Catalogue des profils            | `/recruteur/catalogue`       | RECRUITER, ADMIN   |
-| Ma sélection (favoris)           | `/recruteur/favoris`         | RECRUITER, ADMIN   |
-| Historique des interactions      | `/recruteur/interactions`    | RECRUITER, ADMIN   |
-| Tableau de bord administrateur   | `/admin`                     | ADMIN              |
+| Page                           | Route                     | Rôles            |
+| ------------------------------ | ------------------------- | ---------------- |
+| Tableau de bord recruteur      | `/recruteur`              | RECRUITER, ADMIN |
+| Catalogue des profils          | `/recruteur/catalogue`    | RECRUITER, ADMIN |
+| Ma sélection (favoris)         | `/recruteur/favoris`      | RECRUITER, ADMIN |
+| Historique des interactions    | `/recruteur/interactions` | RECRUITER, ADMIN |
+| Tableau de bord administrateur | `/admin`                  | ADMIN            |
 
 Les filtres du catalogue vivent dans l'URL (`?sector=...&skills=React,SQL&sort=score`) :
 une recherche est partageable, marquable et restaurée par le bouton retour.
@@ -272,16 +272,16 @@ une recherche est partageable, marquable et restaurée par le bouton retour.
 ### Endpoints
 
 | Méthode    | Route                                    | Rôle métier                                       |
-| ---------- | ----------------------------------------- | --------------------------------------------------- |
-| GET        | `/api/recruiter/catalogue`               | Liste paginée et filtrée des profils                |
-| GET        | `/api/recruiter/catalogue/facets`        | Valeurs de filtres réellement disponibles           |
-| GET        | `/api/recruiter/favorites`               | Catalogue restreint à la sélection                  |
-| PUT/DELETE | `/api/recruiter/favorites/{applicantId}` | Ajout/retrait d'un favori (idempotent)              |
-| GET        | `/api/recruiter/dashboard`               | Statistiques du recruteur connecté                  |
-| GET        | `/api/interactions`                      | Interactions envoyées ou reçues, paginées           |
-| POST       | `/api/interactions`                      | Consultation, favori ou prise de contact            |
-| PATCH      | `/api/interactions/{id}`                 | `isViewed` (destinataire) / `isFavorite` (auteur)   |
-| GET        | `/api/admin/dashboard`                   | Statistiques plateforme                             |
+| ---------- | ---------------------------------------- | ------------------------------------------------- |
+| GET        | `/api/recruiter/catalogue`               | Liste paginée et filtrée des profils              |
+| GET        | `/api/recruiter/catalogue/facets`        | Valeurs de filtres réellement disponibles         |
+| GET        | `/api/recruiter/favorites`               | Catalogue restreint à la sélection                |
+| PUT/DELETE | `/api/recruiter/favorites/{applicantId}` | Ajout/retrait d'un favori (idempotent)            |
+| GET        | `/api/recruiter/dashboard`               | Statistiques du recruteur connecté                |
+| GET        | `/api/interactions`                      | Interactions envoyées ou reçues, paginées         |
+| POST       | `/api/interactions`                      | Consultation, favori ou prise de contact          |
+| PATCH      | `/api/interactions/{id}`                 | `isViewed` (destinataire) / `isFavorite` (auteur) |
+| GET        | `/api/admin/dashboard`                   | Statistiques plateforme                           |
 
 ### Règles métier
 

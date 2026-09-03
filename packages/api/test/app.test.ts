@@ -116,7 +116,7 @@ describe('app', () => {
   });
 
   describe('optionalAuth visibility, end-to-end', () => {
-    it("lets the owner see their own not-yet-approved profile, but hides it from an anonymous request", async () => {
+    it('lets the owner see their own not-yet-approved profile, but hides it from an anonymous request', async () => {
       const created = await request(app)
         .post('/api/profiles/me')
         .set('Authorization', `Bearer ${applicantToken}`)

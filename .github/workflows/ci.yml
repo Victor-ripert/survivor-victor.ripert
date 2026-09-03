@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -64,3 +67,26 @@ jobs:
         with:
           files: ./packages/*/coverage/coverage-final.json
           fail_ci_if_error: false
+
+      # Everything above (migrations, seed, build, lint, format, tests) must
+      # succeed for this step to even run — a broken build never produces an
+      # artifact, so a green workflow is the guarantee Thomas asked for.
+      # Scoped to pushes on main only: PRs don't need a demo-ready artifact.
+      - name: Package build artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          tar -czf build-artifact.tar.gz \
+            packages/api/dist \
+            packages/web/dist \
+            packages/shared/dist \
+            packages/db/prisma \
+            package.json \
+            package-lock.json
+
+      - name: Upload build artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: profils-actifs-build-${{ github.sha }}
+          path: build-artifact.tar.gz
+          retention-days: 14

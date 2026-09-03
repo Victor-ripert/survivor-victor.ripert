@@ -3,12 +3,19 @@ import type { ApiErrorCode, ApiErrorResponse } from '@profils-actifs/shared';
 import { getEnv } from '../utils/env.js';
 import { clearToken, readToken } from './auth-storage.js';
 
+/** A request that has not answered by now is not going to: without a ceiling a
+ *  dropped connection leaves a spinner turning for as long as the tab is open. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 // `getEnv` (not a bare `import.meta.env.VITE_API_URL ?? ...`) because
 // `import.meta.env` is a Vite-only feature: under Jest, this module is
 // imported by virtually every service-layer test, so a bare read that
 // throws when `import.meta.env` itself is absent at runtime would take
 // down the whole suite rather than just this one file.
-export const api = axios.create({ baseURL: getEnv('VITE_API_URL', 'http://localhost:3000/api') });
+export const api = axios.create({
+  baseURL: getEnv('VITE_API_URL', 'http://localhost:3000/api'),
+  timeout: REQUEST_TIMEOUT_MS,
+});
 
 api.interceptors.request.use((config) => {
   const token = readToken();
@@ -42,6 +49,20 @@ export const toApiError = (error: unknown): ApiError => {
 
     if (isApiErrorResponse(body)) {
       return new ApiError(error.response?.status ?? 500, body.error, body.message);
+    }
+
+    // Our own AbortController firing — a superseded request, not a failure.
+    // Callers drop it (see `useAsyncResource`), but it still needs a shape.
+    if (error.code === 'ERR_CANCELED') {
+      return new ApiError(0, 'internal_error', 'Requête annulée.');
+    }
+
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      return new ApiError(
+        0,
+        'service_unavailable',
+        'Le serveur met trop de temps à répondre. Réessayez dans un instant.',
+      );
     }
 
     if (!error.response) {

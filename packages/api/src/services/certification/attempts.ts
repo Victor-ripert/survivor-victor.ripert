@@ -1,4 +1,4 @@
-import { Prisma, type CertificationAttempt } from '@prisma/client';
+import { Prisma, type Answer, type CertificationAttempt } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
 import { forbidden, notFound } from '../../utils/http-error.js';
 
@@ -8,6 +8,20 @@ export const attemptNotFound = () => notFound('Tentative de certification introu
 export const attemptForbidden = () => forbidden('Cette tentative ne vous appartient pas');
 
 const MAX_SERIALIZATION_RETRIES = 3;
+
+/** An attempt as the candidate may see it. `answers` is not optional: the
+ *  questionnaire restores a resumed session from it, so an attempt handed back
+ *  without it silently loses the candidate's progress. */
+export type OpenAttempt = CertificationAttempt & { answers: Omit<Answer, 'pointsEarned'>[] };
+
+// Never reveal points while the candidate could still be answering — same
+// rule as getAttemptForUser below. Every attempt this function returns is
+// IN_PROGRESS by construction, so the strip is unconditional here. The key is
+// dropped rather than zeroed: `Answer.pointsEarned` is documented as present
+// only once the attempt is closed, and getAttemptForUser drops it the same
+// way — a zero would be a value the client could believe.
+const withoutPoints = (answers: Answer[]): Omit<Answer, 'pointsEarned'>[] =>
+  answers.map(({ pointsEarned: _pointsEarned, ...rest }) => rest);
 
 // The schema deliberately has no DB constraint for "at most one IN_PROGRESS
 // attempt per user" (see the comment on CertificationAttempt) — it's an
@@ -19,18 +33,46 @@ const MAX_SERIALIZATION_RETRIES = 3;
 // and the retry will see the other transaction's now-committed row.
 export const startOrResumeAttempt = async (
   userId: string,
-): Promise<{ attempt: CertificationAttempt; created: boolean }> => {
+): Promise<{ attempt: OpenAttempt; created: boolean }> => {
   for (let retry = 0; retry < MAX_SERIALIZATION_RETRIES; retry++) {
     try {
       return await prisma.$transaction(
         async (tx) => {
+          // `answers` must be included here — the frontend resumes straight
+          // off this response (no follow-up GET) to know which question to
+          // land on, and an attempt can only ever be resumed while
+          // IN_PROGRESS, so this is the one place that data is needed.
           const existing = await tx.certificationAttempt.findFirst({
             where: { userId, status: 'IN_PROGRESS' },
+            // Ordered like getAttemptForUser's: a CHECKBOX question stores one
+            // row per selected option, and the questionnaire folds them back in
+            // the order it receives them.
+            include: { answers: { orderBy: { createdAt: 'asc' } } },
           });
-          if (existing) return { attempt: existing, created: false };
+          if (existing) {
+            return {
+              attempt: { ...existing, answers: withoutPoints(existing.answers) },
+              created: false,
+            };
+          }
 
-          const created = await tx.certificationAttempt.create({ data: { userId } });
-          return { attempt: created, created: true };
+          const created = await tx.certificationAttempt.create({
+            data: { userId },
+            include: { answers: true },
+          });
+
+          // The profile mirrors the questionnaire's state so the candidate's
+          // space and the catalogue read "in progress" without a join; a
+          // completed certification is never downgraded by a retake.
+          await tx.profile.updateMany({
+            where: { userId, certificationStatus: { in: ['PENDING', 'REJECTED'] } },
+            data: { certificationStatus: 'IN_PROGRESS' },
+          });
+
+          return {
+            attempt: { ...created, answers: withoutPoints(created.answers) },
+            created: true,
+          };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );

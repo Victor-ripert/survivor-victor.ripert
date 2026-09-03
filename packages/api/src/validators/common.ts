@@ -9,17 +9,32 @@ const MAX_ID_LENGTH = 64;
 
 /** Postgres refuses a NUL byte inside a text value, so a payload carrying one
  *  would fail deep in the driver instead of at the edge. */
-const NUL_BYTE = /\u0000/;
+const NUL_BYTE = String.fromCharCode(0);
 
-export const printableText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .min(1)
-    .max(max)
-    .refine((value) => !NUL_BYTE.test(value), { error: 'Caractère non autorisé' });
+const withoutNulByte = <T extends z.ZodType<string>>(schema: T) =>
+  schema.refine((value) => !value.includes(NUL_BYTE), { error: 'Caractère non autorisé' });
 
-export const idSchema = printableText(MAX_ID_LENGTH);
+/** Required free text: trimmed, non-empty, capped. `requiredMessage` is what
+ *  the user reads when the field is blank. */
+export const printableText = (max: number, requiredMessage = 'Champ requis') =>
+  withoutNulByte(
+    z
+      .string({ error: requiredMessage })
+      .trim()
+      .min(1, { error: requiredMessage })
+      .max(max, { error: `Ne peut pas dépasser ${max} caractères` }),
+  );
+
+/** Free text that may be blank — a blank value clears the stored one. */
+export const optionalText = (max: number) =>
+  withoutNulByte(
+    z
+      .string()
+      .trim()
+      .max(max, { error: `Ne peut pas dépasser ${max} caractères` }),
+  );
+
+export const idSchema = printableText(MAX_ID_LENGTH, 'Identifiant requis');
 
 /** Path parameters arrive as `string | undefined`; this turns a missing or
  *  malformed one into a 400 instead of an unchecked cast. */
@@ -43,3 +58,5 @@ export const paginationQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
 });
+
+export type PaginationQuery = z.infer<typeof paginationQuerySchema>;

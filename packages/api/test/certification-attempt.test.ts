@@ -96,6 +96,9 @@ describe('POST /certification/attempt', () => {
     expect(res.status).toBe(201);
     expect(res.body.status).toBe('IN_PROGRESS');
     expect(res.body.userId).toBe(applicantId);
+    // The questionnaire builds its state from this array on mount; handing it
+    // back undefined is what the frontend crashed on.
+    expect(res.body.answers).toEqual([]);
   });
 
   it('resumes the same attempt on a second call (200, same id)', async () => {
@@ -109,6 +112,12 @@ describe('POST /certification/attempt', () => {
     expect(first.status).toBe(201);
     expect(second.status).toBe(200);
     expect(second.body.id).toBe(first.body.id);
+    // Resume is the whole point of the endpoint: the answers already given
+    // must come back with the attempt, and without their points.
+    expect(Array.isArray(second.body.answers)).toBe(true);
+    for (const answer of second.body.answers) {
+      expect(answer).not.toHaveProperty('pointsEarned');
+    }
 
     const count = await prisma.certificationAttempt.count({
       where: { userId: applicantId, status: 'IN_PROGRESS' },

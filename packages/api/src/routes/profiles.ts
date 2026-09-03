@@ -1,19 +1,25 @@
+import { UserRole } from '@prisma/client';
 import { Router } from 'express';
 import {
-  listProfiles,
-  getProfile,
+  addMySkill,
   getMyProfile,
+  getProfile,
+  listProfiles,
+  removeMySkill,
   upsertMyProfile,
 } from '../controllers/profile.controller.js';
-import { requireAuth, requireRole, optionalAuth } from '../middleware/auth.js';
+import { optionalAuth, requireAuth, requireRole } from '../middleware/auth.js';
 
 export const profilesRouter = Router();
 
-// /me must be registered before /:id — otherwise Express would match the
-// literal path segment "me" as an :id value and this route would never be
-// reached.
-profilesRouter.get('/me', requireAuth, requireRole('APPLICANT'), getMyProfile);
-profilesRouter.post('/me', requireAuth, requireRole('APPLICANT'), upsertMyProfile);
+const applicantOnly = [requireAuth, requireRole(UserRole.APPLICANT)];
+
+// /me is registered before /:id — otherwise Express would match the literal
+// segment "me" as an :id value and these routes would never be reached.
+profilesRouter.get('/me', applicantOnly, getMyProfile);
+profilesRouter.post('/me', applicantOnly, upsertMyProfile);
+profilesRouter.post('/me/skills', applicantOnly, addMySkill);
+profilesRouter.delete('/me/skills/:skillId', applicantOnly, removeMySkill);
 
 profilesRouter.get('/', listProfiles);
 profilesRouter.get('/:id', optionalAuth, getProfile);

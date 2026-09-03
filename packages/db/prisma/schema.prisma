@@ -22,12 +22,12 @@ model User {
   isActive     Boolean  @default(true)
   birthDate    DateTime?
 
-  profile               Profile?
-  attempts              CertificationAttempt[]
-  notifications         Notification[]
-  moderationLogs        ModerationLog[]
-  interactionsCreated   Interaction[]          @relation("InteractionCreatedBy")
-  interactionsReceived  Interaction[]          @relation("InteractionRecipient")
+  profile              Profile?
+  attempts             CertificationAttempt[]
+  notifications        Notification[]
+  moderationLogs       ModerationLog[]
+  interactionsCreated  Interaction[]          @relation("InteractionCreatedBy")
+  interactionsReceived Interaction[]          @relation("InteractionRecipient")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -38,6 +38,9 @@ model User {
 enum NotificationType {
   NEW_INTERACTION_RECEIVED
   CERTIFICATION_BADGE_EARNED
+  // Sent when an admin edits an active question while the candidate has an
+  // IN_PROGRESS attempt — see services/certification/invalidation.ts.
+  CERTIFICATION_ATTEMPT_INVALIDATED
 }
 
 model Notification {
@@ -65,6 +68,10 @@ model Skill {
   name String @unique
 
   profiles ProfileSkill[]
+
+  // The unique btree above serves exact lookups; the catalogue matches skill
+  // names case-insensitively, which is an ILIKE the btree cannot answer.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
 }
 
 enum SkillLevel {
@@ -85,7 +92,11 @@ model ProfileSkill {
   level SkillLevel @default(INTERMEDIATE)
 
   @@unique([profileId, skillId])
-  @@index([skillId])
+  // Reverse direction of the unique index above: the catalogue's skill facet
+  // starts from a skill and asks which profiles carry it. Both columns are in
+  // the index, so that lookup never touches the heap. Supersedes a standalone
+  // index on skillId, which was only its prefix.
+  @@index([skillId, profileId])
 }
 
 enum CertificationStatus {
@@ -124,10 +135,17 @@ model Profile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([sector])
-  @@index([location])
+  // `sector` and `location` are filtered case-insensitively, which Prisma
+  // emits as ILIKE — a plain btree cannot answer that, so these two are
+  // trigram indexes. See docs/decisions/02-index-du-catalogue.md for the
+  // measurements and for why write-time normalisation was not chosen instead.
+  @@index([sector(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([location(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([certificationStatus])
   @@index([moderationStatus])
+  // `sort=score` and `sort=recent`, the catalogue's two default orderings.
+  @@index([certificationScore])
+  @@index([updatedAt])
 }
 
 enum VideoType {
@@ -151,9 +169,18 @@ model Video {
   moderationStatus ModerationStatus @default(PENDING)
   moderationLogs   ModerationLog[]
 
-  acceptedAt        DateTime
+  // Consent to publication is logged, not merely ticked: the moment it was
+  // given and the version of the text that was accepted (brief §7.1).
+  acceptedAt         DateTime
   consentTextVersion String
-  revokedAt         DateTime?
+  revokedAt          DateTime?
+
+  // Restored after 20260902133533_add_video_consent dropped it. That migration
+  // announces the drop in its own header ("All the data in the column will be
+  // lost"), which reads as collateral rather than intent: every other table
+  // carries createdAt, the catalogue orders a profile's preview video by it,
+  // and a consent record without a deposit date is a poor audit trail.
+  createdAt DateTime @default(now())
 
   @@index([profileId])
 }
@@ -324,8 +351,8 @@ model Interaction {
 
   type       InteractionType
   message    String? // set for CONTACT/MESSAGE
-  isViewed   Boolean @default(false)
-  isFavorite Boolean @default(false)
+  isViewed   Boolean         @default(false)
+  isFavorite Boolean         @default(false)
 
   notifications Notification[]
 

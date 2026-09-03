@@ -1,98 +1,185 @@
-import type { JSX } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { SkillLevel } from '@profils-actifs/shared';
-import { useProfile } from '../../hooks/useProfile.js';
-import { VideoEmbed } from '../../components/VideoEmbed.js';
 import { CertificationBadge } from '../../components/CertificationBadge.js';
-import styles from './ProfilePage.module.css';
-
-/** French, product-facing labels for `SkillLevel` — same pattern as `CertificationBadge`'s status labels. */
-const SKILL_LEVEL_LABEL: Record<SkillLevel, string> = {
-  BEGINNER: 'Débutant',
-  INTERMEDIATE: 'Intermédiaire',
-  ADVANCED: 'Avancé',
-  EXPERT: 'Expert',
-};
+import { ContactDialog } from '../../components/ContactDialog.js';
+import { Icon } from '../../components/Icon.js';
+import { EmptyState, ErrorNotice, LoadingRow, Notice } from '../../components/StatusMessages.js';
+import { VideoPlayer } from '../../components/VideoPlayer.js';
+import { useAsyncResource } from '../../hooks/useAsyncResource.js';
+import { useAuth } from '../../hooks/useAuth.js';
+import { fetchProfile } from '../../services/profiles.js';
+import { SKILL_LEVEL_LABELS } from '../../utils/format.js';
 
 /**
- * `GET /profiles/:id` — public, no auth required (the brief requires a
- * profile to stay viewable without a recruiter account). Neither this page
- * nor `useProfile`/`getProfileById` ever attach an auth token; the one
- * exception — the profile's own owner previewing it before it's
- * approved — is handled entirely server-side (the API reads whatever
- * token happens to be present), so this page needs no special case for it.
+ * The public profile page — one of the three audited screens (brief §7.4):
+ * every video is a keyboard-reachable control, focus stays visible, and the
+ * certification state is written out rather than coloured.
  */
-export function ProfilePage(): JSX.Element {
-  const { id } = useParams<{ id: string }>();
-  const { profile, loading, notFound, error } = useProfile(id);
+export const ProfilePage = () => {
+  const { id = '' } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [isContacting, setIsContacting] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
-  if (loading) {
-    return <p role="status">Chargement du profil…</p>;
-  }
+  const load = useCallback((signal: AbortSignal) => fetchProfile(id, signal), [id]);
+  const { data: profile, error, isLoading, reload } = useAsyncResource(load);
 
-  if (notFound) {
+  if (isLoading && !profile) return <LoadingRow label="Chargement du profil…" />;
+
+  if (error?.status === 404) {
     return (
-      <div className={styles.emptyState}>
-        <p>Ce profil n’existe pas, ou n’est plus disponible.</p>
-        <Link to="/profiles">Retour à la liste des profils</Link>
-      </div>
+      <EmptyState
+        title="Ce profil n'existe pas, ou n'est plus disponible."
+        action={<Link to="/">Retour aux profils</Link>}
+      />
     );
   }
 
-  if (error || !profile) {
-    return (
-      <p role="alert" className={styles.emptyState}>
-        {error ?? 'Impossible de charger ce profil pour le moment.'}
-      </p>
-    );
-  }
+  if (error) return <ErrorNotice error={error} onRetry={reload} />;
+  if (!profile) return null;
+
+  const fullName = `${profile.firstName} ${profile.lastName}`;
+  const isOwner = user?.id === profile.userId;
+  const canContact = user?.role === 'RECRUITER' || user?.role === 'ADMIN';
 
   return (
-    <article className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.headline}>{profile.headline ?? profile.sector}</h1>
-        <CertificationBadge
-          status={profile.certificationStatus}
-          badge={profile.certificationBadge ?? null}
-          score={profile.certificationScore ?? null}
-        />
-        <p className={styles.meta}>
-          {profile.sector} · {profile.location}
-        </p>
-      </header>
+    <div className="page-reading stack stack--loose">
+      <Link className="back-link" to="/">
+        <Icon name="arrow-left" />
+        Retour aux profils
+      </Link>
 
-      {profile.bio && <p className={styles.bio}>{profile.bio}</p>}
-
-      {profile.skills.length > 0 && (
-        <section aria-labelledby="profile-skills-heading">
-          <h2 id="profile-skills-heading" className={styles.sectionTitle}>
-            Compétences
-          </h2>
-          <ul className={styles.skills}>
-            {profile.skills.map((skill) => (
-              <li key={skill.id} className={styles.skill}>
-                {skill.skillName}
-                <span className={styles.skillLevel}> · {SKILL_LEVEL_LABEL[skill.level]}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {isOwner && profile.moderationStatus !== 'APPROVED' && (
+        <Notice tone="warning">
+          <p>
+            Ce profil n’est visible que par vous tant qu’un administrateur ne l’a pas validé.{' '}
+            <Link to="/mon-profil">Modifier mon profil</Link>
+          </p>
+        </Notice>
       )}
 
-      <section aria-labelledby="profile-videos-heading">
-        <h2 id="profile-videos-heading" className={styles.sectionTitle}>
-          Vidéos
-        </h2>
-        {profile.videos.length === 0 ? (
-          <p className={styles.noVideo}>Aucune vidéo pour le moment.</p>
-        ) : (
-          <div className={styles.videos}>
-            {profile.videos.map((video) => (
-              <VideoEmbed key={video.id} type={video.type} url={video.url} />
-            ))}
-          </div>
-        )}
-      </section>
-    </article>
+      {feedback && (
+        <Notice tone="success">
+          <p>{feedback}</p>
+        </Notice>
+      )}
+
+      <article className="two-col">
+        <div className="stack stack--loose">
+          <header className="profile-header">
+            <div className="profile-header__row">
+              <div>
+                <h1>{fullName}</h1>
+                {profile.headline && <p className="profile-header__headline">{profile.headline}</p>}
+              </div>
+              <CertificationBadge
+                status={profile.certificationStatus}
+                badge={profile.certificationBadge ?? null}
+                score={profile.certificationScore ?? null}
+              />
+            </div>
+            <p className="meta">
+              <span>{profile.sector}</span>
+              <span aria-hidden="true">·</span>
+              <span>{profile.location}</span>
+            </p>
+          </header>
+
+          <section className="card panel" aria-labelledby="profile-videos-heading">
+            <h2 id="profile-videos-heading" className="panel__title">
+              {profile.videos.length > 1 ? 'Vidéos de présentation' : 'Vidéo de présentation'}
+            </h2>
+            {profile.videos.length === 0 ? (
+              <p className="panel__subtitle">Aucune vidéo pour le moment.</p>
+            ) : (
+              <div className="stack">
+                {profile.videos.map((video) => (
+                  <VideoPlayer
+                    key={video.id}
+                    video={video}
+                    active={activeVideoId === video.id}
+                    onActivate={setActiveVideoId}
+                  />
+                ))}
+                <p className="panel__subtitle">
+                  Le lecteur n’est chargé qu’au clic. Les sous-titres sont activés par défaut.
+                </p>
+              </div>
+            )}
+          </section>
+
+          {profile.bio && (
+            <section className="stack" aria-labelledby="profile-bio-heading">
+              <h2 id="profile-bio-heading">Présentation</h2>
+              <p className="profile-bio">{profile.bio}</p>
+            </section>
+          )}
+        </div>
+
+        <aside className="stack">
+          <section className="card panel" aria-labelledby="profile-skills-heading">
+            <h2 id="profile-skills-heading" className="panel__title">
+              Compétences
+            </h2>
+            {profile.skills.length === 0 ? (
+              <p className="panel__subtitle">Aucune compétence renseignée.</p>
+            ) : (
+              <ul className="skill-table">
+                {profile.skills.map((skill) => (
+                  <li key={skill.id}>
+                    <span className="skill-table__name">{skill.skillName}</span>
+                    <span className="skill-table__level">{SKILL_LEVEL_LABELS[skill.level]}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {canContact && (
+            <section className="card panel" aria-labelledby="profile-contact-heading">
+              <h2 id="profile-contact-heading" className="panel__title">
+                Prendre contact
+              </h2>
+              <p className="panel__subtitle">
+                Votre message est transmis dans l’espace du candidat, qui en est notifié. Aucune
+                adresse e-mail n’est communiquée.
+              </p>
+              <button
+                type="button"
+                className="button button--primary button--lg"
+                onClick={() => setIsContacting(true)}
+              >
+                Contacter
+              </button>
+            </section>
+          )}
+
+          {!user && (
+            <section className="card panel">
+              <p className="panel__subtitle">
+                Vous recrutez ? <Link to="/connexion">Connectez-vous</Link> pour contacter{' '}
+                {profile.firstName}.
+              </p>
+            </section>
+          )}
+        </aside>
+      </article>
+
+      {isContacting && (
+        <ContactDialog
+          recipient={{
+            userId: profile.userId,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+          }}
+          onClose={() => setIsContacting(false)}
+          onSent={() => {
+            setIsContacting(false);
+            setFeedback(`Message envoyé à ${fullName}.`);
+          }}
+        />
+      )}
+    </div>
   );
-}
+};

@@ -1,5 +1,6 @@
-import { ModerationStatus, Prisma, UserRole } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import type { CatalogueSort } from '@profils-actifs/shared';
+import { publishedVideoFilter, visibleProfileFilter } from './visibility.js';
 
 export interface CatalogueFilters {
   q?: string;
@@ -13,35 +14,30 @@ export interface CatalogueFilters {
   restrictToUserIds?: string[];
 }
 
-/**
- * Profiles a recruiter is allowed to see: an active job-seeker account whose
- * profile has not been rejected by moderation. Profiles still awaiting review
- * stay visible — the platform is opt-in for job-seekers and a moderation
- * backlog must not silently hide them — while a rejected profile disappears
- * from every recruiter-facing surface.
- */
-export const visibleProfileFilter: Prisma.ProfileWhereInput = {
-  moderationStatus: { not: ModerationStatus.REJECTED },
-  user: { isActive: true, role: UserRole.APPLICANT },
-};
-
-export const publishedVideoFilter: Prisma.VideoWhereInput = {
-  moderationStatus: { not: ModerationStatus.REJECTED },
-};
+export { publishedVideoFilter, visibleProfileFilter };
 
 const insensitive = (value: string): Prisma.StringFilter => ({
   contains: value,
   mode: 'insensitive',
 });
 
+/**
+ * Free text, restricted to what the candidate wrote about their work.
+ *
+ * `user.firstName` and `user.lastName` used to be part of this OR and were
+ * removed: a surname is a documented proxy for origin, and a catalogue that
+ * lets a recruiter narrow the population by name offers a selection criterion
+ * that Art. L1132-1 of the Code du travail does not allow. Looking up a
+ * candidate already known by name is a real need, but it is a different
+ * feature from browsing the catalogue and it does not justify exposing the
+ * filter here. See docs/livrables/note-criteres-de-filtrage.md.
+ */
 const searchFilter = (term: string): Prisma.ProfileWhereInput => ({
   OR: [
     { headline: insensitive(term) },
     { bio: insensitive(term) },
     { sector: insensitive(term) },
     { location: insensitive(term) },
-    { user: { firstName: insensitive(term) } },
-    { user: { lastName: insensitive(term) } },
     { skills: { some: { skill: { name: insensitive(term) } } } },
   ],
 });

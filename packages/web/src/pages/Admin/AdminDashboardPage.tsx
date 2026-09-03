@@ -4,7 +4,7 @@ import { StatCard } from '../../components/StatCard.js';
 import { TrendChart } from '../../components/TrendChart.js';
 import { ErrorNotice, LoadingRow } from '../../components/StatusMessages.js';
 import { useAsyncResource } from '../../hooks/useAsyncResource.js';
-import { fetchAdminDashboard } from '../../services/recruiter.js';
+import { fetchAdminDashboard } from '../../services/admin.js';
 import {
   CERTIFICATION_LABELS,
   formatCount,

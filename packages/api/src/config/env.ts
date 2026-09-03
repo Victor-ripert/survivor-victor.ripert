@@ -38,6 +38,15 @@ const envSchema = z.object({
     .positive()
     .default(15 * 60 * 1000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(100),
+  /** Server-side cap on a directly uploaded video, in bytes (brief §8.5). */
+  MAX_VIDEO_SIZE: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(100 * 1024 * 1024),
+  /** Where uploaded files land — resolved against the repo root and refused if
+   *  it points inside it (video.service.ts). */
+  UPLOAD_DIR: z.string().min(1).default('../profils-actifs-uploads'),
 });
 
 const parsed = envSchema.safeParse(process.env);

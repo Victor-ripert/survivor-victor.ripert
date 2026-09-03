@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
 import type { SubmitAnswerInput } from '../../validators/certification.js';
-import { badRequest, conflict, notFound } from '../../utils/http-error.js';
+import { conflict, notFound, unprocessableEntity } from '../../utils/http-error.js';
 import { attemptForbidden, attemptNotFound } from './attempts.js';
 
 export const attemptNotInProgress = () => conflict("Cette tentative n'est plus en cours");
@@ -32,36 +32,42 @@ export const saveAnswer = async (attemptId: string, userId: string, input: Submi
   const validOptionIds = new Set(question.options.map((option) => option.id));
   let answersToCreate: Omit<Prisma.AnswerCreateManyInput, 'attemptId' | 'questionId'>[];
 
+  // 422, not 400: submitAnswerSchema already accepted the payload's shape, and
+  // which field is actually required only becomes knowable once the question's
+  // real type has been read back from the database.
   switch (question.type) {
     case 'MULTIPLE_CHOICE': {
-      if (!input.optionId) throw badRequest('optionId is required for a MULTIPLE_CHOICE question');
+      if (!input.optionId) {
+        throw unprocessableEntity('optionId est requis pour une question MULTIPLE_CHOICE');
+      }
       if (!validOptionIds.has(input.optionId)) {
-        throw badRequest('optionId does not belong to this question');
+        throw unprocessableEntity("optionId n'appartient pas à cette question");
       }
       answersToCreate = [{ optionId: input.optionId }];
       break;
     }
     case 'CHECKBOX': {
       if (!input.optionIds || input.optionIds.length === 0) {
-        throw badRequest('optionIds is required for a CHECKBOX question');
+        throw unprocessableEntity('optionIds est requis pour une question CHECKBOX');
       }
       for (const optionId of input.optionIds) {
         if (!validOptionIds.has(optionId)) {
-          throw badRequest(`optionId ${optionId} does not belong to this question`);
+          throw unprocessableEntity(`optionId ${optionId} n'appartient pas à cette question`);
         }
       }
       answersToCreate = input.optionIds.map((optionId) => ({ optionId }));
       break;
     }
     case 'SHORT_TEXT': {
-      if (!input.textAnswer?.trim())
-        throw badRequest('textAnswer is required for a SHORT_TEXT question');
+      if (!input.textAnswer?.trim()) {
+        throw unprocessableEntity('textAnswer est requis pour une question SHORT_TEXT');
+      }
       answersToCreate = [{ textAnswer: input.textAnswer }];
       break;
     }
     case 'LIKERT_SCALE': {
       if (input.numericAnswer === undefined) {
-        throw badRequest('numericAnswer is required for a LIKERT_SCALE question');
+        throw unprocessableEntity('numericAnswer est requis pour une question LIKERT_SCALE');
       }
       answersToCreate = [{ numericAnswer: input.numericAnswer }];
       break;

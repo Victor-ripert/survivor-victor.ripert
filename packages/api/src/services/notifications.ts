@@ -71,6 +71,27 @@ export const notifyBadgeEarned = (
     client,
   );
 
+/**
+ * Raised when an admin edit to an active question invalidates a candidate's
+ * IN_PROGRESS attempt (see services/certification/invalidation.ts). The mail
+ * accepting this arbitrage conditions it on the candidate being "properly
+ * informed" — this notification, plus the MA-7 in-app message, is that.
+ */
+export const notifyAttemptInvalidated = (
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<Notification> =>
+  createNotification(
+    {
+      userId,
+      type: 'CERTIFICATION_ATTEMPT_INVALIDATED',
+      title: 'Questionnaire de certification mis à jour',
+      message:
+        'Le questionnaire de certification a été modifié pendant votre passation. Votre tentative en cours a été annulée — vous pouvez la recommencer.',
+    },
+    client,
+  );
+
 export const listNotifications = async (
   userId: string,
   page?: number,

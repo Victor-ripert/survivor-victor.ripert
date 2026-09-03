@@ -1,4 +1,4 @@
-import { LIKERT_MIN, LIKERT_MAX } from '../../validators/certification.js';
+import { LIKERT_MAX, LIKERT_MIN } from '@profils-actifs/shared';
 
 // Deliberately Prisma-free — takes plain data in, returns a plain result.
 // Whoever calls this (the /submit endpoint, ticket #15) is responsible for

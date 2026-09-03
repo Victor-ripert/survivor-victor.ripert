@@ -1,25 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import type { UserRole } from '@profils-actifs/shared';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { FormField } from '../../components/FormField.js';
+import { Notice } from '../../components/StatusMessages.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { toApiError } from '../../services/api.js';
-
-/** Where each role lands after signing in. */
-const HOME_BY_ROLE: Record<UserRole, string> = {
-  RECRUITER: '/recruteur',
-  ADMIN: '/admin',
-  APPLICANT: '/',
-};
+import { HOME_BY_ROLE } from '../../utils/navigation.js';
 
 interface LocationState {
   from?: string;
 }
 
-/**
- * Minimal sign-in form so the recruiter space is usable end to end. Domain A
- * owns authentication screens and is expected to replace this page with the
- * full flow (registration, password rules, error copy).
- */
 export const LoginPage = () => {
   const { login, status, user } = useAuth();
   const navigate = useNavigate();
@@ -51,49 +41,47 @@ export const LoginPage = () => {
   };
 
   return (
-    <main className="auth-page">
-      <form className="card auth-card" onSubmit={submit}>
-        <h1>ProfilsActifs</h1>
-        <p className="auth-card__hint">Connectez-vous à votre espace.</p>
+    <form className="card auth-card auth-card--single" onSubmit={submit}>
+      <div>
+        <h1>Connexion</h1>
+        <p className="page-header__subtitle">
+          Accédez à votre espace candidat, recruteur ou administrateur.
+        </p>
+      </div>
 
-        {error && (
-          <p className="alert alert--error" role="alert">
-            {error}
-          </p>
-        )}
+      {error && (
+        <Notice tone="error">
+          <p>{error}</p>
+        </Notice>
+      )}
 
-        <div className="field">
-          <label className="field__label" htmlFor="email">
-            Adresse e-mail
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="username"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-        </div>
+      <FormField id="email" label="Adresse e-mail">
+        <input
+          type="email"
+          autoComplete="username"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          required
+        />
+      </FormField>
 
-        <div className="field">
-          <label className="field__label" htmlFor="password">
-            Mot de passe
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </div>
+      <FormField id="password" label="Mot de passe">
+        <input
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+        />
+      </FormField>
 
-        <button type="submit" className="button button--primary" disabled={isSubmitting}>
-          {isSubmitting ? 'Connexion…' : 'Se connecter'}
-        </button>
-      </form>
-    </main>
+      <button type="submit" className="button button--primary button--lg" disabled={isSubmitting}>
+        {isSubmitting ? 'Connexion…' : 'Se connecter'}
+      </button>
+
+      <p className="auth-card__switch">
+        Pas encore de compte ? <Link to="/inscription">Créer un compte</Link>
+      </p>
+    </form>
   );
 };

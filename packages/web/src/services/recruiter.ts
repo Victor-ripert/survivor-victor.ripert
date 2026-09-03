@@ -1,5 +1,4 @@
 import type {
-  AdminDashboard,
   CatalogueFacets,
   CatalogueProfile,
   CatalogueQuery,
@@ -62,12 +61,6 @@ export const fetchRecruiterDashboard = async (
   signal?: AbortSignal,
 ): Promise<RecruiterDashboard> => {
   const response = await api.get<RecruiterDashboard>('/recruiter/dashboard', { signal });
-
-  return response.data;
-};
-
-export const fetchAdminDashboard = async (signal?: AbortSignal): Promise<AdminDashboard> => {
-  const response = await api.get<AdminDashboard>('/admin/dashboard', { signal });
 
   return response.data;
 };

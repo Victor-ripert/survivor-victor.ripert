@@ -1,30 +1,25 @@
 import { z } from 'zod';
-import { VIDEO_TYPES } from '@profils-actifs/shared';
+import {
+  VIDEO_DESCRIPTION_MAX_LENGTH,
+  VIDEO_TITLE_MAX_LENGTH,
+  VIDEO_TYPES,
+} from '@profils-actifs/shared';
+import { optionalText, printableText } from './common.js';
 
 /**
  * Payload for `POST /profiles/{profileId}/videos`.
  *
  * Format-level validation only — is this a well-formed URL — lives here.
- * Business-level validation — is it actually a YouTube/Vimeo URL, does an
- * UPLOAD file respect the 100MB cap — is the video *service*'s job (issue
- * #4a/#4b), not the validator's. Keeping that line means this schema
- * doesn't need to change shape when the service-layer rules do.
+ * Business-level validation — is it actually a YouTube/Vimeo URL — is the
+ * video service's job, so this schema keeps its shape when those rules move.
  *
- * `url` stays required for both `EXTERNAL_LINK` and `UPLOAD` because that's
- * what the contract specifies today. Once direct upload (#4b) is wired up,
- * an `UPLOAD` video's URL will likely be server-assigned after the file is
- * stored rather than client-supplied — if so, this becomes a discriminated
- * union on `type` at that point, not before.
+ * `consentAccepted` must be literally `true`: publishing a video is the
+ * consent act the API logs with the version of the text that was accepted
+ * (brief §7.1), so an unticked box is a validation error, not a default.
  */
 export const addVideoSchema = z.object({
-  title: z
-    .string()
-    .min(1, { error: 'Titre requis' })
-    .max(120, { error: 'Le titre ne peut pas dépasser 120 caractères' }),
-  description: z
-    .string()
-    .max(500, { error: 'La description ne peut pas dépasser 500 caractères' })
-    .optional(),
+  title: printableText(VIDEO_TITLE_MAX_LENGTH, 'Titre requis'),
+  description: optionalText(VIDEO_DESCRIPTION_MAX_LENGTH).optional(),
   type: z.enum(VIDEO_TYPES, { error: 'Type de vidéo invalide' }),
   url: z.url({ error: 'URL invalide' }),
   duration: z
@@ -32,6 +27,9 @@ export const addVideoSchema = z.object({
     .int({ error: 'La durée doit être un entier (secondes)' })
     .positive({ error: 'La durée doit être positive' })
     .optional(),
+  consentAccepted: z.literal(true, {
+    error: 'Le consentement à la diffusion de la vidéo est requis',
+  }),
 });
 
 export type AddVideoInput = z.infer<typeof addVideoSchema>;

@@ -1,181 +1,226 @@
-import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { CONSENT_TEXT_VERSION, MIN_APPLICANT_AGE, type UserRole } from '@profils-actifs/shared';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { ADULT_AGE, MIN_APPLICANT_AGE, PASSWORD_MIN_LENGTH } from '@profils-actifs/shared';
+import { FormField } from '../../components/FormField.js';
+import { Icon } from '../../components/Icon.js';
+import { Notice } from '../../components/StatusMessages.js';
 import { useAuth } from '../../hooks/useAuth.js';
+import { useFormErrors } from '../../hooks/useFormErrors.js';
 import { toApiError } from '../../services/api.js';
-import type { RegisterInput } from '../../types/auth.js';
+import { HOME_BY_ROLE } from '../../utils/navigation.js';
+import {
+  EMPTY_REGISTER_FORM,
+  registerFormSchema,
+  type RegisterFormValues,
+} from './register-form.js';
 
-const HOME_BY_ROLE: Record<UserRole, string> = {
-  RECRUITER: '/recruteur',
-  ADMIN: '/admin',
-  APPLICANT: '/',
-};
+type Field = keyof RegisterFormValues;
 
-type RegistrableRole = RegisterInput['role'];
-
-const ROLE_LABELS: Record<RegistrableRole, string> = {
-  APPLICANT: "Demandeur d'emploi",
-  RECRUITER: 'Recruteur',
-};
-
-/**
- * Registration screen — one of the three RGAA-audited screens (AD-6), so it
- * ships with real <label>s, native keyboard support and the global
- * :focus-visible ring from the first version rather than a later pass.
- * Carries the age control (birthDate, brief §7.3) and terms acceptance
- * (§7.6) required at sign-up — the separate, video-specific consent record
- * (acceptedAt/consentTextVersion on Video, AD-3) is written when a video is
- * published, not here.
- */
+/** One of the three screens the accessibility audit covers (brief §7.4):
+ *  every control is labelled, reachable by keyboard and reports its error
+ *  through `aria-describedby`. */
 export const RegisterPage = () => {
   const { register, status, user } = useAuth();
   const navigate = useNavigate();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [role, setRole] = useState<RegistrableRole>('APPLICANT');
-  const [acceptsTerms, setAcceptsTerms] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<RegisterFormValues>(EMPTY_REGISTER_FORM);
+  const { errors, fromZod, clear } = useFormErrors<Field>();
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (status === 'authenticated' && user) {
     return <Navigate to={HOME_BY_ROLE[user.role]} replace />;
   }
 
+  const isApplicant = form.role === 'APPLICANT';
+
+  const update =
+    (field: Field) =>
+    (event: ChangeEvent<HTMLInputElement>): void => {
+      const { value } = event.target;
+      setForm((current) => ({ ...current, [field]: value }));
+      clear(field);
+      setSubmitError(null);
+    };
+
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+
+    const parsed = registerFormSchema.safeParse(form);
+    if (!parsed.success) {
+      fromZod(parsed.error);
+      return;
+    }
+
     setIsSubmitting(true);
-    setError(null);
+    setSubmitError(null);
 
     try {
-      const signedUp = await register({ firstName, lastName, email, password, birthDate, role });
-      navigate(HOME_BY_ROLE[signedUp.role], { replace: true });
+      const { birthDate, ...rest } = parsed.data;
+      const created = await register(rest.role === 'APPLICANT' ? { ...rest, birthDate } : rest);
+      navigate(HOME_BY_ROLE[created.role], { replace: true });
     } catch (cause: unknown) {
-      setError(toApiError(cause).message);
+      setSubmitError(toApiError(cause).message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <main className="auth-page">
-      <form className="card auth-card" onSubmit={submit}>
-        <h1>ProfilsActifs</h1>
-        <p className="auth-card__hint">Créez votre compte.</p>
-
-        {error && (
-          <p className="alert alert--error" role="alert">
-            {error}
+    <div className="auth-layout">
+      <section className="auth-intro">
+        <h1>Créer un compte</h1>
+        <p className="auth-intro__lead">
+          Un candidat publie un profil et une vidéo de présentation, puis passe le questionnaire de
+          certification. Un recruteur consulte le catalogue et prend contact.
+        </p>
+        <ol className="steps">
+          <li>
+            <span className="steps__number" aria-hidden="true">
+              1
+            </span>
+            <span>
+              <strong>Votre profil</strong> — secteur, localisation et compétences, relu par un
+              administrateur avant publication.
+            </span>
+          </li>
+          <li>
+            <span className="steps__number" aria-hidden="true">
+              2
+            </span>
+            <span>
+              <strong>Votre vidéo</strong> — un lien YouTube ou Vimeo, avec votre consentement
+              explicite, validé avant d’être visible.
+            </span>
+          </li>
+          <li>
+            <span className="steps__number" aria-hidden="true">
+              3
+            </span>
+            <span>
+              <strong>La certification JEB</strong> — 100 questions, reprise possible à tout moment,
+              badge affiché sur votre profil.
+            </span>
+          </li>
+        </ol>
+        <Notice tone="info">
+          <p>
+            Vos données servent uniquement à la mise en relation professionnelle. Aucune donnée
+            n’est vendue ni transmise hors de la plateforme.
           </p>
+        </Notice>
+      </section>
+
+      <form className="card auth-card" onSubmit={submit} noValidate>
+        <fieldset>
+          <legend className="field__label" style={{ marginBottom: 'var(--space-2)' }}>
+            Je suis
+          </legend>
+          <div className="choice-group">
+            <label className={`choice${isApplicant ? ' choice--selected' : ''}`}>
+              <input
+                type="radio"
+                name="role"
+                value="APPLICANT"
+                checked={isApplicant}
+                onChange={update('role')}
+              />
+              Candidat·e
+            </label>
+            <label className={`choice${isApplicant ? '' : ' choice--selected'}`}>
+              <input
+                type="radio"
+                name="role"
+                value="RECRUITER"
+                checked={!isApplicant}
+                onChange={update('role')}
+              />
+              Recruteur·se
+            </label>
+          </div>
+        </fieldset>
+
+        {submitError && (
+          <Notice tone="error">
+            <p>{submitError}</p>
+          </Notice>
         )}
 
-        <div className="field">
-          <label className="field__label" htmlFor="firstName">
-            Prénom
-          </label>
-          <input
-            id="firstName"
-            type="text"
-            autoComplete="given-name"
-            value={firstName}
-            onChange={(event) => setFirstName(event.target.value)}
-            required
-          />
+        <div className="form-grid">
+          <FormField id="firstName" label="Prénom" error={errors.firstName}>
+            <input
+              type="text"
+              autoComplete="given-name"
+              value={form.firstName}
+              onChange={update('firstName')}
+              required
+            />
+          </FormField>
+          <FormField id="lastName" label="Nom" error={errors.lastName}>
+            <input
+              type="text"
+              autoComplete="family-name"
+              value={form.lastName}
+              onChange={update('lastName')}
+              required
+            />
+          </FormField>
         </div>
 
-        <div className="field">
-          <label className="field__label" htmlFor="lastName">
-            Nom
-          </label>
+        <FormField id="email" label="Adresse e-mail" error={errors.email}>
           <input
-            id="lastName"
-            type="text"
-            autoComplete="family-name"
-            value={lastName}
-            onChange={(event) => setLastName(event.target.value)}
-            required
-          />
-        </div>
-
-        <div className="field">
-          <label className="field__label" htmlFor="email">
-            Adresse e-mail
-          </label>
-          <input
-            id="email"
             type="email"
-            autoComplete="username"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            value={form.email}
+            onChange={update('email')}
             required
           />
-        </div>
+        </FormField>
 
-        <div className="field">
-          <label className="field__label" htmlFor="password">
-            Mot de passe
-          </label>
+        <FormField
+          id="password"
+          label="Mot de passe"
+          hint={`${PASSWORD_MIN_LENGTH} caractères minimum.`}
+          error={errors.password}
+        >
           <input
-            id="password"
             type="password"
             autoComplete="new-password"
-            minLength={8}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            value={form.password}
+            onChange={update('password')}
             required
           />
-        </div>
+        </FormField>
 
-        <div className="field">
-          <label className="field__label" htmlFor="birthDate">
-            Date de naissance
-          </label>
-          <input
+        {isApplicant && (
+          <FormField
             id="birthDate"
-            type="date"
-            autoComplete="bday"
-            value={birthDate}
-            onChange={(event) => setBirthDate(event.target.value)}
-            required
-          />
-          <p className="field__hint">Vous devez avoir au moins {MIN_APPLICANT_AGE} ans.</p>
-        </div>
-
-        <div className="field">
-          <label className="field__label" htmlFor="role">
-            Je m&apos;inscris en tant que
-          </label>
-          <select
-            id="role"
-            value={role}
-            onChange={(event) => setRole(event.target.value as RegistrableRole)}
+            label="Date de naissance"
+            error={errors.birthDate}
+            hint={`Inscription à partir de ${MIN_APPLICANT_AGE} ans. Entre ${MIN_APPLICANT_AGE} et ${ADULT_AGE} ans, votre profil reste réservé aux recruteurs connectés : il n'apparaît pas sur le fil public.`}
           >
-            {(Object.keys(ROLE_LABELS) as RegistrableRole[]).map((value) => (
-              <option key={value} value={value}>
-                {ROLE_LABELS[value]}
-              </option>
-            ))}
-          </select>
-        </div>
+            <input
+              type="date"
+              autoComplete="bday"
+              value={form.birthDate}
+              onChange={update('birthDate')}
+              required
+            />
+          </FormField>
+        )}
 
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={acceptsTerms}
-            onChange={(event) => setAcceptsTerms(event.target.checked)}
-            required
-          />
-          J&apos;accepte les conditions générales d&apos;utilisation (version {CONSENT_TEXT_VERSION}
-          )
-        </label>
-
-        <button type="submit" className="button button--primary" disabled={isSubmitting}>
-          {isSubmitting ? 'Création du compte…' : 'Créer mon compte'}
+        <button type="submit" className="button button--primary button--lg" disabled={isSubmitting}>
+          {isSubmitting ? 'Création…' : 'Créer mon compte'}
         </button>
+
+        <p className="auth-card__switch">
+          Déjà inscrit·e ? <Link to="/connexion">Se connecter</Link>
+        </p>
+        <p className="field__hint">
+          <Icon name="info" size={14} /> Aucune condition générale n’est publiée pour l’instant : le
+          projet est en cours de relecture juridique.
+        </p>
       </form>
-    </main>
+    </div>
   );
 };

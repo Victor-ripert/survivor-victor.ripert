@@ -1,52 +1,50 @@
 import { jest } from '@jest/globals';
-import type { Paginated, Profile } from '@profils-actifs/shared';
 import { api } from '../../src/services/api.js';
-import { fetchPendingProfiles, moderateProfile } from '../../src/services/admin.js';
-
-const pendingProfile: Profile = {
-  id: 'profile-1',
-  userId: 'user-1',
-  location: 'Lyon',
-  sector: 'Informatique',
-  skills: [],
-  videos: [],
-  certificationStatus: 'PENDING',
-  moderationStatus: 'PENDING',
-};
+import {
+  fetchVideoModerationQueue,
+  moderateProfile,
+  moderateVideo,
+} from '../../src/services/admin.js';
 
 afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('fetchPendingProfiles', () => {
-  it('requests the admin moderation queue with the given pagination', async () => {
-    const page: Paginated<Profile> = {
-      data: [pendingProfile],
-      pagination: { page: 1, limit: 20, total: 1, pages: 1 },
-    };
-    jest.spyOn(api, 'get').mockResolvedValue({ data: page });
+describe('moderateProfile', () => {
+  it('posts the action, reason and notes to the moderate endpoint', async () => {
+    jest.spyOn(api, 'post').mockResolvedValue({ data: { message: 'Profil modéré' } });
 
-    await expect(fetchPendingProfiles({ page: 1, limit: 20 })).resolves.toEqual(page);
-    expect(api.get).toHaveBeenCalledWith('/admin/moderation/profiles', {
-      params: { page: 1, limit: 20 },
+    await moderateProfile('profile-1', { action: 'APPROVE', reason: 'Conforme' });
+
+    expect(api.post).toHaveBeenCalledWith('/admin/profiles/profile-1/moderate', {
+      action: 'APPROVE',
+      reason: 'Conforme',
     });
   });
 });
 
-describe('moderateProfile', () => {
-  it('posts the action, reason and notes to the moderate endpoint', async () => {
-    jest.spyOn(api, 'post').mockResolvedValue({ data: { message: 'Profile moderated' } });
-
-    await moderateProfile('profile-1', {
-      action: 'APPROVE',
-      reason: 'Looks good',
-      notes: undefined,
+describe('video moderation', () => {
+  it('asks for the pending queue by default and forwards the status filter', async () => {
+    jest.spyOn(api, 'get').mockResolvedValue({
+      data: { data: [], pagination: { page: 1, limit: 20, total: 0, pages: 0 } },
     });
 
-    expect(api.post).toHaveBeenCalledWith('/admin/profiles/profile-1/moderate', {
-      action: 'APPROVE',
-      reason: 'Looks good',
-      notes: undefined,
+    await fetchVideoModerationQueue({ status: 'REJECTED', page: 2 });
+
+    expect(api.get).toHaveBeenCalledWith('/admin/moderation/videos', {
+      params: { page: '2', status: 'REJECTED' },
+      signal: undefined,
+    });
+  });
+
+  it('posts a decision with its mandatory reason', async () => {
+    jest.spyOn(api, 'post').mockResolvedValue({ data: { id: 'video-1' } });
+
+    await moderateVideo('video-1', { action: 'REJECT', reason: 'Le son est inaudible' });
+
+    expect(api.post).toHaveBeenCalledWith('/admin/videos/video-1/moderate', {
+      action: 'REJECT',
+      reason: 'Le son est inaudible',
     });
   });
 });

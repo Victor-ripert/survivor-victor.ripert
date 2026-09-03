@@ -14,6 +14,11 @@ export type CertificationStatus = (typeof CERTIFICATION_STATUSES)[number];
 export const SKILL_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'] as const;
 export type SkillLevel = (typeof SKILL_LEVELS)[number];
 
+export const SKILL_NAME_MAX_LENGTH = 60;
+export const PROFILE_HEADLINE_MAX_LENGTH = 120;
+export const PROFILE_BIO_MAX_LENGTH = 2000;
+export const PROFILE_FIELD_MAX_LENGTH = 120;
+
 /** A skill from the shared catalog (`Skill` in `schema.prisma`). */
 export interface Skill {
   id: string;
@@ -32,6 +37,8 @@ export interface ProfileSkill {
 export interface Profile {
   id: string;
   userId: string;
+  firstName: string;
+  lastName: string;
   headline?: string;
   bio?: string;
   location: string;
@@ -47,19 +54,25 @@ export interface Profile {
    * on `POST /profiles/me`; see `ProfileInput` below.
    */
   moderationStatus: ModerationStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
- * Payload for `POST /profiles/me` (create-or-update). Matches the contract
- * as it stands today — `headline`/`bio` optional, `location`/`sector`
- * required. Skills aren't part of this payload; `POST`/`DELETE
- * /profiles/me/skills` (see `openapi.yaml`) have their own request shape,
- * not yet mirrored here as a type since no service/controller implements
- * them yet — add a `ProfileSkillInput` type here when that lands.
+ * Payload for `POST /profiles/me` (create-or-update). `headline`/`bio` are
+ * optional; sending an empty string clears the stored value, omitting the
+ * key leaves it untouched.
  */
 export interface ProfileInput {
   headline?: string;
   bio?: string;
   location: string;
   sector: string;
+}
+
+/** Payload for `POST /profiles/me/skills`. The skill is looked up (or created)
+ *  by name in the shared catalog; the client never supplies an id. */
+export interface ProfileSkillInput {
+  skillName: string;
+  level?: SkillLevel;
 }

@@ -124,6 +124,7 @@ describe('app', () => {
 
       expect(created.status).toBe(200);
       expect(created.body.moderationStatus).toBe('PENDING');
+      expect(created.body).toMatchObject({ firstName: 'Applicant', lastName: 'Test' });
       const profileId = created.body.id as string;
 
       const asOwner = await request(app)

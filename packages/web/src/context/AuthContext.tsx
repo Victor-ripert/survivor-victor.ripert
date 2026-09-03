@@ -1,7 +1,13 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, setUnauthorizedHandler } from '../services/api.js';
+import type { AuthUser } from '@profils-actifs/shared';
+import { setUnauthorizedHandler } from '../services/api.js';
+import {
+  fetchCurrentUser,
+  login as loginRequest,
+  register as registerRequest,
+} from '../services/auth.js';
+import type { RegisterInput } from '../services/auth.js';
 import { clearToken, readToken, writeToken } from '../services/auth-storage.js';
-import type { AuthUser, LoginResponse, RegisterInput, RegisterResponse } from '../types/auth.js';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
@@ -40,10 +46,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const controller = new AbortController();
 
-    api
-      .get<AuthUser>('/auth/me', { signal: controller.signal })
-      .then((response) => {
-        setUser(response.data);
+    fetchCurrentUser(controller.signal)
+      .then((current) => {
+        setUser(current);
         setStatus('authenticated');
       })
       .catch(() => {
@@ -54,25 +59,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [logout]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
-    const response = await api.post<LoginResponse>('/auth/login', { email, password });
+    const response = await loginRequest(email, password);
 
-    writeToken(response.data.token);
-    setUser(response.data.user);
+    writeToken(response.token);
+    setUser(response.user);
     setStatus('authenticated');
 
-    return response.data.user;
+    return response.user;
   }, []);
 
-  // Same session bootstrap as login: a new account signs the applicant in
-  // immediately rather than sending them back to /connexion afterwards.
   const register = useCallback(async (input: RegisterInput): Promise<AuthUser> => {
-    const response = await api.post<RegisterResponse>('/auth/register', input);
+    const response = await registerRequest(input);
 
-    writeToken(response.data.token);
-    setUser(response.data.user);
+    writeToken(response.token);
+    setUser(response.user);
     setStatus('authenticated');
 
-    return response.data.user;
+    return response.user;
   }, []);
 
   const value = useMemo<AuthContextValue>(

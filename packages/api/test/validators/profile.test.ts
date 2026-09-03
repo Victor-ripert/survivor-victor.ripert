@@ -1,12 +1,14 @@
-import { upsertProfileSchema, feedQuerySchema } from '../../src/validators/profile.js';
+import {
+  addSkillSchema,
+  feedQuerySchema,
+  upsertProfileSchema,
+} from '../../src/validators/profile.js';
 
 describe('upsertProfileSchema', () => {
   it('accepts a minimal valid payload (location + sector only)', () => {
-    const parsed = upsertProfileSchema.safeParse({
-      location: 'Paris',
-      sector: 'Informatique',
-    });
-    expect(parsed.success).toBe(true);
+    expect(
+      upsertProfileSchema.safeParse({ location: 'Paris', sector: 'Informatique' }).success,
+    ).toBe(true);
   });
 
   it('accepts a full payload', () => {
@@ -19,14 +21,16 @@ describe('upsertProfileSchema', () => {
     expect(parsed.success).toBe(true);
   });
 
-  it('rejects a missing location', () => {
-    const parsed = upsertProfileSchema.safeParse({ sector: 'Informatique' });
-    expect(parsed.success).toBe(false);
+  it('keeps a blank headline so the service can clear the stored one', () => {
+    const parsed = upsertProfileSchema.parse({ headline: '  ', location: 'Lyon', sector: 'IT' });
+    expect(parsed.headline).toBe('');
   });
 
-  it('rejects a missing sector', () => {
-    const parsed = upsertProfileSchema.safeParse({ location: 'Paris' });
-    expect(parsed.success).toBe(false);
+  it.each([
+    ['location', { sector: 'Informatique' }],
+    ['sector', { location: 'Paris' }],
+  ])('rejects a missing %s', (_field, payload) => {
+    expect(upsertProfileSchema.safeParse(payload).success).toBe(false);
   });
 
   it('rejects a headline over 120 characters', () => {
@@ -37,30 +41,45 @@ describe('upsertProfileSchema', () => {
     });
     expect(parsed.success).toBe(false);
   });
+
+  it('trims free text', () => {
+    expect(upsertProfileSchema.parse({ location: '  Lyon ', sector: 'IT' }).location).toBe('Lyon');
+  });
+});
+
+describe('addSkillSchema', () => {
+  it('defaults the level to INTERMEDIATE', () => {
+    expect(addSkillSchema.parse({ skillName: 'React' }).level).toBe('INTERMEDIATE');
+  });
+
+  it('rejects an unknown level', () => {
+    expect(addSkillSchema.safeParse({ skillName: 'React', level: 'GURU' }).success).toBe(false);
+  });
+
+  it('rejects a blank name', () => {
+    expect(addSkillSchema.safeParse({ skillName: '   ' }).success).toBe(false);
+  });
 });
 
 describe('feedQuerySchema', () => {
-  it('accepts an empty query, filling in pagination defaults', () => {
-    const parsed = feedQuerySchema.safeParse({});
-    expect(parsed.success).toBe(true);
-    if (parsed.success) {
-      expect(parsed.data.page).toBe(1);
-      expect(parsed.data.limit).toBe(20);
-    }
+  it('accepts an empty query', () => {
+    expect(feedQuerySchema.safeParse({}).success).toBe(true);
   });
 
-  it('accepts a valid certificationStatus filter', () => {
-    const parsed = feedQuerySchema.safeParse({ certificationStatus: 'COMPLETED' });
-    expect(parsed.success).toBe(true);
+  it('coerces page and limit from the query string', () => {
+    expect(feedQuerySchema.parse({ page: '3', limit: '10' })).toEqual({ page: 3, limit: 10 });
   });
 
-  it('rejects an invalid certificationStatus value', () => {
-    const parsed = feedQuerySchema.safeParse({ certificationStatus: 'NOT_A_REAL_STATUS' });
-    expect(parsed.success).toBe(false);
+  it('exposes no selection criterion on the public feed', () => {
+    const parsed = feedQuerySchema.parse({
+      sector: 'Informatique',
+      certificationStatus: 'COMPLETED',
+    });
+    expect(parsed).toEqual({});
   });
 
-  it('still enforces the inherited pagination cap', () => {
-    const parsed = feedQuerySchema.safeParse({ limit: '999' });
-    expect(parsed.success).toBe(false);
+  it('rejects a page that is not a positive integer', () => {
+    expect(feedQuerySchema.safeParse({ page: '0' }).success).toBe(false);
+    expect(feedQuerySchema.safeParse({ page: 'abc' }).success).toBe(false);
   });
 });

@@ -1,78 +1,85 @@
 import { jest } from '@jest/globals';
 import type { Profile } from '@profils-actifs/shared';
-import { api } from '../../src/services/api.js';
-import { getMyProfile, getProfileById, upsertMyProfile } from '../../src/services/profiles.js';
+import { api, ApiError } from '../../src/services/api.js';
+import {
+  addOwnSkill,
+  fetchOwnProfile,
+  fetchProfileFeed,
+  saveOwnProfile,
+} from '../../src/services/profiles.js';
 
 const baseProfile: Profile = {
   id: 'profile-1',
   userId: 'user-1',
+  firstName: 'Amina',
+  lastName: 'Berthier',
   location: 'Lyon',
   sector: 'Informatique',
   skills: [],
   videos: [],
   certificationStatus: 'PENDING',
   moderationStatus: 'APPROVED',
+  createdAt: '2026-09-01T10:00:00.000Z',
+  updatedAt: '2026-09-01T10:00:00.000Z',
 };
-
-/** Minimal fake matching what `axios.isAxiosError` actually checks (`isAxiosError === true`), without depending on `AxiosError`'s full constructor shape. */
-function fakeAxiosError(status: number): Error {
-  return Object.assign(new Error(`Request failed with status code ${status}`), {
-    isAxiosError: true,
-    response: { status },
-  });
-}
 
 afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('getProfileById', () => {
-  it('returns the profile on success', async () => {
-    jest.spyOn(api, 'get').mockResolvedValue({ data: baseProfile });
+describe('fetchProfileFeed', () => {
+  it('keeps the first page out of the query string', async () => {
+    jest.spyOn(api, 'get').mockResolvedValue({
+      data: { data: [], pagination: { page: 1, limit: 20, total: 0, pages: 0 } },
+    });
 
-    await expect(getProfileById('profile-1')).resolves.toEqual(baseProfile);
-  });
+    await fetchProfileFeed(1);
+    expect(api.get).toHaveBeenCalledWith('/profiles', { params: {}, signal: undefined });
 
-  it('returns null for a 404, instead of throwing', async () => {
-    jest.spyOn(api, 'get').mockRejectedValue(fakeAxiosError(404));
-
-    await expect(getProfileById('does-not-exist')).resolves.toBeNull();
-  });
-
-  it('re-throws a non-404 error rather than swallowing it', async () => {
-    jest.spyOn(api, 'get').mockRejectedValue(fakeAxiosError(500));
-
-    await expect(getProfileById('profile-1')).rejects.toThrow();
+    await fetchProfileFeed(3);
+    expect(api.get).toHaveBeenLastCalledWith('/profiles', {
+      params: { page: 3 },
+      signal: undefined,
+    });
   });
 });
 
-describe('getMyProfile', () => {
+describe('fetchOwnProfile', () => {
   it('returns the profile on success', async () => {
     jest.spyOn(api, 'get').mockResolvedValue({ data: baseProfile });
 
-    await expect(getMyProfile()).resolves.toEqual(baseProfile);
-    expect(api.get).toHaveBeenCalledWith('/profiles/me');
+    await expect(fetchOwnProfile()).resolves.toEqual(baseProfile);
   });
 
-  it('returns null for a 404 — a brand-new applicant with no profile yet', async () => {
-    jest.spyOn(api, 'get').mockRejectedValue(fakeAxiosError(404));
+  it('resolves null for a 404 — a brand-new applicant with no profile yet', async () => {
+    jest.spyOn(api, 'get').mockRejectedValue(new ApiError(404, 'not_found', 'Profil introuvable'));
 
-    await expect(getMyProfile()).resolves.toBeNull();
+    await expect(fetchOwnProfile()).resolves.toBeNull();
   });
 
-  it('re-throws a non-404 error', async () => {
-    jest.spyOn(api, 'get').mockRejectedValue(fakeAxiosError(500));
+  it('re-throws any other failure', async () => {
+    jest.spyOn(api, 'get').mockRejectedValue(new ApiError(500, 'internal_error', 'Erreur interne'));
 
-    await expect(getMyProfile()).rejects.toThrow();
+    await expect(fetchOwnProfile()).rejects.toThrow('Erreur interne');
   });
 });
 
-describe('upsertMyProfile', () => {
-  it('posts the input and returns the saved profile', async () => {
+describe('mutations', () => {
+  it('posts the profile form to /profiles/me', async () => {
     jest.spyOn(api, 'post').mockResolvedValue({ data: baseProfile });
     const input = { headline: '', bio: '', location: 'Lyon', sector: 'Informatique' };
 
-    await expect(upsertMyProfile(input)).resolves.toEqual(baseProfile);
+    await expect(saveOwnProfile(input)).resolves.toEqual(baseProfile);
     expect(api.post).toHaveBeenCalledWith('/profiles/me', input);
+  });
+
+  it('tags a skill by name', async () => {
+    jest.spyOn(api, 'post').mockResolvedValue({ data: baseProfile });
+
+    await addOwnSkill({ skillName: 'React', level: 'ADVANCED' });
+    expect(api.post).toHaveBeenCalledWith('/profiles/me/skills', {
+      skillName: 'React',
+      level: 'ADVANCED',
+    });
   });
 });

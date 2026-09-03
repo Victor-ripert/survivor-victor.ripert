@@ -6,6 +6,8 @@ import { PublicProfileCard } from '../../src/components/PublicProfileCard.js';
 const baseProfile: Profile = {
   id: 'profile-1',
   userId: 'user-1',
+  firstName: 'Amina',
+  lastName: 'Berthier',
   headline: 'Développeuse full-stack',
   location: 'Lyon',
   sector: 'Informatique',
@@ -13,35 +15,36 @@ const baseProfile: Profile = {
   videos: [],
   certificationStatus: 'PENDING',
   moderationStatus: 'APPROVED',
+  createdAt: '2026-09-01T10:00:00.000Z',
+  updatedAt: '2026-09-01T10:00:00.000Z',
 };
 
-function renderCard(profile: Profile): ReturnType<typeof render> {
-  return render(
+const renderCard = (profile: Profile) =>
+  render(
     <MemoryRouter>
-      <PublicProfileCard profile={profile} />
+      <PublicProfileCard profile={profile} activeVideoId={null} onActivateVideo={() => {}} />
     </MemoryRouter>,
   );
-}
 
 describe('PublicProfileCard', () => {
-  it('links the headline to the public profile page', () => {
+  it('links the candidate name to the public profile page', () => {
     renderCard(baseProfile);
-    const link = screen.getByRole('link', { name: 'Développeuse full-stack' });
-    expect(link).toHaveAttribute('href', '/profiles/profile-1');
-  });
 
-  it('falls back to the sector as a headline when none is set', () => {
-    renderCard({ ...baseProfile, headline: undefined });
-    expect(screen.getByRole('link', { name: 'Informatique' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Amina Berthier' })).toHaveAttribute(
+      'href',
+      '/profils/profile-1',
+    );
+    expect(screen.getByText('Développeuse full-stack')).toBeInTheDocument();
   });
 
   it('shows a placeholder when the profile has no video yet', () => {
     renderCard(baseProfile);
+
     expect(screen.getByText('Aucune vidéo pour le moment')).toBeInTheDocument();
     expect(document.querySelector('iframe, video')).toBeNull();
   });
 
-  it('renders the primary video via VideoEmbed when one exists', () => {
+  it('offers the primary video as a poster to play', () => {
     renderCard({
       ...baseProfile,
       videos: [
@@ -52,21 +55,22 @@ describe('PublicProfileCard', () => {
           type: 'EXTERNAL_LINK',
           url: 'https://www.youtube.com/embed/abc123',
           moderationStatus: 'APPROVED',
+          createdAt: '2026-09-01T10:00:00.000Z',
         },
       ],
     });
-    expect(screen.getByTitle('Vidéo de présentation')).toHaveAttribute(
-      'src',
-      'https://www.youtube.com/embed/abc123',
-    );
+
+    expect(screen.getByRole('button', { name: 'Lire « Ma présentation »' })).toBeInTheDocument();
   });
 
-  it('shows the certification status', () => {
+  it('spells out the certification state', () => {
     renderCard({
       ...baseProfile,
       certificationStatus: 'COMPLETED',
       certificationBadge: 'Certifié JEB',
+      certificationScore: 68,
     });
-    expect(screen.getByRole('status')).toHaveTextContent('Certifié JEB');
+
+    expect(screen.getByRole('status')).toHaveTextContent('Certifié JEB · 68/100');
   });
 });

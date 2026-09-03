@@ -1,61 +1,70 @@
-import type { JSX } from 'react';
 import { Link } from 'react-router-dom';
 import type { Profile } from '@profils-actifs/shared';
-import { VideoEmbed } from './VideoEmbed.js';
 import { CertificationBadge } from './CertificationBadge.js';
-import styles from './PublicProfileCard.module.css';
+import { VideoPlayer } from './VideoPlayer.js';
 
-export interface PublicProfileCardProps {
+const VISIBLE_SKILLS = 4;
+
+interface PublicProfileCardProps {
   profile: Profile;
+  activeVideoId: string | null;
+  onActivateVideo: (videoId: string) => void;
 }
 
-/**
- * One profile's card in the public feed (`FeedPage`) — not to be confused
- * with `ProfileCard`, the recruiter catalogue's own card for
- * `CatalogueProfile`. The two solve different problems for different
- * audiences (this one is public, has no favourite/contact actions, and
- * renders a `Profile` DTO rather than a catalogue row) and were built
- * independently; this one was renamed from `ProfileCard` specifically to
- * stop colliding with that one on merge, not because either was wrong.
- *
- * Shows its primary video via `VideoEmbed` (which already handles both
- * `EXTERNAL_LINK` and `UPLOAD` uniformly, so this component doesn't need
- * to care which one it's showing) and its certification state via
- * `CertificationBadge`.
- *
- * Only the headline is wrapped in the link to `/profiles/{id}` (the public
- * profile page), not the whole card — the video itself is independently
- * keyboard-focusable and operable (see `VideoEmbed`), and putting a
- * focusable element inside an `<a>` produces a confusing, invalid nested
- * focus target. This keeps "click the video to play it" and "click the
- * title to see the full profile" as two clearly separate actions.
- */
-export function PublicProfileCard({ profile }: PublicProfileCardProps): JSX.Element {
-  const primaryVideo = profile.videos[0];
+/** One profile on the public feed: its first approved video, who they are,
+ *  where, and the certification state in words. */
+export const PublicProfileCard = ({
+  profile,
+  activeVideoId,
+  onActivateVideo,
+}: PublicProfileCardProps) => {
+  const [primaryVideo] = profile.videos;
+  const fullName = `${profile.firstName} ${profile.lastName}`;
+  const hiddenSkills = profile.skills.length - VISIBLE_SKILLS;
 
   return (
-    <article className={styles.card}>
-      <div className={styles.media}>
-        {primaryVideo ? (
-          <VideoEmbed type={primaryVideo.type} url={primaryVideo.url} />
-        ) : (
-          <p className={styles.noVideo}>Aucune vidéo pour le moment</p>
-        )}
-      </div>
+    <article className="card feed-card" aria-label={`Profil de ${fullName}`}>
+      {primaryVideo ? (
+        <VideoPlayer
+          video={primaryVideo}
+          active={activeVideoId === primaryVideo.id}
+          onActivate={onActivateVideo}
+        />
+      ) : (
+        <p className="video-placeholder">Aucune vidéo pour le moment</p>
+      )}
 
-      <div className={styles.body}>
-        <Link to={`/profiles/${profile.id}`} className={styles.link}>
-          <h3 className={styles.headline}>{profile.headline ?? profile.sector}</h3>
-        </Link>
-        <p className={styles.meta}>
-          {profile.sector} · {profile.location}
+      <div className="feed-card__body">
+        <div>
+          <Link className="feed-card__name" to={`/profils/${profile.id}`}>
+            {fullName}
+          </Link>
+          {profile.headline && <p className="feed-card__headline">{profile.headline}</p>}
+        </div>
+
+        <p className="meta">
+          <span>{profile.sector}</span>
+          <span aria-hidden="true">·</span>
+          <span>{profile.location}</span>
         </p>
+
         <CertificationBadge
           status={profile.certificationStatus}
           badge={profile.certificationBadge ?? null}
           score={profile.certificationScore ?? null}
         />
+
+        {profile.skills.length > 0 && (
+          <ul className="chip-list" aria-label="Compétences">
+            {profile.skills.slice(0, VISIBLE_SKILLS).map((skill) => (
+              <li className="chip" key={skill.id}>
+                {skill.skillName}
+              </li>
+            ))}
+            {hiddenSkills > 0 && <li className="chip">+{hiddenSkills}</li>}
+          </ul>
+        )}
       </div>
     </article>
   );
-}
+};

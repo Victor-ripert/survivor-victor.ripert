@@ -3,6 +3,10 @@ import { CertificationStatus, ModerationStatus, SkillLevel } from '@prisma/clien
 export interface ApplicantSeed {
   firstName: string;
   lastName: string;
+  /** ISO date. Every demo account carries one (brief §7.9.1 names the seed
+   *  accounts explicitly); exactly one fixture is a minor, to show that a
+   *  16-18 profile stays out of the public feed. */
+  birthDate: string;
   headline: string;
   bio: string;
   location: string;
@@ -26,6 +30,7 @@ const video = (title: string, id: string, duration: number) => ({
 export const applicants: ApplicantSeed[] = [
   {
     firstName: 'Amina',
+    birthDate: '1998-03-14',
     lastName: 'Berthier',
     headline: 'Développeuse front-end React',
     bio: "Trois ans d'alternance en agence, à la recherche d'un premier CDI.",
@@ -44,6 +49,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Marc',
+    birthDate: '1979-11-02',
     lastName: 'Delaunay',
     headline: 'Technicien de maintenance industrielle',
     bio: 'Quinze ans en maintenance de lignes de production, habilitations électriques à jour.',
@@ -61,6 +67,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Sofia',
+    birthDate: '1988-06-21',
     lastName: 'Nguyen',
     headline: 'Chargée de gestion administrative',
     bio: "Reconversion après dix ans dans l'hôtellerie, formée en comptabilité générale.",
@@ -79,6 +86,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Yanis',
+    birthDate: '2001-01-09',
     lastName: 'Oubrahim',
     headline: 'Développeur back-end Node.js',
     bio: 'Autodidacte, deux projets open source en production, disponible immédiatement.',
@@ -95,6 +103,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Claire',
+    birthDate: '1999-09-30',
     lastName: 'Fontaine',
     headline: 'Cheffe de projet junior',
     bio: 'Master en management de projet, expérience associative en coordination.',
@@ -112,6 +121,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Idriss',
+    birthDate: '1993-04-17',
     lastName: 'Kamara',
     headline: 'Préparateur de commandes CACES 1-3-5',
     bio: 'Expérience en entrepôt frigorifique, permis cariste à jour.',
@@ -124,6 +134,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Élise',
+    birthDate: '1990-12-05',
     lastName: 'Marchand',
     headline: 'Cheffe de partie',
     bio: 'Cuisine de brasserie et restauration collective, sept ans de métier.',
@@ -141,6 +152,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Thomas',
+    birthDate: '1996-07-23',
     lastName: 'Rivière',
     headline: 'Analyste de données junior',
     bio: 'Reconversion via une formation intensive en data, à l’aise en SQL et Python.',
@@ -158,6 +170,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Nadia',
+    birthDate: '1991-02-11',
     lastName: 'Lefèvre',
     headline: 'Rédactrice web SEO',
     bio: 'Freelance pendant quatre ans, cherche un poste salarié en interne.',
@@ -173,6 +186,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Bastien',
+    birthDate: '1994-10-28',
     lastName: 'Colin',
     headline: 'Conseiller clientèle',
     bio: 'Cinq ans en centre de relation client, formé aux outils CRM.',
@@ -188,6 +202,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Leïla',
+    birthDate: '2000-05-19',
     lastName: 'Sassi',
     headline: 'Designer UI junior',
     bio: 'Portfolio orienté accessibilité, formée en design de services publics.',
@@ -205,6 +220,7 @@ export const applicants: ApplicantSeed[] = [
   },
   {
     firstName: 'Hugo',
+    birthDate: '1987-08-08',
     lastName: 'Ferrand',
     headline: 'Profil retiré par la modération',
     bio: 'Contenu signalé, conservé pour illustrer le filtrage côté recruteur.',
@@ -214,5 +230,18 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.REJECTED,
     moderationStatus: ModerationStatus.REJECTED,
     videos: [],
+  },
+  {
+    firstName: 'Lucas',
+    lastName: 'Morel',
+    birthDate: '2009-05-12',
+    headline: 'Apprenti boulanger, cherche un contrat pro',
+    bio: 'Dix-sept ans, en CAP boulangerie. Disponible en alternance dès septembre.',
+    location: 'Nantes',
+    sector: 'Restauration',
+    skills: [['Cuisine', SkillLevel.BEGINNER]],
+    certificationStatus: CertificationStatus.PENDING,
+    moderationStatus: ModerationStatus.APPROVED,
+    videos: [video('Mon premier fournil', '9bZkp7q19f0', 75)],
   },
 ];

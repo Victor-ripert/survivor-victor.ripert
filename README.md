@@ -4,6 +4,12 @@ Plateforme JEB de valorisation des compétences pour demandeurs d'emploi.
 
 **Référence** : JEB/DNI/2026-003 | **Équipe** : 4 personnes
 
+> **Remise du 3 septembre 2026.** Deux courriels du cabinet ajoutent une remise à 12h00 (Ministre) et
+> une à 12h30 (communication), avant un journal télévisé à 13h00. Le plan de la matinée est dans
+> [`REPARTITION.md`](REPARTITION.md) §0, les pièces dans [`docs/livrables/`](docs/livrables/), et
+> l'état chiffré du produit dans
+> [`docs/livrables/recensement-du-3-septembre.md`](docs/livrables/recensement-du-3-septembre.md).
+
 ---
 
 ## 📋 Architecture
@@ -45,12 +51,14 @@ Chaque propriétaire livre ses routes Express _et_ les pages React qui les conso
 ## 🔧 Stack Technique
 
 - **Runtime** : Node.js ≥ 20
-- **Backend** : Express 5 + TypeScript
+- **Language** : TypeScript 7 (compilateur natif), l'API 6.x conservée pour ts-jest et ESLint
+- **Backend** : Express 5
 - **Frontend** : React 19 + Vite
 - **Database** : PostgreSQL + Prisma 7 (via un driver adapter — voir `packages/db/prisma.config.ts`)
 - **Testing** : Jest + Supertest (`api`), Jest + Testing Library (`web`)
 - **Orchestration** : Turborepo 2
-- **CI/CD** : GitHub Actions
+- **CI/CD** : GitHub Actions — `.github/workflows/ci.yml` enchaîne migrations, seed, build, lint,
+  format et tests sur PostgreSQL 16, et publie l'artefact de build (tâche JT-0, faite).
 - **Sécurité** : Helmet, bcrypt, JWT, rate-limiting, validation Zod
 
 > **Deux compilateurs TypeScript cohabitent volontairement.** `typescript` est
@@ -186,15 +194,19 @@ npm run db:seed
 npm run db:studio -w @profils-actifs/db   # GUI dans le navigateur
 ```
 
-Le seed crée un jeu de démonstration (candidats, recruteurs, un admin, compétences,
-vidéos, historique d'interactions) avec des upserts déterministes — rejouable sans
-créer de doublons, et refuse de tourner avec `NODE_ENV=production`.
+Le seed crée un jeu de démonstration (13 candidats dont un mineur, 2 recruteurs, 1 administrateur, 100 questions,
+compétences, vidéos et un historique d'interactions étalé sur 30 jours). Il est
+idempotent et refuse de s'exécuter avec `NODE_ENV=production`.
 
-| Rôle           | Compte                                 | Mot de passe   |
-| -------------- | -------------------------------------- | -------------- |
-| Administrateur | `admin@profils-actifs.fr`              | `Password123!` |
-| Recruteur      | `recruteur@profils-actifs.fr`          | `Password123!` |
-| Candidat       | `amina.berthier@example.fr` (+ autres) | `Password123!` |
+| Rôle                     | Compte                                    | Mot de passe   |
+| ------------------------ | ----------------------------------------- | -------------- |
+| Administrateur           | `admin@profils-actifs.fr`                 | `Password123!` |
+| Recruteur                | `recruteur@profils-actifs.fr`             | `Password123!` |
+| Candidat                 | `amina.berthier@example.fr` (+ 12 autres) | `Password123!` |
+| Candidat mineur (17 ans) | `lucas.morel@example.fr`                  | `Password123!` |
+
+Un second compte recruteur, `recruteur2@profils-actifs.fr`, existe pour tester l'isolation entre
+recruteurs : **il n'a aucun historique**, donc ne le donnez pas pour une démonstration.
 
 ### Tests
 
@@ -258,16 +270,26 @@ supprime directement la ligne `Video`, détaillé dans
 
 ### Parcours web
 
-| Page                           | Route                     | Rôles            |
-| ------------------------------ | ------------------------- | ---------------- |
-| Tableau de bord recruteur      | `/recruteur`              | RECRUITER, ADMIN |
-| Catalogue des profils          | `/recruteur/catalogue`    | RECRUITER, ADMIN |
-| Ma sélection (favoris)         | `/recruteur/favoris`      | RECRUITER, ADMIN |
-| Historique des interactions    | `/recruteur/interactions` | RECRUITER, ADMIN |
-| Tableau de bord administrateur | `/admin`                  | ADMIN            |
+| Page                             | Route                        | Rôles             |
+| -------------------------------- | ---------------------------- | ----------------- |
+| Fil public des profils           | `/`                          | tous, sans compte |
+| Profil public                    | `/profils/:id`               | tous, sans compte |
+| Inscription / connexion          | `/inscription`, `/connexion` | —                 |
+| Mon profil (vidéos, compétences) | `/mon-profil`                | APPLICANT         |
+| Questionnaire de certification   | `/certification`             | APPLICANT         |
+| Notifications                    | `/notifications`             | connectés         |
+| Tableau de bord recruteur        | `/recruteur`                 | RECRUITER, ADMIN  |
+| Catalogue des profils            | `/recruteur/catalogue`       | RECRUITER, ADMIN  |
+| Ma sélection (favoris)           | `/recruteur/favoris`         | RECRUITER, ADMIN  |
+| Historique des interactions      | `/recruteur/interactions`    | RECRUITER, ADMIN  |
+| Tableau de bord administrateur   | `/admin`                     | ADMIN             |
+| Modération des profils           | `/admin/moderation-profils`  | ADMIN             |
+| Modération des vidéos            | `/admin/moderation-videos`   | ADMIN             |
+| Questionnaire (barème)           | `/admin/questionnaire`       | ADMIN             |
 
 Les filtres du catalogue vivent dans l'URL (`?sector=...&skills=React,SQL&sort=score`) :
-une recherche est partageable, marquable et restaurée par le bouton retour.
+une recherche est partageable, marquable et restaurée par le bouton retour. Le fil public,
+lui, n'expose aucun filtre.
 
 ### Endpoints
 
@@ -304,8 +326,8 @@ changement que toute route/payload/code de retour qui bouge côté implémentati
 C'est la seule référence exhaustive des routes ; ce README ne duplique pas la liste
 complète pour éviter qu'elle diverge du contrat réel.
 
-Il n'y a pas de Swagger UI (`/api/docs`) — le contrat se lit directement dans le
-fichier ou via n'importe quel client OpenAPI pointé dessus.
+**Accès** : Swagger UI est servi sur `http://localhost:3000/api/docs/` (assets embarqués, aucun
+CDN), et le contrat brut sur `/api/docs/openapi.yaml`.
 
 **Principes** : RESTful, stateless (JWT), pagination à 20 items/page (server-side,
 `resolvePageRequest`/`buildPaginationMeta` dans `@profils-actifs/shared`), erreurs
@@ -429,6 +451,34 @@ Exemple : `feat(auth): add age verification to registration`
 - **Florine Pontaillac** — Conseillère juridique
 - **Thomas Vignal** — Conseiller numérique
 - **Benjamin Sellami** — Conseiller en communication
+
+---
+
+## 📅 Timeline
+
+| Date                   | Événement                | Attendu                                                                          |
+| ---------------------- | ------------------------ | -------------------------------------------------------------------------------- |
+| J1                     | Socle commun             | DB, API spec, auth middleware, CI/CD                                             |
+| J2-J4                  | Développement parallèle  | Domaines A, B, C (partiel)                                                       |
+| **Vendredi S1**        | **Revue de projet**      | **Feed + profils + questionnaire partiel + présentation**                        |
+| **Jeu. 3 sept. 12h00** | **Remise au Ministre**   | Artefact de build sur `main`, données, prototype documenté, guide, vidéo, plan B |
+| **Jeu. 3 sept. 12h30** | **Deck du cabinet**      | 8 slides en PDF, six captures de l'application du matin                          |
+| **Jeu. 3 sept. 13h00** | **Journal télévisé**     | Hors de notre main — la vidéo et le plan B y vont à notre place                  |
+| **Ven. 4 sept. matin** | **Présentation cabinet** | 6 minutes, deux voix, répétée une fois                                           |
+| **Ven. 4 sept. 12h00** | **Dépôt légal**          | Registre, CGU, accessibilité, notes                                              |
+| **Ven. 4 sept. 17h00** | **Dépôt technique**      | Schéma, index, preuves, Swagger                                                  |
+| **Jeudi S2**           | **Revue technique**      | Code quality, tests, docs                                                        |
+| **Vendredi S2**        | **Keynote**              | Démo finale + rétrospective                                                      |
+
+---
+
+## 🤝 Collaboration
+
+- **Monorepo avec Turborepo** : `npm run dev` orchestre tous les services
+- **API spec d'abord** : pas de surprise d'intégration
+- **Daily standups** : 15 min, blocages + avancement
+- **Branche de feature** : `git checkout -b feat/domain-description`
+- **PRs** : 1 reviewer minimum avant merge
 
 ---
 

@@ -1,4 +1,4 @@
-import { Prisma, type CertificationAttempt } from '@prisma/client';
+import { Prisma, type Answer, type CertificationAttempt } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
 import { forbidden, notFound } from '../../utils/http-error.js';
 
@@ -8,6 +8,16 @@ export const attemptNotFound = () => notFound('Tentative de certification introu
 export const attemptForbidden = () => forbidden('Cette tentative ne vous appartient pas');
 
 const MAX_SERIALIZATION_RETRIES = 3;
+
+/** An attempt as the candidate may see it. `answers` is not optional: the
+ *  questionnaire restores a resumed session from it, so an attempt handed back
+ *  without it silently loses the candidate's progress. */
+export type OpenAttempt = CertificationAttempt & { answers: Omit<Answer, 'pointsEarned'>[] };
+
+/** Points are withheld while the attempt is still open — the same rule
+ *  `getAttemptForUser` applies, and for the same reason. */
+const withoutPoints = (answers: Answer[]): Omit<Answer, 'pointsEarned'>[] =>
+  answers.map(({ pointsEarned: _pointsEarned, ...rest }) => rest);
 
 // The schema deliberately has no DB constraint for "at most one IN_PROGRESS
 // attempt per user" (see the comment on CertificationAttempt) — it's an
@@ -19,17 +29,26 @@ const MAX_SERIALIZATION_RETRIES = 3;
 // and the retry will see the other transaction's now-committed row.
 export const startOrResumeAttempt = async (
   userId: string,
-): Promise<{ attempt: CertificationAttempt; created: boolean }> => {
+): Promise<{ attempt: OpenAttempt; created: boolean }> => {
   for (let retry = 0; retry < MAX_SERIALIZATION_RETRIES; retry++) {
     try {
       return await prisma.$transaction(
         async (tx) => {
           const existing = await tx.certificationAttempt.findFirst({
             where: { userId, status: 'IN_PROGRESS' },
+            include: { answers: { orderBy: { createdAt: 'asc' } } },
           });
-          if (existing) return { attempt: existing, created: false };
+          if (existing) {
+            return {
+              attempt: { ...existing, answers: withoutPoints(existing.answers) },
+              created: false,
+            };
+          }
 
-          const created = await tx.certificationAttempt.create({ data: { userId } });
+          const created = await tx.certificationAttempt.create({
+            data: { userId },
+            include: { answers: true },
+          });
 
           // The profile mirrors the questionnaire's state so the candidate's
           // space and the catalogue read "in progress" without a join; a

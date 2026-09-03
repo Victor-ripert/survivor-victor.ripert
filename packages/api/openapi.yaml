@@ -250,7 +250,9 @@ components:
         completedAt:
           type: string
           format: date-time
-      required: [id, userId, status, startedAt]
+      # `answers` is always present, empty array included: the questionnaire
+      # restores a resumed session from it.
+      required: [id, userId, status, startedAt, answers]
 
     Answer:
       type: object

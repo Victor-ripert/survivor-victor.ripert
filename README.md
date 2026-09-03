@@ -2,54 +2,63 @@
 
 Plateforme JEB de valorisation des compétences pour demandeurs d'emploi.
 
-**Référence** : JEB/DNI/2026-003 | **Durée** : 2 semaines | **Équipe** : 4 personnes
+**Référence** : JEB/DNI/2026-003 | **Équipe** : 4 personnes
 
 ---
 
 ## 📋 Architecture
 
-Monorepo Turborepo avec 4 packages modulaires :
+Monorepo Turborepo avec 4 packages :
 
 ```
 profils-actifs/
 ├── packages/
-│   ├── api/              (Domain A, C, D) - Backend Express TypeScript
-│   ├── web/              (Domain B, D) - Frontend React TypeScript
-│   ├── shared/           - Types, utilities partagés
-│   └── db/               (Domain C) - Prisma schema & migrations
-├── package.json          (root workspace)
-├── turbo.json            (orchestration)
-└── README.md (this file)
+│   ├── api/              - Backend Express + TypeScript
+│   ├── web/               - Frontend React + Vite
+│   ├── shared/             - Types, constantes et helpers partagés
+│   └── db/                - Prisma schema, migrations, seed
+├── docs/legal/            - Notes de conformité (âge, consentement)
+├── package.json           (root workspace)
+├── turbo.json              (orchestration)
+└── README.md
 ```
 
-**Approche** : Chaque package possède front + back (verticale fonctionnelle, pas par couche). Évite les blocages entre équipes.
+**Approche** : chaque domaine fonctionnel possède son bout de code front *et* back
+(verticale, pas par couche) — voir la table ci-dessous. Ça évite les blocages entre
+équipes sur un projet de deux semaines.
 
 ---
 
 ## 🎯 Domaines Verticaux
 
-| Domain | Propriétaire           | Responsabilité                                                   | Livrable S1              |
-| ------ | ---------------------- | ---------------------------------------------------------------- | ------------------------ |
-| **A**  | Auth & Notifications   | Inscription/login 3 rôles, middleware permissions, notifications | Socle API contractuel    |
-| **B**  | Profils & Vidéo        | CRUD profil, vidéos (iframe), feed paginé, modération            | Feed + 5 profils fictifs |
-| **C**  | Questionnaire          | Questions, réponses, sauvegarde, scoring, badge                  | Questionnaire partiel    |
-| **D**  | Recruteur & Dashboards | Catalogue, filtrage, favoris, tableaux bord                      | Démarrage possible S2    |
+| Domaine | Propriétaire           | Responsabilité                                                                    |
+| ------- | ----------------------- | ---------------------------------------------------------------------------------- |
+| **A**   | Auth & Notifications    | 3 rôles, inscription/connexion, middleware de permissions, notification du candidat lors d'une interaction recruteur — arbitre le contrat d'API en cas de désaccord entre domaines |
+| **B**   | Profils & Vidéo         | CRUD profil, vidéos en iframe, page profil publique, feed paginé, modération       |
+| **C**   | Questionnaire           | Questions/options/pondérations, sauvegarde et reprise, scoring, badge — chemin critique du projet |
+| **D**   | Recruteur & Dashboards  | Catalogue + filtrage, favoris, prise de contact, tableaux de bord recruteur/admin  |
 
-⚠️ **Chemin critique** : Questionnaire (C) — besoin de renfort fin S1.
+Chaque propriétaire livre ses routes Express *et* les pages React qui les consomment.
 
 ---
 
 ## 🔧 Stack Technique
 
 - **Runtime** : Node.js ≥ 20
-- **Language** : TypeScript 5.3+
-- **Backend** : Express 4
-- **Frontend** : React 18 + Vite
-- **Database** : PostgreSQL + Prisma
-- **Testing** : Jest + Supertest
-- **Orchestration** : Turborepo 2.0
+- **Backend** : Express 5 + TypeScript
+- **Frontend** : React 19 + Vite
+- **Database** : PostgreSQL + Prisma 7 (via un driver adapter — voir `packages/db/prisma.config.ts`)
+- **Testing** : Jest + Supertest (`api`), Jest + Testing Library (`web`)
+- **Orchestration** : Turborepo 2
 - **CI/CD** : GitHub Actions
-- **Security** : Helmet, bcrypt, JWT, rate-limiting
+- **Sécurité** : Helmet, bcrypt, JWT, rate-limiting, validation Zod
+
+> **Deux compilateurs TypeScript cohabitent volontairement.** `typescript` est
+> aliasé sur `@typescript/typescript6` (nécessaire pour ts-jest et
+> typescript-eslint, qui n'ont pas encore rattrapé l'API programmatique de TS7),
+> et le vrai compilateur natif 7.x est aliasé sur `typescript-native`. Un `tsc`
+> nu est donc ambigu dans ce workspace : chaque `build` de package appelle
+> `node ../../scripts/tsc-native.js`, jamais `tsc` directement.
 
 ---
 
@@ -60,18 +69,20 @@ profils-actifs/
 ```
 api/
 ├── src/
-│   ├── index.ts              - Entry point
-│   ├── server.ts             - Express app setup
-│   ├── middleware/           - Auth, permissions, error handling
-│   ├── routes/               - API endpoints (auth, profiles, etc)
-│   ├── services/             - Business logic
-│   ├── controllers/          - Route handlers
-│   ├── validators/           - Input validation
-│   └── utils/
-├── test/                     - Jest tests
+│   ├── app.ts                - Assemble l'app Express (middlewares, routers) — testable sans écouter
+│   ├── index.ts               - Point d'entrée : importe app.ts et appelle app.listen
+│   ├── config/                - env.ts (validation Zod des variables), prisma.ts, security.ts
+│   ├── middleware/             - auth, rate-limit, gestion d'erreur uniforme
+│   ├── routes/                 - montage des routers par domaine
+│   ├── controllers/            - handlers de route, orchestration pure
+│   ├── services/                - logique métier, seul endroit qui parle à Prisma
+│   ├── validators/               - schémas Zod (validators/common.ts pour les primitives partagées)
+│   ├── types/                    - extension globale de Request (req.user)
+│   └── utils/                     - http-error.ts, current-user.ts, etc.
+├── test/                       - tests d'intégration Supertest
+├── openapi.yaml                 - le contrat d'API
 ├── package.json
-├── tsconfig.json
-└── .env.example
+└── tsconfig.json
 ```
 
 ### `packages/web/`
@@ -79,16 +90,16 @@ api/
 ```
 web/
 ├── src/
-│   ├── main.tsx              - Entry point
-│   ├── App.tsx
-│   ├── components/           - Reusable UI components
-│   ├── pages/                - Page components
-│   ├── hooks/                - Custom React hooks
-│   ├── context/              - Context providers
-│   ├── services/             - API client, auth
-│   ├── types/                - TypeScript types
+│   ├── main.tsx                - Point d'entrée
+│   ├── App.tsx                  - Déclaration des routes (React Router)
+│   ├── components/              - UI réutilisable
+│   ├── pages/                    - Un dossier par domaine (Auth, Profile, Certification, Recruiter, Admin)
+│   ├── context/                  - AuthContext (session, token, login/register/logout)
+│   ├── hooks/                     - useAuth, useAsyncResource, etc.
+│   ├── services/                   - client API (axios), stockage du token
+│   ├── validators/                  - schémas Zod côté client
+│   ├── types/                        - types partagés avec les réponses API
 │   └── utils/
-├── test/                     - Jest + React Testing Library
 ├── index.html
 ├── vite.config.ts
 ├── package.json
@@ -100,28 +111,33 @@ web/
 ```
 shared/
 ├── src/
-│   ├── types/                - Shared TS interfaces
-│   │   ├── user.ts
-│   │   ├── profile.ts
-│   │   ├── certification.ts
-│   │   └── index.ts
-│   ├── constants/            - Enums, constants
-│   └── utils/                - Helper functions
+│   ├── constants/           - MIN_APPLICANT_AGE, CONSENT_TEXT_VERSION, pagination, etc.
+│   ├── types/                - interfaces partagées (User, Profile, API...)
+│   ├── utils/                 - helpers purs (pagination, séries)
+│   ├── node/                   - loadRepoEnv() et tout ce qui touche `node:` — voir encadré ci-dessous
+│   └── index.ts                - point d'entrée principal (browser-safe)
 ├── package.json
 └── tsconfig.json
 ```
+
+> **`@profils-actifs/shared` reste 100% browser-safe** — aucun import `node:`, aucune
+> dépendance à `@prisma/client` sur le point d'entrée principal. Les helpers qui ont
+> besoin de Node (comme `loadRepoEnv`, utilisé par l'API, `prisma.config.ts`, le seed
+> et Jest) vivent séparément sous `@profils-actifs/shared/node`, pour que le bundle
+> web ne tire jamais accidentellement du code Node dans le navigateur.
 
 ### `packages/db/`
 
 ```
 db/
 ├── prisma/
-│   ├── schema.prisma         - Database schema
-│   └── migrations/           - Auto-generated by Prisma
+│   ├── schema.prisma         - Schéma de base
+│   └── migrations/            - générées par Prisma, versionnées
 ├── src/
-│   └── seed.ts               - Database seeding
-├── package.json
-└── .env.example
+│   ├── client.ts               - instance PrismaClient dédiée aux scripts (seed, CLI)
+│   └── seed.ts, seed-data/      - jeu de données de démo, upserts idempotents
+├── prisma.config.ts             - config CLI Prisma 7 (schema path, DATABASE_URL) — charge l'env lui-même
+└── package.json
 ```
 
 ---
@@ -132,147 +148,169 @@ db/
 
 ```bash
 npm install
-npm run build
 ```
+
+`postinstall` compile automatiquement `@profils-actifs/shared` puis génère le client
+Prisma — un clone frais a tout ce qu'il faut sans étape manuelle.
 
 ### Développement
 
 ```bash
-# Démarrer tous les services (API + Web + watch)
+# Démarrer API + Web en parallèle (watch mode)
 npm run dev
 
-# Lancer API seule
+# Un seul package
 npm run dev -w @profils-actifs/api
-
-# Lancer Web seule
 npm run dev -w @profils-actifs/web
 ```
 
-| Service        | URL                              |
-| -------------- | -------------------------------- |
-| Front          | http://localhost:5173            |
-| API            | http://localhost:3000/api        |
-| Sonde de santé | http://localhost:3000/api/health |
-| pgAdmin        | http://localhost:5050            |
+| Service        | URL                               |
+| -------------- | ---------------------------------- |
+| Front          | http://localhost:5173              |
+| API            | http://localhost:3000/api          |
+| Sonde de santé | http://localhost:3000/api/health   |
+| pgAdmin        | http://localhost:5050              |
 
-Prérequis : `docker compose up -d` puis `npm run db:migrate && npm run db:seed`
+Prérequis : `docker compose up -d`, puis `npm run db:migrate && npm run db:seed`
 (voir [Database](#database)). L'API refuse de démarrer sans `.env.local` — copiez
-`.env.example`.
+`.env.example` et adaptez si besoin. La validation se fait avec Zod au démarrage
+(`config/env.ts`) : toute variable manquante ou mal formée liste précisément ce qui
+cloche, plutôt qu'un plantage silencieux plus tard.
 
 ### Database
 
 ```bash
-# Démarrer PostgreSQL (port 5432) et pgAdmin (port 5050)
-docker compose up -d
-
-# Créer/migrer la DB
-npm run db:migrate
-
-# Seeder la DB (données fictives)
+docker compose up -d       # Postgres :5432, pgAdmin :5050
+npm run db:migrate          # prisma migrate dev, après toute modif de schema.prisma
 npm run db:seed
-
-# Ouvrir Prisma Studio (GUI)
-npm run db:studio
+npm run db:studio -w @profils-actifs/db   # GUI dans le navigateur
 ```
 
-Le seed crée un jeu de démonstration (12 candidats, 2 recruteurs, 1 administrateur,
-compétences, vidéos et un historique d'interactions étalé sur 30 jours). Il est
-idempotent et refuse de s'exécuter avec `NODE_ENV=production`.
+Le seed crée un jeu de démonstration (candidats, recruteurs, un admin, compétences,
+vidéos, historique d'interactions) avec des upserts déterministes — rejouable sans
+créer de doublons, et refuse de tourner avec `NODE_ENV=production`.
 
-| Rôle           | Compte                                    | Mot de passe   |
-| -------------- | ----------------------------------------- | -------------- |
-| Administrateur | `admin@profils-actifs.fr`                 | `Password123!` |
-| Recruteur      | `recruteur@profils-actifs.fr`             | `Password123!` |
-| Candidat       | `amina.berthier@example.fr` (+ 11 autres) | `Password123!` |
+| Rôle           | Compte                                 | Mot de passe   |
+| -------------- | --------------------------------------- | --------------- |
+| Administrateur | `admin@profils-actifs.fr`               | `Password123!`  |
+| Recruteur      | `recruteur@profils-actifs.fr`           | `Password123!`  |
+| Candidat       | `amina.berthier@example.fr` (+ autres)  | `Password123!`  |
 
 ### Tests
 
 ```bash
-# Tous les tests
-npm run test
-
-# Watch mode
-npm run test -- --watch
-
-# Coverage
+npm run test                 # tout le monorepo (via Turborepo)
 npm run test -- --coverage
+
+# Un seul package
+npm test -w @profils-actifs/api
+
+# Un seul fichier / un seul test (Jest)
+npm test -w @profils-actifs/api -- src/services/notifications.test.ts
+npm test -w @profils-actifs/api -- -t "nom du test"
 ```
+
+Une partie de la suite `api` fait des tests d'intégration contre une vraie base
+partagée (`maxWorkers: 1` dans `jest.config.js`) — Postgres doit être up et migré
+avant de lancer les tests.
 
 ### Linting & Formatting
 
 ```bash
-# Lint
 npm run lint
-
-# Format code
-npm run format
+npm run format          # prettier --write sur tout le repo
+npm run format:check
 ```
+
+---
+
+## 🔐 Authentification & inscription (Domain A)
+
+JWT stateless, bearer token (`Authorization: Bearer <token>`), expiration 7 jours.
+Mots de passe hashés en bcrypt (12 tours de sel) — voir `packages/api/src/services/password.ts`.
+
+| Méthode | Route                 | Détail                                                                                                                                  |
+| ------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| POST    | `/api/auth/register`   | `email`, `password` (8+ car.), `firstName`, `lastName`, `birthDate`, `role` (`APPLICANT` ou `RECRUITER` uniquement — un compte `ADMIN` n'est jamais auto-inscrit) |
+| POST    | `/api/auth/login`      | `email`, `password`                                                                                                                        |
+| GET     | `/api/auth/me`         | Utilisateur courant (route protégée)                                                                                                        |
+
+**Vérification d'âge** : l'inscription est refusée sans `birthDate`, et si l'âge
+calculé est inférieur à `MIN_APPLICANT_AGE` (16 ans, `@profils-actifs/shared`). Les
+comptes créés avant cette vérification (jeux de démo compris) ne sont pas affectés
+rétroactivement — voir `docs/legal/accounts-without-birthdate.md`.
+
+Côté web : `/inscription` et `/connexion` (hors du layout applicatif authentifié),
+gérées par `AuthContext` (`login`, `register`, `logout`).
+
+### Consentement vidéo
+
+La publication d'une vidéo journalise le consentement (`acceptedAt`,
+`consentTextVersion` sur `Video`) plutôt qu'une simple case cochée — voir
+`packages/api/src/services/video-consent.ts`. Les vidéos étant intégrées en iframe
+(YouTube/Vimeo), il n'existe aucun fichier propre à la plateforme : la révocation
+supprime directement la ligne `Video`, détaillé dans
+`docs/legal/video-consent-revocation.md`.
 
 ---
 
 ## 🧑‍💼 Espace recruteur & tableaux de bord (Domain D)
 
-### Parcours
+### Parcours web
 
-| Page                           | Route                     | Rôles            |
-| ------------------------------ | ------------------------- | ---------------- |
-| Tableau de bord recruteur      | `/recruteur`              | RECRUITER, ADMIN |
-| Catalogue des profils          | `/recruteur/catalogue`    | RECRUITER, ADMIN |
-| Ma sélection (favoris)         | `/recruteur/favoris`      | RECRUITER, ADMIN |
-| Historique des interactions    | `/recruteur/interactions` | RECRUITER, ADMIN |
-| Tableau de bord administrateur | `/admin`                  | ADMIN            |
+| Page                            | Route                      | Rôles            |
+| -------------------------------- | ---------------------------- | ------------------ |
+| Tableau de bord recruteur        | `/recruteur`                 | RECRUITER, ADMIN   |
+| Catalogue des profils            | `/recruteur/catalogue`       | RECRUITER, ADMIN   |
+| Ma sélection (favoris)           | `/recruteur/favoris`         | RECRUITER, ADMIN   |
+| Historique des interactions      | `/recruteur/interactions`    | RECRUITER, ADMIN   |
+| Tableau de bord administrateur   | `/admin`                     | ADMIN              |
 
 Les filtres du catalogue vivent dans l'URL (`?sector=...&skills=React,SQL&sort=score`) :
 une recherche est partageable, marquable et restaurée par le bouton retour.
 
 ### Endpoints
 
-| Méthode    | Route                                    | Rôle             | Rôle métier                                       |
-| ---------- | ---------------------------------------- | ---------------- | ------------------------------------------------- |
-| GET        | `/api/recruiter/catalogue`               | RECRUITER, ADMIN | Liste paginée et filtrée des profils              |
-| GET        | `/api/recruiter/catalogue/facets`        | RECRUITER, ADMIN | Valeurs de filtres réellement disponibles         |
-| GET        | `/api/recruiter/favorites`               | RECRUITER, ADMIN | Catalogue restreint à la sélection                |
-| PUT/DELETE | `/api/recruiter/favorites/{applicantId}` | RECRUITER, ADMIN | Ajout/retrait d'un favori (idempotent)            |
-| GET        | `/api/recruiter/dashboard`               | RECRUITER, ADMIN | Statistiques du recruteur connecté                |
-| GET        | `/api/interactions`                      | Tous             | Interactions envoyées ou reçues, paginées         |
-| POST       | `/api/interactions`                      | RECRUITER, ADMIN | Consultation, favori ou prise de contact          |
-| PATCH      | `/api/interactions/{id}`                 | Tous             | `isViewed` (destinataire) / `isFavorite` (auteur) |
-| GET        | `/api/admin/dashboard`                   | ADMIN            | Statistiques plateforme                           |
+| Méthode    | Route                                    | Rôle métier                                       |
+| ---------- | ----------------------------------------- | --------------------------------------------------- |
+| GET        | `/api/recruiter/catalogue`               | Liste paginée et filtrée des profils                |
+| GET        | `/api/recruiter/catalogue/facets`        | Valeurs de filtres réellement disponibles           |
+| GET        | `/api/recruiter/favorites`               | Catalogue restreint à la sélection                  |
+| PUT/DELETE | `/api/recruiter/favorites/{applicantId}` | Ajout/retrait d'un favori (idempotent)              |
+| GET        | `/api/recruiter/dashboard`               | Statistiques du recruteur connecté                  |
+| GET        | `/api/interactions`                      | Interactions envoyées ou reçues, paginées           |
+| POST       | `/api/interactions`                      | Consultation, favori ou prise de contact            |
+| PATCH      | `/api/interactions/{id}`                 | `isViewed` (destinataire) / `isFavorite` (auteur)   |
+| GET        | `/api/admin/dashboard`                   | Statistiques plateforme                             |
 
 ### Règles métier
 
-- **Visibilité** : un profil rejeté par la modération ou porté par un compte désactivé
-  n'apparaît jamais dans le catalogue ; un profil en attente de modération reste visible,
-  pour qu'un retard de modération ne masque pas un candidat.
-- **Pas d'adresse e-mail dans le catalogue** : le recruteur passe par `POST /interactions`,
-  ce qui trace le contact et notifie le candidat.
-- **Consultations dédupliquées sur 24h** : les tableaux de bord comptent des personnes,
+- Un profil rejeté par la modération ou porté par un compte désactivé n'apparaît
+  jamais dans le catalogue ; un profil en attente de modération reste visible.
+- Pas d'adresse e-mail dans le catalogue : le recruteur passe par `POST /interactions`,
+  ce qui trace le contact et notifie le candidat (5 messages max par candidat / 24h).
+- Consultations dédupliquées sur 24h : les tableaux de bord comptent des personnes,
   pas des chargements de page.
-- **Seules les prises de contact notifient** le candidat, et elles sont plafonnées à
-  5 messages par candidat et par tranche de 24h.
-- **Les favoris ne sont pas supprimés** : le retrait bascule `isFavorite`, l'historique reste auditable.
-- **`isViewed` appartient au destinataire, `isFavorite` à l'auteur** : aucune des deux
-  parties ne peut écrire le champ de l'autre.
+- Les favoris ne sont pas supprimés : le retrait bascule `isFavorite`, l'historique
+  reste auditable. `isViewed` appartient au destinataire, `isFavorite` à l'auteur.
 
 ---
 
 ## 📋 Contrat d'API
 
-**Fichier** : `packages/api/openapi.yaml`
+**Fichier** : `packages/api/openapi.yaml` — tous les endpoints, payloads et réponses
+y sont écrits avant la première ligne de code métier, et mis à jour dans le même
+changement que toute route/payload/code de retour qui bouge côté implémentation.
+C'est la seule référence exhaustive des routes ; ce README ne duplique pas la liste
+complète pour éviter qu'elle diverge du contrat réel.
 
-L'API est documentée en OpenAPI 3.0. Tous les endpoints, payloads et réponses y sont définis avant la première ligne de code métier.
+Il n'y a pas de Swagger UI (`/api/docs`) — le contrat se lit directement dans le
+fichier ou via n'importe quel client OpenAPI pointé dessus.
 
-**Accès** : le contrat se lit directement dans `packages/api/openapi.yaml` (ou dans n'importe quel
-client OpenAPI pointé dessus). L'API ne sert pas encore de Swagger UI — il n'y a pas de route
-`/api/docs`.
-
-### Principes d'API
-
-- **RESTful** : verbes HTTP corrects (GET, POST, PATCH, DELETE)
-- **Stateless** : JWT authentication
-- **Versioning** : single version `v1` dans les routes si évolution majeure
-- **Pagination** : 20 items par page (hardcoded pour feed profils)
-- **Erreurs** : réponses structurées `{ error, message, statusCode }`
+**Principes** : RESTful, stateless (JWT), pagination à 20 items/page (server-side,
+`resolvePageRequest`/`buildPaginationMeta` dans `@profils-actifs/shared`), erreurs
+structurées `{ error, message, statusCode }` avec un code `error` faisant partie de
+l'union `ApiErrorCode` partagée — jamais inventé à la volée côté client ou serveur.
 
 ---
 
@@ -280,106 +318,70 @@ client OpenAPI pointé dessus). L'API ne sert pas encore de Swagger UI — il n'
 
 **Fichier** : `packages/db/prisma/schema.prisma`
 
-**Tables principales** :
-
-- `User` : identité + rôle (APPLICANT, RECRUITER, ADMIN)
-- `Profile` : profil professionnel applicant (bio, secteur, localisation)
-- `Video` : vidéos liées au profil (externe ou upload)
-- `Skill` / `ProfileSkill` : compétences
-- `CertificationQuestion` / `Answer` / `CertificationAttempt` : questionnaire + scoring
-- `Interaction` : contacts recruteur → applicant + favoris
-- `Notification` : notifications utilisateurs
-- `ModerationLog` : audit administrateur
+**Tables principales** : `User`, `Profile`, `Video`, `Skill`/`ProfileSkill`,
+`CertificationQuestion`/`CertificationOption`/`CertificationAttempt`/`Answer`,
+`Interaction`, `Notification`, `ModerationLog`.
 
 **Particularités** :
 
-- Soft deletes : utiliser `isModerated` flag plutôt que DELETE
-- Indexes sur recherches fréquentes : role, email, sector, location, certificationStatus
-- Foreign keys avec `onDelete: Cascade` : suppression en cascade sûre
-- Timestamps : `createdAt`, `updatedAt` sur toutes tables
+- Soft deletes : `Profile.moderationStatus` / `User.isActive` plutôt qu'un `DELETE`
+  — sauf les vidéos, supprimées pour de vrai à la révocation du consentement (voir
+  plus haut).
+- Certains champs existent en base avant que le contrat les expose (le schéma porte
+  un commentaire expliquant pourquoi à chaque fois) — la préservation de cet écart
+  documenté est volontaire, ne pas le faire disparaître silencieusement.
+- Clés étrangères en `onDelete: Cascade`, `createdAt`/`updatedAt` sur toutes les tables.
+- `ModerationLog` trace chaque changement de statut de modération — jamais un
+  écrasement silencieux de `Profile.moderationStatus`.
 
 ---
 
 ## 🔐 Sécurité
 
-### Authentication
-
-- **Mot de passe** : bcrypt (salt rounds: 12)
-- **JWT** : signé avec `JWT_SECRET`, expiry 7 jours
-- **Token dans headers** : `Authorization: Bearer <token>`
-
-### Permissions
-
-Middleware `requireRole()` sur chaque route :
-
-```typescript
-router.post('/profiles/:id/moderate', requireRole('ADMIN'), moderateProfile);
-```
-
-Trois rôles :
-
-- **APPLICANT** : CRUD profil/vidéos, passation certification
-- **RECRUITER** : consultation catalogue, favoris, contact
-- **ADMIN** : modération, gestion questionnaire, dashboards
-
-### Protection contre les attaques
-
-- **CORS** : `CORS_ORIGIN` env var, restrictif par défaut
+- **Mots de passe** : bcrypt, 12 tours de sel
+- **JWT** : signé avec `JWT_SECRET`, expiration 7 jours, `Authorization: Bearer <token>`
+- **Permissions** : `requireAuth` + `requireRole(...roles)` (variadique) sur chaque
+  route qui en a besoin — exemple : `requireRole('ADMIN')`
+- **CORS** : piloté par `CORS_ORIGIN`, restrictif par défaut
 - **Rate limiting** : 100 requêtes / 15 min par IP
-- **Input validation** : Joi/Zod sur tous les endpoints
-- **CSRF** : tokens sur mutations (si SPA, voir Helmet)
-- **SQL injection** : Prisma ORM échappe automatiquement
-- **XSS** : Helmet headers, React échappe par défaut
-- **Helmet** : security headers (CSP, X-Frame-Options, etc)
+- **Validation des entrées** : Zod sur tous les payloads, `Prisma` échappe les requêtes SQL
+- **XSS** : headers Helmet + échappement par défaut de React
+- **Auto-hébergé uniquement** : aucune dépendance à un service tiers payant ou à
+  compte propriétaire (pas de stockage objet managé, pas de base hébergée, pas
+  d'auth-as-a-service commercial) — l'app tourne entièrement en local depuis un
+  clone + les instructions d'installation
 
 ---
 
 ## 📊 Séquencement Livrables
 
-### Semaine 1 (Vendredi revue de projet)
+### Semaine 1 (revue de projet)
 
-**Socle commun (J1-J2)** : ✓ DB, API spec, auth, CI/CD
-**Domain A** (Auth) : ✓ Endpoints login/register
-**Domain B** (Profils) : ✓ Feed + 5 profils fictifs, création profil
-**Domain C** (Certification) : ⚠️ Questionnaire partiel (au minimum présentation orale des questions)
+Socle commun (DB, contrat d'API, auth, CI/CD), domaine A (login/register), domaine B
+(feed + profils fictifs), domaine C (questionnaire au moins présenté), démo + positionnement produit.
 
-**Présentation** : démo fonctionnelle + positionnement produit
+### Semaine 2 (revue technique puis keynote)
 
-### Semaine 2 (Jeudi revue technique, Vendredi keynote)
+Domaine A complet (notifications), domaine B complet (modération), domaine C complet
+(questionnaire + badge — renfort dès la fin de la semaine 1 sur ce domaine, chemin
+critique du projet), domaine D complet (catalogue, dashboards), documentation.
 
-**Domain A** : ✓ Notifications complètes
-**Domain B** : ✓ Modération, toutes features
-**Domain C** : ✓ Questionnaire complet + badge (avec renfort)
-**Domain D** : ✓ Catalogue recruteur, dashboards
-
-**Documentation** : API docs, architecture decision records
+> Le planning détaillé (répartition par personne, échéances précises, preuves
+> attendues) vit dans le document de recette de l'équipe, pas dans ce README —
+> demandez le dernier en date plutôt que de vous fier à des dates figées ici.
 
 ---
 
 ## 📝 Points d'Attention
 
-### ⚠️ Questionnaire = Chemin Critique
-
-Le questionnaire concentre la plus grande logique métier :
-
-- Sauvegarde en cours de passation (reprise possible)
-- Pondérations variables par question
-- Calcul de score complexe
-- Attribution badge basée sur le score
-
-**Action** : Renfort fin S1 → pas isolation S2.
-
-### ⚠️ Démo Pèse Autant que le Code
-
-- **S1 vendredi** : Présentation orale (10-15 min) + démo live
-- **S2 vendredi** : Keynote devant jury
-- **Désigner responsable présentation J1** (sinon préparée la veille)
-
-### ⚠️ Périmètre Restreint
-
-**Hors scope** (temps perdu) : likes, partages, engagement social, threads, notifications "en temps réel" (polling ok, WebSocket non).
-
-**Focus** : mise en relation professionnelle uniquement.
+- **Questionnaire = chemin critique.** Concentre la plus grande logique métier
+  (sauvegarde/reprise, pondérations, scoring, badge). Renfort prévu en fin de
+  semaine 1, pas d'isolement en semaine 2.
+- **La démo pèse autant que le code.** Une présentation en semaine 1, une keynote
+  en semaine 2 — désigner un responsable de présentation dès le départ.
+- **Hors périmètre** : ce n'est pas un réseau social — pas de likes, partages,
+  compteurs d'engagement, fil d'actualité, notifications temps réel (le polling
+  est acceptable, pas les WebSockets).
 
 ---
 
@@ -387,32 +389,38 @@ Le questionnaire concentre la plus grande logique métier :
 
 ### TypeScript
 
-- Strict mode activé (`"strict": true`)
-- Pas de `any` (utiliser `unknown` si vraiment nécessaire)
-- Interfaces pour les structures partagées (dans `packages/shared`)
-- Types explicites sur les paramètres de fonction
+- Mode strict activé, pas de `any` (préférer `unknown`)
+- Les types de domaine viennent de `@prisma/client` (`UserRole`, etc.), jamais
+  redéclarés à la main
+- Imports relatifs avec l'extension `.js` explicite (ESM) : `from '../services/jwt.js'`
+- Paramètres et types de retour de fonction toujours explicites
 
 ### Nommage
 
 - **Routes API** : kebab-case (`/auth/register`, `/profiles/{id}/videos`)
-- **Variables/functions** : camelCase
-- **Database fields** : snake_case (Prisma à conversion auto)
-- **Enums** : PascalCase avec valeurs ALL_CAPS
+- **Variables/fonctions** : camelCase
+- **Champs base de données** : snake_case (conversion automatique par Prisma)
+- **Enums** : PascalCase, valeurs en ALL_CAPS
 
 ### Commits
 
 ```
 <type>(<domain>): <description>
-
-<body (optional)>
-
-<footer (optional)>
 ```
 
 Types : `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
-Domains : `auth`, `profiles`, `certification`, `recruiter`, `db`
+Domaines : `auth`, `profiles`, `videos`, `certification`, `recruiter`, `notifications`, `admin`, `db`
 
-Exemple : `feat(certification): implement answer saving with partial completion`
+Exemple : `feat(auth): add age verification to registration`
+
+---
+
+## 🤝 Collaboration
+
+- **Monorepo Turborepo** : `npm run dev` orchestre tous les services
+- **Contrat d'API d'abord** : pas de surprise d'intégration entre front et back
+- **Branche de feature** : `git checkout -b feat/domaine-description`
+- **PRs** : 1 reviewer minimum avant merge
 
 ---
 
@@ -424,37 +432,15 @@ Exemple : `feat(certification): implement answer saving with partial completion`
 
 ---
 
-## 📅 Timeline
-
-| Date            | Événement                | Attendu                                                   |
-| --------------- | ------------------------ | --------------------------------------------------------- |
-| J1              | Socle commun             | DB, API spec, auth middleware, CI/CD                      |
-| J2-J4           | Développement parallèle  | Domaines A, B, C (partiel)                                |
-| **Vendredi S1** | **Revue de projet**      | **Feed + profils + questionnaire partiel + présentation** |
-| J6-J8           | Continuation + renfort C | Finition D, complétion C                                  |
-| **Jeudi S2**    | **Revue technique**      | Code quality, tests, docs                                 |
-| **Vendredi S2** | **Keynote**              | Démo finale + rétrospective                               |
-
----
-
-## 🤝 Collaboration
-
-- **Monorepo avec Turborepo** : `npm run dev` orchestre tous les services
-- **API spec d'abord** : pas de surprise d'intégration
-- **Daily standups** : 15 min, blocages + avancement
-- **Branche de feature** : `git checkout -b feat/domain-description`
-- **PRs** : 1 reviewer minimum avant merge
-
----
-
 ## 📚 Ressources
 
 - [Prisma Docs](https://www.prisma.io/docs/)
-- [Express Best Practices](https://expressjs.com/en/advanced/best-practice-security.html)
+- [Express Docs](https://expressjs.com/)
 - [React Docs](https://react.dev)
 - [OpenAPI 3.0 Spec](https://spec.openapis.org/oas/v3.0.3)
 - [Turborepo](https://turbo.build)
 
 ---
 
-**Document généré** : Architecture socle commun, Jour 1.
+Pour le détail des décisions d'architecture et les pièges connus du toolchain, voir
+`.claude/CLAUDE.md` — ce README couvre l'onboarding, `CLAUDE.md` couvre le pourquoi.

@@ -1,6 +1,7 @@
 import { env } from '../../config/env.js';
 import type { VideoProvider } from '../video-provider.js';
 import { createMinistryPlaceholderVideoProvider } from './ministry-placeholder.js';
+import { createExternalLinkVideoProvider } from './external-link.js';
 
 /**
  * Resolves VIDEO_PROVIDER to the matching implementation. This is the one
@@ -17,13 +18,11 @@ export const getVideoProvider = (): VideoProvider => {
   switch (env.VIDEO_PROVIDER) {
     case 'ministry-placeholder':
       return createMinistryPlaceholderVideoProvider();
+    case 'external-link':
+      return createExternalLinkVideoProvider();
     case 'local':
       throw new Error(
         "VIDEO_PROVIDER=local is not implemented yet — pending Victor's V1 (packages/api/src/services/video-providers/local.ts).",
-      );
-    case 'external-link':
-      throw new Error(
-        'VIDEO_PROVIDER=external-link is not implemented yet — pending A4 (YouTube/Vimeo provider).',
       );
   }
 };

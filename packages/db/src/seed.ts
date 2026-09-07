@@ -1,12 +1,11 @@
 import { NotificationType, UserRole, VideoType } from '@prisma/client';
 import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
 import bcrypt from 'bcryptjs';
-import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
 import { prisma } from './client.js';
+import { loadQuestionnaire } from './questionnaire-loader.js';
 import type { ApplicantSeed } from './seed-data/applicants.js';
 import { applicants } from './seed-data/applicants.js';
 import { certificationLevels } from './seed-data/certification-levels.js';
-import { certificationQuestions } from './seed-data/certification-questions/index.js';
 import { CONTACT_MESSAGE, interactionPlan } from './seed-data/interactions.js';
 import { skills } from './seed-data/skills.js';
 import { DEMO_PASSWORD, primaryRecruiter, staff } from './seed-data/staff.js';
@@ -39,8 +38,15 @@ async function seedCertificationLevels(): Promise<void> {
   );
 }
 
+// Loading throws QuestionnaireValidationError on anything wrong with the
+// file — before this function writes a single row. Per Thomas Vignal's
+// brief (certification/questions.v1.json), a half-loaded questionnaire is
+// worse than no questionnaire: main() lets this propagate and abort the
+// whole seed run rather than catching it here.
 async function seedCertificationQuestions(): Promise<void> {
-  for (const { id, options, ...questionData } of certificationQuestions) {
+  const questionnaire = loadQuestionnaire();
+
+  for (const { id, options, ...questionData } of questionnaire.questions) {
     await prisma.certificationQuestion.upsert({
       where: { id },
       update: questionData,
@@ -55,7 +61,20 @@ async function seedCertificationQuestions(): Promise<void> {
       });
     }
   }
-  console.log(`Seeded ${certificationQuestions.length} certification questions`);
+
+  // Single-row table recording which version is currently loaded — new
+  // attempts stamp this onto themselves (see startOrResumeAttempt in the
+  // api package) so every passation stays attributable to the content it
+  // was actually scored against.
+  await prisma.questionnaireVersion.upsert({
+    where: { id: 'current' },
+    update: { version: questionnaire.version },
+    create: { id: 'current', version: questionnaire.version },
+  });
+
+  console.log(
+    `Seeded ${questionnaire.questions.length} certification questions (version ${questionnaire.version})`,
+  );
 }
 
 async function seedSkills(): Promise<void> {

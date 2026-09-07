@@ -101,6 +101,24 @@ describe('POST /certification/attempt', () => {
     expect(res.body.answers).toEqual([]);
   });
 
+  it('stamps the attempt with the currently loaded questionnaire version', async () => {
+    const currentVersion = await prisma.questionnaireVersion.findUniqueOrThrow({
+      where: { id: 'current' },
+    });
+
+    const res = await request(app)
+      .post('/api/certification/attempt')
+      .set('Authorization', `Bearer ${applicantToken}`);
+
+    expect(res.status).toBe(201);
+    expect(res.body.questionnaireVersion).toBe(currentVersion.version);
+
+    const stored = await prisma.certificationAttempt.findUniqueOrThrow({
+      where: { id: res.body.id },
+    });
+    expect(stored.questionnaireVersion).toBe(currentVersion.version);
+  });
+
   it('resumes the same attempt on a second call (200, same id)', async () => {
     const first = await request(app)
       .post('/api/certification/attempt')

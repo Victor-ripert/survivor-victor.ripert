@@ -119,6 +119,15 @@ components:
           enum: [EXTERNAL_LINK, UPLOAD]
         url:
           type: string
+        captionsUrl:
+          type: string
+          description: >-
+            Address of the WebVTT caption track, served by this API under
+            `/uploads/`. Present for `UPLOAD` videos that carry subtitles and
+            absent otherwise — an `EXTERNAL_LINK` can never have one, since a
+            track cannot be attached to YouTube's or Vimeo's player from
+            outside it. Subtitles are an accessibility obligation, so a video
+            served by ProfilsActifs itself is expected to carry this.
         duration:
           type: integer
         moderationStatus:

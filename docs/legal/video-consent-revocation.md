@@ -1,13 +1,71 @@
 # Video consent revocation
 
-Videos are embedded via iframe (YouTube/Vimeo), not uploaded — the platform never stores a video
-file of its own. The "storage directory before/after revocation" proof requested for revocation
-therefore does not apply as stated: there is no directory to diff, because there is no file to
-begin with.
+The demonstration asked for on 7 September — a view of the storage directory
+before revocation, the same after, and the profile page in between — can now be
+produced, and has been: `docs/preuves/AD-7-sous-titres-et-revocation.txt`, with
+the screen captures alongside it in
+`docs/preuves/AD-7-sous-titres-et-revocation/`.
 
-Revocation is instead implemented as deletion of the `Video` row itself: `revokeVideoConsent`
-(`packages/api/src/services/video-consent.ts`) deletes the row and returns the revocation
-timestamp for the API response and notification, without persisting it — once the row is gone,
-there is no longer a place in the database to store it. The applicable proof is the database
-state before revocation (row present) and after (row absent), not a timestamped field on a
-deleted record.
+## Why it could not be produced before
+
+The demonstration set had no file in it. Every video was a YouTube embed, and an
+embed has nothing stored on our side: the row points at a third party's player,
+so there is no directory entry to show disappearing. The honest answer to "show
+me the file being deleted" was "there is no file", which answers a different
+question from the one asked.
+
+The demonstration set now contains one video **ProfilsActifs hosts itself** —
+Leïla Sassi's presentation, the same one carrying the caption track. It exists so
+that the deletion has something to delete in front of a witness.
+
+## What revocation does
+
+`DELETE /videos/{videoId}`, the route the candidate's own profile page calls, is
+handled by `deleteVideo` in `packages/api/src/services/video.service.ts`. In
+order: ownership is checked, the `Video` row is deleted, and then — for a video
+we host — the video file and its caption track are removed from disk. The caption
+track goes with the video because it is a transcript of what the candidate said:
+it is part of what consent covered, and leaving it behind would leave their words
+in the storage directory after they asked for them to go.
+
+Measured, in that transcript: `ls -la` before shows the `.mp4` and the `.fr.vtt`;
+the route answers `204`; `ls -la` after shows an empty directory; the public
+profile page shows the video, then does not.
+
+## Two things this deliberately does not do
+
+**There is no `revokedAt` column.** A field that can only ever be written on the
+row being removed is a field that stays empty. Revocation is a deletion, and the
+evidence that it happened is the absence of the row and of the files, not a flag
+on a record that no longer exists. The column existed until 7 September and was
+never written to by anything; it was dropped by migration
+`20260907092851_video_captions_drop_revoked_at`.
+
+**There is one revocation path, not two.** A `revokeVideoConsent` helper used to
+sit in `services/video-consent.ts`; nothing called it, it deleted the row without
+touching the files, and this note used to describe it as the live code. That is
+precisely the drift a second entry point invites, so it is gone. Consent
+revocation and video deletion are the same operation because they are the same
+act.
+
+## What revocation cannot reach
+
+For a YouTube or Vimeo video, revoking consent removes the association and the
+row, and the video stops appearing anywhere on the platform for anyone. **It does
+not delete the file from the third-party platform**, which remains under the
+candidate's own control through that platform's own account. The consent text
+(`docs/legal/consent-text-v1.md`) says so in those terms, so that no one is led
+to believe otherwise. This is one of the reasons the iframe route is on record as
+a point for your arbitration (processing register, §5).
+
+## Reproducing it
+
+```bash
+docker compose up -d
+npm run db:migrate && npm run db:seed
+npm run dev -w @profils-actifs/api
+npm run dev -w @profils-actifs/web
+npx tsx scripts/preuves/sous-titres-et-revocation.mts
+```
+
+The run deletes the fixture it demonstrates on. `npm run db:seed` puts it back.

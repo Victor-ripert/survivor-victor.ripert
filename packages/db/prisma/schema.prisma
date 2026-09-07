@@ -166,14 +166,23 @@ model Video {
 
   fileSizeBytes Int? // set for UPLOAD only; app layer enforces the 100MB cap (brief §3.2)
 
+  // Storage path of the WebVTT caption track, for UPLOAD only — subtitles are
+  // an accessibility obligation, not a comfort option (courriel du 7 septembre).
+  // An embedded video cannot carry one: the track would have to live inside the
+  // third party's player, which is why only our own <video> element can honour
+  // it. Deleted with the video file when consent is revoked.
+  captionsUrl String?
+
   moderationStatus ModerationStatus @default(PENDING)
   moderationLogs   ModerationLog[]
 
   // Consent to publication is logged, not merely ticked: the moment it was
   // given and the version of the text that was accepted (brief §7.1).
+  // Revocation deletes the row and the file rather than flagging them, so
+  // there is deliberately no `revokedAt` here: a column that can only ever be
+  // written on a row being removed is a column that stays empty.
   acceptedAt         DateTime
   consentTextVersion String
-  revokedAt          DateTime?
 
   // Restored after 20260902133533_add_video_consent dropped it. That migration
   // announces the drop in its own header ("All the data in the column will be

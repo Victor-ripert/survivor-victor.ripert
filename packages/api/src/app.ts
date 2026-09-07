@@ -19,8 +19,13 @@ import { profilesRouter } from './routes/profiles.js';
 import { recruiterRouter } from './routes/recruiter.js';
 import { skillsRouter } from './routes/skills.js';
 import { videosRouter } from './routes/videos.js';
+import { resolveUploadDir } from './services/video.service.js';
 
 const JSON_BODY_LIMIT = '64kb';
+
+/** A year: the filenames are random UUIDs, so a stored file's content never
+ *  changes under a given name and a revoked one stops resolving entirely. */
+const UPLOAD_CACHE_MAX_AGE = '365d';
 
 export const createApp = (): Express => {
   const app = express();
@@ -29,6 +34,33 @@ export const createApp = (): Express => {
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
+
+  // Uploaded video files and their caption tracks. Mounted outside `/api`,
+  // which is the path the web app builds from `VITE_API_URL`'s origin
+  // (utils/embed.ts), and ahead of the rate limiter — one profile page pulls
+  // a video plus its `.vtt`, and charging media to a reader's request budget
+  // makes a page unwatchable after a few reloads.
+  //
+  // `resolveUploadDir()` throws for a directory inside the repository, so a
+  // misconfigured UPLOAD_DIR stops the server here rather than surfacing much
+  // later as a revocation that quietly fails to delete anything.
+  //
+  // The filenames are random UUIDs: an unlisted directory whose entries are
+  // unguessable, disclosed only where the visibility rules already disclose a
+  // video's URL. `index: false` keeps the listing itself unreadable, and
+  // `dotfiles: 'deny'` refuses anything an operator dropped in by accident.
+  app.use(
+    '/uploads',
+    cors({ origin: env.CORS_ORIGIN }),
+    express.static(resolveUploadDir(), {
+      index: false,
+      dotfiles: 'deny',
+      maxAge: UPLOAD_CACHE_MAX_AGE,
+      // Helmet defaults Cross-Origin-Resource-Policy to same-origin, which
+      // would stop the web app on its own port from loading either file.
+      setHeaders: (res) => res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'),
+    }),
+  );
 
   // Health probes run on a timer and must not eat into the request budget.
   app.use('/api/health', healthRouter);

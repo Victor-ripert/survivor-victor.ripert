@@ -1,0 +1,15 @@
+VI-7 (2 & 3/3) — sous-titres réellement affichés dans le lecteur (§7.5)
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-03T14:30:05.276Z
+commit      : c4715c53fdb5565d0e41a376f63007887f6713e1
+branche     : Victor-part-2
+web         : http://localhost:5173
+
+profil forcé via PROFILE_ID : cmtlcxhdi00148iocodl5u4n2
+vidéo activée, recherche d’un segment de sous-titre non vide…
+conteneur de sous-titres (.ytp-caption-window-container) trouvé avec du texte : oui
+texte affiché à l’instant de la capture : « do »
+capture d’écran : /home/victor-ripert/delivery/tek3/survivor_pool/survivor/docs/preuves/VI-7-sous-titres-affiches.png
+
+fin — 2026-09-03T14:30:14.210Z

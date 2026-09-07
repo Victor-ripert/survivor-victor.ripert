@@ -1,0 +1,65 @@
+AD-7 — sous-titres réels et révocation à effet réel
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-07T09:56:10.605Z
+commit      : ba68234c7092093ffb6efbf4038f32889ede335f
+branche     : fix/courriel-du-7-septembre
+web         : http://localhost:5173
+api         : http://localhost:3000/api
+
+## 1. Sous-titres — une piste réelle, affichée par notre lecteur
+
+  profil     : Leïla Sassi (cmtin5p1k00208lio8zpivfkh)
+  vidéo      : « Refonte accessible — présentation sous-titrée »
+  fichier    : /uploads/3f9a6c21-5d84-4b17-9e0c-8a2fd1b64e05.mp4
+  piste      : /uploads/3f9a6c21-5d84-4b17-9e0c-8a2fd1b64e05.fr.vtt
+
+  la piste est servie : HTTP 200 text/vtt; charset=utf-8
+
+  pistes exposées par le lecteur : 1
+  genre / langue                 : captions / fr
+  mode                           : showing
+  cues chargées                  : 4
+  cue affichée à t=5s            : "Je suis designer d'interfaces,\nspécialisée en accessibilité."
+
+  ✓ la piste est chargée, en mode « showing » sans action du spectateur, et une cue est réellement affichée à cet instant.
+
+## 2. Révocation du consentement — effet réel sur le stockage
+
+  répertoire de stockage : /home/ewan/Tek3/Piscine/profils-actifs-uploads
+  (hors du dépôt, comme l’exige le §8.5 — la configuration est refusée sinon)
+
+$ ls -la /home/ewan/Tek3/Piscine/profils-actifs-uploads    # AVANT révocation
+  total 44
+  drwxr-xr-x. 1 ewan ewan   166  7 sept. 11:50 .
+  drwxr-xr-x. 1 ewan ewan    60  7 sept. 11:39 ..
+  -rw-r--r--. 1 ewan ewan   392  7 sept. 11:55 3f9a6c21-5d84-4b17-9e0c-8a2fd1b64e05.fr.vtt
+  -rw-r--r--. 1 ewan ewan 39452  7 sept. 11:55 3f9a6c21-5d84-4b17-9e0c-8a2fd1b64e05.mp4
+
+  capture : la fiche publique porte la vidéo (02-fiche-avant-revocation.png)
+
+$ DELETE http://localhost:3000/api/videos/cmtr2f4e0001p4jio2lfkj4vm    # authentifié comme leila.sassi@example.fr
+  → HTTP 204
+
+$ ls -la /home/ewan/Tek3/Piscine/profils-actifs-uploads    # APRÈS révocation
+  total 0
+  drwxr-xr-x. 1 ewan ewan  0  7 sept. 11:56 .
+  drwxr-xr-x. 1 ewan ewan 60  7 sept. 11:39 ..
+
+  capture : la fiche publique ne porte plus de vidéo (03-fiche-apres-revocation.png)
+
+  fichier vidéo supprimé du disque   : true
+  piste de sous-titres supprimée     : true
+  la fiche ne montre plus de vidéo    : true
+
+  ✓ la révocation a retiré les octets, pas seulement la ligne : le répertoire de
+    stockage ne contient plus ni la vidéo ni sa piste, et la fiche est nette.
+
+## Résultat
+
+  sous-titres réels affichés par le lecteur : true
+  révocation supprimant les fichiers        : true
+
+  Le jeu de démonstration est à restaurer après ce relevé : npm run db:seed
+
+fin — 2026-09-07T09:56:16.126Z

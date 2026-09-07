@@ -3,3 +3,4 @@
  * bundle never pulls `node:` built-ins in through the barrel file.
  */
 export * from './env.js';
+export * from './uploads.js';

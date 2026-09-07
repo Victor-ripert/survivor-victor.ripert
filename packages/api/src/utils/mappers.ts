@@ -62,6 +62,7 @@ export function toVideoDto(video: VideoRow): Video {
     description: video.description ?? undefined,
     type: video.type,
     url: video.url,
+    captionsUrl: video.captionsUrl ?? undefined,
     duration: video.duration ?? undefined,
     moderationStatus: video.moderationStatus,
     moderationReason: rejectionReason(video),

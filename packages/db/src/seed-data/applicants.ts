@@ -44,8 +44,9 @@ export interface UploadedVideoSeed {
   /** A fixed uuid rather than a fresh one, so re-seeding overwrites the same
    *  two files instead of littering the directory, and so a proof capture
    *  taken last week still names the file the reviewer will see. Shaped like
-   *  what `writeVideoFile` generates: the name must not be guessable from the
-   *  candidate's identity. */
+   *  what the local `VideoProvider`'s `store()` generates
+   *  (`packages/api/src/services/video-providers/local.ts`): the name must
+   *  not be guessable from the candidate's identity. */
   storedName: string;
   duration: number;
 }

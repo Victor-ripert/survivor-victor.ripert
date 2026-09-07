@@ -19,7 +19,7 @@ import { profilesRouter } from './routes/profiles.js';
 import { recruiterRouter } from './routes/recruiter.js';
 import { skillsRouter } from './routes/skills.js';
 import { videosRouter } from './routes/videos.js';
-import { resolveUploadDir } from './services/video.service.js';
+import { resolveUploadDir } from './services/video-providers/local.js';
 
 const JSON_BODY_LIMIT = '64kb';
 

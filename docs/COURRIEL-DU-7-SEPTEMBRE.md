@@ -217,12 +217,18 @@ révocation, la même après, et la fiche du profil entre les deux. »
 
 1. **La révocation supprime réellement.** `packages/api/src/services/video.service.ts`
    (`deleteVideo`) supprime la ligne `Video` puis, si `type === UPLOAD`, appelle
-   `removeUploadedFile`, qui `unlink` le fichier. Ce n'est pas un masquage.
+   `provider.delete()` — l'implémentation locale de l'interface `VideoProvider`
+   (`packages/api/src/services/video-providers/local.ts`), qui `unlink` le
+   fichier. Ce n'est pas un masquage. (Avant le passage derrière
+   `VideoProvider` le 7 septembre après-midi, cette même opération s'appelait
+   `removeUploadedFile` directement dans `video.service.ts` — comportement
+   inchangé, seul l'emplacement a bougé.)
 2. **Mais aucun fichier n'existe.** Le dépôt direct répond `501` :
    `packages/api/src/controllers/video.controller.ts:24` lève `notImplemented`,
-   parce qu'aucune route ne lit de corps multipart. `addUploadedVideo` et
-   `removeUploadedFile` sont écrits et testables, mais **inatteignables depuis
-   l'application**. Le jeu de démonstration compte 0 vidéo déposée
+   parce qu'aucune route ne lit de corps multipart. `addUploadedVideo`
+   (`video.service.ts`) et le `delete()` du fournisseur local
+   (`video-providers/local.ts`) sont écrits et testables, mais **inatteignables
+   depuis l'application**. Le jeu de démonstration compte 0 vidéo déposée
    (`docs/livrables/recensement-du-3-septembre.md`, ligne « déposées directement
    sur le serveur »).
 3. **La réponse écrite existe déjà mais elle est incomplète.**

@@ -103,7 +103,10 @@ export const ProfilePage = () => {
                   />
                 ))}
                 <p className="panel__subtitle">
-                  Le lecteur n’est chargé qu’au clic. Les sous-titres sont activés par défaut.
+                  Le lecteur n’est chargé qu’au clic.{' '}
+                  {profile.videos.some((video) => video.captionsUrl)
+                    ? 'Les vidéos hébergées par ProfilsActifs affichent leurs sous-titres dès le lancement.'
+                    : 'Pour une vidéo YouTube ou Vimeo, l’affichage des sous-titres est demandé au lecteur de la plateforme, qui l’honore lorsque la vidéo en propose une.'}
                 </p>
               </div>
             )}

@@ -96,7 +96,9 @@ export async function backfillVideoProviders(): Promise<BackfillSummary> {
     }
   }
 
-  const after = await prisma.video.count({ where: { providerRef: null } });
+  const after = await prisma.video.count({
+    where: { OR: [{ providerRef: null }, { providerName: null }] },
+  });
 
   return { before, updated, failed, after };
 }

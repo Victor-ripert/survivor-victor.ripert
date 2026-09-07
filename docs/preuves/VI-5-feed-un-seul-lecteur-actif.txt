@@ -1,0 +1,16 @@
+VI-5 — flux public, un seul lecteur vidéo actif (§8.6)
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-03T14:06:29.299Z
+commit      : bfd1326495290fe669cc159cba1e4ac78bd6c594
+branche     : Victor-part-2
+web         : http://localhost:5173
+
+deux premières cartes avec vidéo dans le flux : positions 1 et 2
+carte A (activée) : iframe chargée = true
+carte B (jamais cliquée) : reste une vignette = true
+carte B (jamais cliquée) : a démarré un lecteur = false
+un seul lecteur actif à la fois : oui
+capture d’écran (cartes A + B) : /home/victor-ripert/delivery/tek3/survivor_pool/survivor/docs/preuves/VI-5-feed-un-seul-lecteur-actif.png
+
+fin — 2026-09-03T14:06:35.805Z

@@ -1,0 +1,19 @@
+VI-4 — ajout d’une vidéo, rendu de l’embed sans navigation (§4.2, §8.6)
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-03T13:59:58.700Z
+commit      : db5272bfe16bfdd511ecfdd51e1eb31ed5cac0f7
+branche     : Victor-part-2
+web         : http://localhost:5173
+compte      : amina.berthier@example.fr (compte de démonstration issu du seed)
+
+connexion réussie, redirigé vers : http://localhost:5173/mon-profil
+vidéos avant ajout : 1
+URL avant soumission du formulaire : http://localhost:5173/mon-profil
+carte ajoutée, titre affiché : "Preuve VI-4 — capture d’écran"
+URL après chargement de l’embed         : http://localhost:5173/mon-profil
+aucune navigation : oui
+capture d’écran : /home/victor-ripert/delivery/tek3/survivor_pool/survivor/docs/preuves/VI-4-ajout-video-embed.png
+nettoyage : vidéo de preuve supprimée par l’UI, retour à 1 vidéo(s)
+
+fin — 2026-09-03T14:00:08.672Z

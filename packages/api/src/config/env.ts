@@ -47,6 +47,8 @@ const envSchema = z.object({
   /** Where uploaded files land — resolved against the repo root and refused if
    *  it points inside it (video.service.ts). */
   UPLOAD_DIR: z.string().min(1).default('../profils-actifs-uploads'),
+  /** Which VideoProvider backs new videos — see services/video-providers/. */
+  VIDEO_PROVIDER: z.enum(['local', 'ministry-placeholder', 'external-link']).default('local'),
 });
 
 const parsed = envSchema.safeParse(process.env);

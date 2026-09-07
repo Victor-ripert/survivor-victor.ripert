@@ -114,10 +114,12 @@ export async function deleteVideo(videoId: string, ownerId: string): Promise<voi
   // getVideoProvider() reflects the *currently configured* provider — if
   // VIDEO_PROVIDER changed since this video was uploaded, this deletes
   // nothing from the provider that actually stored it. `Video.providerName`
-  // now records the provider each row was actually written through, but
-  // reading it back here is deliberately left for a later change: rows
-  // written before this column existed still carry `providerName: null`
-  // until a backfill runs, and this function has no fallback for that yet.
+  // now records the provider each row was actually written through (and
+  // `packages/db/src/migrate-video-providers.ts` backfills it for older
+  // rows), but reading it back here to pick the provider is deliberately
+  // left for a later change — this function has no fallback yet for a row
+  // whose `providerName` is still null (backfill not run, or run failed for
+  // that row).
   const provider = getVideoProvider();
 
   // The caption track carries the candidate's own words transcribed; it is

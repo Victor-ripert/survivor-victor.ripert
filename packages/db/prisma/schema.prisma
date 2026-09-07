@@ -170,8 +170,9 @@ model Video {
   // VideoProviderName ('local' | 'ministry-placeholder' | 'external-link'),
   // and a second, hand-kept enum here would only give the two a way to drift
   // apart. Both nullable — rows written before this migration don't have
-  // them yet; a replayable backfill script derives them from `url` + `type`
-  // for the rows that predate it (not written yet). `url` remains what every
+  // them yet; `packages/db/src/migrate-video-providers.ts` (`npm run
+  // db:migrate-video-providers`) is the replayable script that derives them
+  // from `url` + `type` for rows still missing one. `url` remains what every
   // reader, including the API's Video DTO, actually serves from; these two
   // exist so `deleteVideo` can call the provider that really stored the
   // bytes, rather than whichever provider VIDEO_PROVIDER currently names.

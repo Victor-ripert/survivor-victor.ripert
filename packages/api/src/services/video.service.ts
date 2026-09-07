@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { VideoType } from '@prisma/client';
 import type { Video } from '@profils-actifs/shared';
+import {
+  assertUploadDirOutsideRepo,
+  resolveUploadDir as resolveSharedUploadDir,
+} from '@profils-actifs/shared/node';
 import { env } from '../config/env.js';
 import { prisma } from '../config/prisma.js';
 import {
@@ -155,13 +158,24 @@ export async function addExternalVideo(
 export async function deleteVideo(videoId: string, ownerId: string): Promise<void> {
   const video = await prisma.video.findUnique({
     where: { id: videoId },
-    select: { type: true, url: true, profile: { select: { userId: true } } },
+    select: {
+      type: true,
+      url: true,
+      captionsUrl: true,
+      profile: { select: { userId: true } },
+    },
   });
   if (!video || video.profile.userId !== ownerId) throw videoNotFound();
 
   await prisma.video.delete({ where: { id: videoId } });
 
-  if (video.type === VideoType.UPLOAD) await removeUploadedFile(video.url);
+  if (video.type !== VideoType.UPLOAD) return;
+
+  // The caption track carries the candidate's own words transcribed; it is
+  // part of what consent covered, so it goes with the video rather than
+  // outliving it in the storage directory.
+  await removeUploadedFile(video.url);
+  if (video.captionsUrl) await removeUploadedFile(video.captionsUrl);
 }
 
 // ============================================================================
@@ -208,31 +222,28 @@ export function detectVideoContentType(buffer: Buffer): VideoContentType | null 
   return null;
 }
 
-/** Repo root, from this file's own location: `process.cwd()` depends on how
- *  the process was started, a source file's position on disk does not. */
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
-
 /**
  * Refuses a directory that is the repo root or nested inside it — uploaded
  * files must never sit among git-tracked application code (brief §8.5).
+ * The rule itself lives in `@profils-actifs/shared/node` because the seed
+ * writes its demonstration fixture into the same directory and must not be
+ * allowed to disagree about where that is.
  */
 export function assertUploadDirOutsideAppCode(absoluteDir: string): void {
-  const relativeToRepo = path.relative(REPO_ROOT, absoluteDir);
-  const isInsideRepo = !relativeToRepo.startsWith('..') && !path.isAbsolute(relativeToRepo);
-
-  if (isInsideRepo) {
-    throw new Error(
-      `UPLOAD_DIR ("${absoluteDir}") resolves inside this repository (${REPO_ROOT}). ` +
-        'Point it at a directory outside the cloned repo — a sibling directory in ' +
-        'development, or an absolute path on the host in production.',
-    );
-  }
+  assertUploadDirOutsideRepo(absoluteDir);
 }
 
-function resolveUploadDir(): string {
-  const absoluteDir = path.resolve(REPO_ROOT, env.UPLOAD_DIR);
-  assertUploadDirOutsideAppCode(absoluteDir);
-  return absoluteDir;
+/**
+ * Called once at boot by `app.ts` as well as on every deletion, so a bad
+ * `UPLOAD_DIR` stops the server instead of being discovered the first time a
+ * candidate revokes consent. That ordering matters: `removeUploadedFile`
+ * below is best-effort and swallows what this throws, so a misconfigured
+ * directory would otherwise mean every revocation silently leaves its file on
+ * disk — the exact opposite of the "effet réel" the deletion is supposed to
+ * have.
+ */
+export function resolveUploadDir(): string {
+  return resolveSharedUploadDir(env.UPLOAD_DIR);
 }
 
 const UPLOAD_URL_PREFIX = '/uploads/';
@@ -257,7 +268,13 @@ async function removeUploadedFile(url: string): Promise<void> {
       if (!isMissing) console.error('[api] uploaded file not removed', absolutePath, error);
     }
   } catch (error: unknown) {
-    console.error('[api] upload directory unusable, file left in place', error);
+    // Unreachable in a server that booted, since app.ts resolves the same
+    // directory at startup. Kept as a net, and loud about what it means:
+    // bytes the candidate asked us to delete are still on disk.
+    console.error(
+      '[api] upload directory unusable — REVOKED VIDEO FILE LEFT ON DISK, remove it by hand',
+      error,
+    );
   }
 }
 

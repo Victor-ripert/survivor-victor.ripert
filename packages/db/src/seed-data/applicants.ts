@@ -18,14 +18,53 @@ export interface ApplicantSeed {
   certificationScore?: number;
   certificationBadge?: string;
   moderationStatus: ModerationStatus;
-  videos: { title: string; url: string; duration: number }[];
+  videos: VideoSeed[];
 }
 
-const video = (title: string, id: string, duration: number) => ({
+/** A YouTube/Vimeo embed: nothing of it is stored here, and no caption track
+ *  can be attached to it from outside the third party's own player. */
+export interface EmbeddedVideoSeed {
+  kind: 'embed';
+  title: string;
+  url: string;
+  duration: number;
+}
+
+/**
+ * A video ProfilsActifs hosts itself. The seed copies `basename`.mp4 and
+ * `basename`.fr.vtt out of `seed-data/media/` into `UPLOAD_DIR` under
+ * `storedName`, so a clean build has a real file on disk to play, to caption,
+ * and — the point of the exercise — to watch disappear when consent is
+ * revoked.
+ */
+export interface UploadedVideoSeed {
+  kind: 'upload';
+  title: string;
+  basename: string;
+  /** A fixed uuid rather than a fresh one, so re-seeding overwrites the same
+   *  two files instead of littering the directory, and so a proof capture
+   *  taken last week still names the file the reviewer will see. Shaped like
+   *  what `writeVideoFile` generates: the name must not be guessable from the
+   *  candidate's identity. */
+  storedName: string;
+  duration: number;
+}
+
+export type VideoSeed = EmbeddedVideoSeed | UploadedVideoSeed;
+
+const video = (title: string, id: string, duration: number): EmbeddedVideoSeed => ({
+  kind: 'embed',
   title,
   url: `https://www.youtube.com/embed/${id}`,
   duration,
 });
+
+const uploadedVideo = (
+  title: string,
+  basename: string,
+  storedName: string,
+  duration: number,
+): UploadedVideoSeed => ({ kind: 'upload', title, basename, storedName, duration });
 
 export const applicants: ApplicantSeed[] = [
   {
@@ -216,7 +255,18 @@ export const applicants: ApplicantSeed[] = [
     certificationScore: 79,
     certificationBadge: 'Certifié JEB Confirmé',
     moderationStatus: ModerationStatus.APPROVED,
-    videos: [video('Refonte accessible', 'YykjpeuMNEk', 118)],
+    // The one fixture ProfilsActifs hosts itself, and the only one that can
+    // therefore carry a caption track our own player displays — subtitles are
+    // an accessibility obligation, not a comfort option. It is also the video
+    // the revocation demonstration deletes.
+    videos: [
+      uploadedVideo(
+        'Refonte accessible — présentation sous-titrée',
+        'presentation-leila-sassi',
+        '3f9a6c21-5d84-4b17-9e0c-8a2fd1b64e05',
+        14,
+      ),
+    ],
   },
   {
     firstName: 'Hugo',

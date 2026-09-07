@@ -30,6 +30,13 @@ export interface Video {
   url: string;
   duration?: number; // seconds
   /**
+   * Address of the WebVTT caption track, for `UPLOAD` videos only. An
+   * `EXTERNAL_LINK` never carries one: a track cannot be attached to a
+   * third party's player from outside it, so a subtitled video has to be one
+   * we serve ourselves.
+   */
+  captionsUrl?: string;
+  /**
    * Always set by the API, independently of the parent profile's own
    * `moderationStatus` — see `ModerationStatus`'s doc comment in
    * `moderation.ts` for why the two aren't the same field.

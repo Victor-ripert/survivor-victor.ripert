@@ -1,0 +1,136 @@
+AD-6 — parcours clavier vérifié sur les trois écrans imposés
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-07T09:56:00.624Z
+commit      : ba68234c7092093ffb6efbf4038f32889ede335f
+branche     : fix/courriel-du-7-septembre
+web         : http://localhost:5173
+compte      : recruteur@profils-actifs.fr (pour le catalogue seulement)
+methode     : Tab depuis un chargement neuf, aucun clic ; anneau lu en style calculé
+
+## 1. Parcours d’inscription — /inscription (sans compte)
+
+  #01 <a.skip-link> "Aller au contenu" — :focus-visible=true anneau=true
+  #02 <a.brand-block nom="ProfilsActifs, Ministère du Job et Bonheur — retour à l’accu"> "Ministèredu Jobet BonheurProfilsActifsProfils vi" — :focus-visible=true anneau=true
+  #03 <a.button> "Connexion" — :focus-visible=true anneau=true
+  #04 <a.button.button--primary> "Créer mon profil" — :focus-visible=true anneau=true
+  #05 <a> "Profils" — :focus-visible=true anneau=true
+  #06 <input type=radio name=role value=APPLICANT nom="Candidat·e"> — :focus-visible=true anneau=true
+  #07 <input#firstName type=text nom="Prénom"> — :focus-visible=true anneau=true
+  #08 <input#lastName type=text nom="Nom"> — :focus-visible=true anneau=true
+  #09 <input#email type=email nom="Adresse e-mail"> — :focus-visible=true anneau=true
+  #10 <input#password type=password nom="Mot de passe"> — :focus-visible=true anneau=true
+  #11 <input#birthDate type=date nom="Date de naissance"> — :focus-visible=true anneau=true
+  #15 <button.button.button--primary.button--lg type=submit> "Créer mon compte" — :focus-visible=true anneau=true
+
+  champ « Date de naissance » présent et actif : true
+
+## 2. Fiche profil publique — /profils/:id (sans compte)
+   profil visité : cmtin5p1k00208lio8zpivfkh
+
+  #01 <a.skip-link> "Aller au contenu" — :focus-visible=true anneau=true
+  #02 <a.brand-block nom="ProfilsActifs, Ministère du Job et Bonheur — retour à l’accu"> "Ministèredu Jobet BonheurProfilsActifsProfils vi" — :focus-visible=true anneau=true
+  #03 <a.button> "Connexion" — :focus-visible=true anneau=true
+  #04 <a.button.button--primary> "Créer mon profil" — :focus-visible=true anneau=true
+  #05 <a> "Profils" — :focus-visible=true anneau=true
+  #06 <a.back-link> "Retour aux profils" — :focus-visible=true anneau=true
+  #07 <button.video-poster type=button nom="Lire « Refonte accessible — présentation sous-titrée », sous"> "Refonte accessible — présentation sous-titrée0:1" — :focus-visible=true anneau=true
+  #08 <a> "Connectez-vous" — :focus-visible=true anneau=true
+  #09 <a> "Contrat d’API" — :focus-visible=true anneau=true
+  #10 <a> "Sonde de santé" — :focus-visible=true anneau=true
+  #11 — focus sur <body>
+     ↺ retour au premier élément — l’ordre de tabulation boucle, fin du relevé
+     après Entrée sur la vignette : focus = <video.video-frame> "Votre navigateur ne prend pas en charge la lectu"
+     ✓ le lecteur reprend le focus ; l’anneau est peint par la règle `.video-frame:focus` (l’<iframe> ne satisfait pas `:focus-visible`)
+
+## 3. Catalogue recruteur — /recruteur/catalogue (compte recruteur)
+
+  #01 <a.skip-link> "Aller au contenu" — :focus-visible=true anneau=true
+  #02 <a.brand-block nom="ProfilsActifs, Ministère du Job et Bonheur — retour à l’accu"> "Ministèredu Jobet BonheurProfilsActifsProfils vi" — :focus-visible=true anneau=true
+  #03 <button.button.button--subtle type=button> "Déconnexion" — :focus-visible=true anneau=true
+  #04 <a> "Profils" — :focus-visible=true anneau=true
+  #05 <a> "Tableau de bord" — :focus-visible=true anneau=true
+  #06 <a.active> "Catalogue" — :focus-visible=true anneau=true
+  #07 <a> "Ma sélection" — :focus-visible=true anneau=true
+  #08 <a> "Historique" — :focus-visible=true anneau=true
+  #09 <a> "Notifications" — :focus-visible=true anneau=true
+  #10 <input#filter-search type=search name=q nom="Rechercher"> — :focus-visible=true anneau=true
+  #11 <select#filter-sector type=select-one nom="Secteur"> "Tous les secteursInformatique (3)Restauration (2" — :focus-visible=true anneau=true
+  #12 <select#filter-location type=select-one nom="Ville"> "Toutes les villesLyon (3)Marseille (2)Nantes (2)" — :focus-visible=true anneau=true
+  #13 <button.chip.chip--toggle type=button> "Anglais" — :focus-visible=true anneau=true
+  #14 <button.chip.chip--toggle type=button> "Relation client" — :focus-visible=true anneau=true
+  #15 <button.chip.chip--toggle type=button> "Cuisine" — :focus-visible=true anneau=true
+  #16 <button.chip.chip--toggle type=button> "Design UI" — :focus-visible=true anneau=true
+  #17 <button.chip.chip--toggle type=button> "React" — :focus-visible=true anneau=true
+  #18 <button.chip.chip--toggle type=button> "SQL" — :focus-visible=true anneau=true
+  #19 <button.chip.chip--toggle type=button> "TypeScript" — :focus-visible=true anneau=true
+  #20 <button.chip.chip--toggle type=button> "Comptabilité" — :focus-visible=true anneau=true
+  #21 <button.chip.chip--toggle type=button> "Électricité" — :focus-visible=true anneau=true
+  #22 <button.chip.chip--toggle type=button> "Gestion de projet" — :focus-visible=true anneau=true
+  #23 <button.chip.chip--toggle type=button> "Logistique" — :focus-visible=true anneau=true
+  #24 <button.chip.chip--toggle type=button> "Node.js" — :focus-visible=true anneau=true
+  #25 <select#filter-score type=select-one nom="Score de certification"> "Tous les scores50 et plus65 et plus80 et plus" — :focus-visible=true anneau=true
+  #26 <input type=checkbox value=on nom="Certification obtenue uniquement"> — :focus-visible=true anneau=true
+  #27 <input type=checkbox value=on nom="Avec vidéo de présentation"> — :focus-visible=true anneau=true
+  #28 <select#sort type=select-one nom="Trier par"> "Profils récentsScore de certificationNom" — :focus-visible=true anneau=true
+  #29 <button.button.button--icon type=button> "Ajouter Lucas Morel aux favorisFavori" — :focus-visible=true anneau=true
+  #30 <button.button type=button> "Voir la vidéo" — :focus-visible=true anneau=true
+  #31 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #32 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #33 <button.button.button--icon type=button> "Retirer Leïla Sassi des favorisFavori" — :focus-visible=true anneau=true
+  #34 <button.button type=button> "Voir la vidéo" — :focus-visible=true anneau=true
+  #35 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #36 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #37 <button.button.button--icon type=button> "Ajouter Bastien Colin aux favorisFavori" — :focus-visible=true anneau=true
+  #38 <button.button type=button> "Voir la vidéo" — :focus-visible=true anneau=true
+  #39 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #40 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #41 <button.button.button--icon type=button> "Ajouter Nadia Lefèvre aux favorisFavori" — :focus-visible=true anneau=true
+  #42 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #43 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #44 <button.button.button--icon type=button> "Ajouter Thomas Rivière aux favorisFavori" — :focus-visible=true anneau=true
+  #45 <button.button type=button> "Voir la vidéo" — :focus-visible=true anneau=true
+  #46 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #47 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #48 <button.button.button--icon type=button> "Retirer Élise Marchand des favorisFavori" — :focus-visible=true anneau=true
+  #49 <button.button type=button> "Voir la vidéo" — :focus-visible=true anneau=true
+  #50 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #51 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #52 <button.button.button--icon type=button> "Ajouter Idriss Kamara aux favorisFavori" — :focus-visible=true anneau=true
+  #53 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #54 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #55 <button.button.button--icon type=button> "Ajouter Claire Fontaine aux favorisFavori" — :focus-visible=true anneau=true
+  #56 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #57 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #58 <button.button.button--icon type=button> "Ajouter Yanis Oubrahim aux favorisFavori" — :focus-visible=true anneau=true
+  #59 <button.button type=button> "Voir la vidéo" — :focus-visible=true anneau=true
+  #60 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #61 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #62 <button.button.button--icon type=button> "Ajouter Sofia Nguyen aux favorisFavori" — :focus-visible=true anneau=true
+  #63 <button.button type=button> "Voir la vidéo" — :focus-visible=true anneau=true
+  #64 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #65 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #66 <button.button.button--icon type=button> "Ajouter Marc Delaunay aux favorisFavori" — :focus-visible=true anneau=true
+  #67 <button.button type=button> "Voir la vidéo" — :focus-visible=true anneau=true
+  #68 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #69 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #70 <button.button.button--icon type=button> "Retirer Amina Berthier des favorisFavori" — :focus-visible=true anneau=true
+  #71 <button.button type=button> "Voir la vidéo" — :focus-visible=true anneau=true
+  #72 <a.button> "Profil complet" — :focus-visible=true anneau=true
+  #73 <button.button.button--primary type=button> "Contacter" — :focus-visible=true anneau=true
+  #74 <a> "Contrat d’API" — :focus-visible=true anneau=true
+  #75 <a> "Sonde de santé" — :focus-visible=true anneau=true
+  #76 — focus sur <body>
+     ↺ retour au premier élément — l’ordre de tabulation boucle, fin du relevé
+
+## Résultat
+
+  /inscription             12 arrêts, 0 sans anneau visible
+  /profils/:id             10 arrêts, 0 sans anneau visible
+  /recruteur/catalogue     75 arrêts, 0 sans anneau visible
+
+  reprise du focus à l’activation d’une vidéo : true
+
+Aucun écart relevé sur les trois écrans à ce passage.
+
+fin — 2026-09-07T09:56:09.427Z

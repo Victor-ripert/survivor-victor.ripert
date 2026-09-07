@@ -122,7 +122,10 @@ const demontrerRenduEtVideo = async (
   await page.waitForSelector('h1');
 
   const nombreVideos = await page.$$eval('.video-poster', (posters) => posters.length);
-  const libelle = await page.$eval('.video-poster', (el) => el.getAttribute('aria-label'));
+  const libelle =
+    nombreVideos > 0
+      ? await page.$eval('.video-poster', (el) => el.getAttribute('aria-label'))
+      : null;
 
   journal.ligne(`  URL                    : ${page.url()}`);
   journal.ligne(`  vidéos affichées       : ${nombreVideos}`);

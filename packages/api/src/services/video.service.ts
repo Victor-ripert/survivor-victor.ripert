@@ -123,12 +123,17 @@ export async function deleteVideo(videoId: string, ownerId: string): Promise<voi
   // today's (pre-V4) behavior for that row rather than refusing the
   // deletion outright — revocation must still take effect (brief §7.1)
   // even for a row the backfill hasn't caught up with.
-  const provider = getVideoProviderByName(video.providerName) ?? getVideoProvider();
+  const isLegacyUpload = video.providerName === null;
+  const isLocalUploadUrl = video.url.startsWith('/uploads/');
+  const provider =
+    getVideoProviderByName(video.providerName) ??
+    (isLegacyUpload && isLocalUploadUrl ? getVideoProviderByName('local') : null) ??
+    getVideoProvider();
   const ref = video.providerRef ?? video.url;
 
-  if (!video.providerName) {
+  if (isLegacyUpload) {
     console.warn(
-      `[api] video ${videoId} has no providerName (predates the V2 migration, or its backfill hasn't reached it) — deleted via the currently configured provider instead of the one that actually stored it`,
+      `[api] video ${videoId} has no providerName (predates the V2 migration, or its backfill hasn't reached it) — deleting via provider "${provider.name}"`,
     );
   }
 

@@ -1,9 +1,12 @@
+import { copyFile, mkdir, stat } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { NotificationType, UserRole, VideoType } from '@prisma/client';
 import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
+import { resolveUploadDir } from '@profils-actifs/shared/node';
 import bcrypt from 'bcryptjs';
-import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
 import { prisma } from './client.js';
-import type { ApplicantSeed } from './seed-data/applicants.js';
+import type { ApplicantSeed, UploadedVideoSeed } from './seed-data/applicants.js';
 import { applicants } from './seed-data/applicants.js';
 import { certificationLevels } from './seed-data/certification-levels.js';
 import { certificationQuestions } from './seed-data/certification-questions/index.js';
@@ -102,6 +105,52 @@ async function seedStaff(passwordHash: string): Promise<void> {
   console.log(`Seeded ${staff.length} staff accounts`);
 }
 
+/** Fixture media, tracked in the repo; the copies below are what actually
+ *  gets served, and they live outside it. */
+const MEDIA_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'seed-data/media');
+
+interface StoredUpload {
+  type: typeof VideoType.UPLOAD;
+  url: string;
+  captionsUrl: string;
+  fileSizeBytes: number;
+}
+
+/**
+ * Copies a fixture video and its caption track into `UPLOAD_DIR` — the very
+ * directory the API serves over `/uploads` and empties when a candidate
+ * revokes consent. Seeding writes the files rather than posting them through
+ * the API because no route parses a multipart body yet; everything downstream
+ * of storage — the row, the consent record, the player, the deletion — is the
+ * real code path.
+ *
+ * `resolveUploadDir` throws for a directory inside the repository, so a clone
+ * with a misconfigured `UPLOAD_DIR` fails here, loudly, instead of producing a
+ * seed whose videos silently 404.
+ */
+async function storeUploadedFixture(entry: UploadedVideoSeed): Promise<StoredUpload> {
+  const uploadDir = resolveUploadDir();
+  await mkdir(uploadDir, { recursive: true });
+
+  const videoName = `${entry.storedName}.mp4`;
+  const captionsName = `${entry.storedName}.fr.vtt`;
+
+  await copyFile(path.join(MEDIA_DIR, `${entry.basename}.mp4`), path.join(uploadDir, videoName));
+  await copyFile(
+    path.join(MEDIA_DIR, `${entry.basename}.fr.vtt`),
+    path.join(uploadDir, captionsName),
+  );
+
+  const { size } = await stat(path.join(uploadDir, videoName));
+
+  return {
+    type: VideoType.UPLOAD,
+    url: `/uploads/${videoName}`,
+    captionsUrl: `/uploads/${captionsName}`,
+    fileSizeBytes: size,
+  };
+}
+
 const seedApplicant = async (applicant: ApplicantSeed, passwordHash: string) => {
   const user = await upsertUser(
     emailFor(applicant.firstName, applicant.lastName),
@@ -142,19 +191,24 @@ const seedApplicant = async (applicant: ApplicantSeed, passwordHash: string) => 
 
   await prisma.video.deleteMany({ where: { profileId: profile.id } });
   for (const entry of applicant.videos) {
+    // GDPR consent logging (brief §7.1) — a seeded video still needs a valid
+    // acceptance record, same as one added through the real API (see
+    // packages/api/src/services/video-consent.ts).
+    const consent = { acceptedAt: new Date(), consentTextVersion: CONSENT_TEXT_VERSION };
+
+    const stored =
+      entry.kind === 'upload'
+        ? await storeUploadedFixture(entry)
+        : { type: VideoType.EXTERNAL_LINK as const, url: entry.url };
+
     await prisma.video.create({
       data: {
         profileId: profile.id,
         title: entry.title,
-        type: VideoType.EXTERNAL_LINK,
-        url: entry.url,
         duration: entry.duration,
         moderationStatus: applicant.moderationStatus,
-        // GDPR consent logging (brief §7.1) — a seeded video still needs a
-        // valid acceptance record, same as one added through the real API
-        // (see packages/api/src/services/video-consent.ts).
-        acceptedAt: new Date(),
-        consentTextVersion: CONSENT_TEXT_VERSION,
+        ...stored,
+        ...consent,
       },
     });
   }

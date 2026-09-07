@@ -1,9 +1,12 @@
 # Registre des activités de traitement — ProfilsActifs
 
 **Destinataire** Florine Pontaillac, conseillère juridique
-**Référence** JEB/DNI/2026-003 §7.7.1 · **Échéance** vendredi 4 septembre, 12h00
+**Référence** JEB/DNI/2026-003 §7.7.1 · **Échéance** vendredi 11 septembre, 12h00
 **Tâche** EW-7 · **Rédacteur** Ewan — domaine D, contrat d'API
-**État du modèle décrit** commit `1d44bad`, cinq migrations appliquées (détail dans
+**Révision** 7 septembre 2026 — reprise après votre courriel du même jour ; le §4
+a changé de sens (voir §4)
+**État du modèle décrit** branche `fix/courriel-du-7-septembre` sur `ba68234`,
+huit migrations appliquées (détail dans
 `docs/livrables/schema-de-base-de-donnees.md`)
 
 ---
@@ -28,9 +31,9 @@ absences et qu'une absence ne se voit pas dans un tableau :
 3. **Les deux traitements que vos exigences imposaient sont désormais au
    modèle** — la date de naissance (§7.3, §7.9.1) et le consentement vidéo
    journalisé (§7.1). Ils figurent aux §2.8 et §2.3 avec leurs vrais noms de
-   champs. Un seul écart subsiste : la trace « qui a décidé et quand » sur une
-   décision de modération **vidéo**, qui n'a pas encore de colonne où s'écrire
-   (§4).
+   champs. L'écart que la version du 4 septembre annonçait — la trace « qui a
+   décidé et quand » sur une décision de modération **vidéo** — est refermé, et
+   le §4 dit où le vérifier.
 
 ---
 
@@ -80,18 +83,18 @@ absences et qu'une absence ne se voit pas dans un tableau :
 
 ### 2.3 Vidéo de présentation
 
-|                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Finalité**                 | Diffuser une présentation filmée du candidat sur son profil et dans le fil.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| **Base légale**              | Consentement explicite, spécifique et révocable (§7.1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| **Personnes concernées**     | Candidats, et toute personne apparaissant ou s'exprimant dans la vidéo.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| **Catégories de données**    | **Image et voix — donnée personnelle identifiante** ; titre et description ; adresse de la ressource.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| **Champs réels**             | `Video.title`, `Video.description`, `Video.type`, `Video.url`, `Video.duration`, `Video.fileSizeBytes`, `Video.moderationStatus`, `Video.createdAt`                                                                                                                                                                                                                                                                                                                                                                                                |
-| **Conservation**             | _Proposition_ : jusqu'à révocation du consentement ou suppression du profil. Non appliquée aujourd'hui.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| **Destinataires**            | Recruteurs ; **le public** ; administrateurs ; **et l'hébergeur de la plateforme vidéo tierce** — voir ci-dessous.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| **Point d'attention majeur** | Les vidéos sont des **intégrations iframe** (`VideoType.EXTERNAL_LINK`) : `Video.url` pointe une ressource YouTube ou Vimeo. La vidéo n'est donc pas hébergée par la plateforme, et **c'est un transfert vers un tiers**, avec ce que cela implique côté RGPD, y compris hors Union européenne. Le §8.3 impose par ailleurs de dire quelles données quittent l'infrastructure : la note de déploiement le détaille. Nous appelons votre attention dessus explicitement.                                                                            |
-| **Consentement**             | Journalisé, pas coché : `Video.acceptedAt` porte la date et l'heure, `Video.consentTextVersion` la version du texte accepté. Les deux colonnes sont `NOT NULL` — une vidéo ne peut pas exister sans son consentement, fixtures de démonstration comprises, qui ne bénéficient d'aucune exemption.                                                                                                                                                                                                                                                  |
-| **Révocation**               | `Video.revokedAt` porte la date ; l'effet réel de la révocation est la tâche AD-4. En intégration iframe, il n'y a **aucun fichier à supprimer côté plateforme** : la révocation retire la ligne `Video` et le lien, mais la vidéo continue d'exister chez l'hébergeur tiers tant que le candidat ne l'y supprime pas. La preuve « répertoire de stockage avant et après » que vous demandez ne s'applique donc pas telle quelle — limite déclarée par écrit dans `docs/remontees/05-lien-externe-inaccessibilite.md`, et à reprendre dans la CGU. |
+|                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Finalité**                 | Diffuser une présentation filmée du candidat sur son profil et dans le fil.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Base légale**              | Consentement explicite, spécifique et révocable (§7.1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Personnes concernées**     | Candidats, et toute personne apparaissant ou s'exprimant dans la vidéo.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Catégories de données**    | **Image et voix — donnée personnelle identifiante** ; titre et description ; adresse de la ressource.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Champs réels**             | `Video.title`, `Video.description`, `Video.type`, `Video.url`, `Video.captionsUrl`, `Video.duration`, `Video.fileSizeBytes`, `Video.moderationStatus`, `Video.createdAt`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Conservation**             | _Proposition_ : jusqu'à révocation du consentement ou suppression du profil. Non appliquée aujourd'hui.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Destinataires**            | Recruteurs ; **le public** ; administrateurs ; **et l'hébergeur de la plateforme vidéo tierce** — voir ci-dessous.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **Point d'attention majeur** | La quasi-totalité des vidéos sont des **intégrations iframe** (`VideoType.EXTERNAL_LINK`) : `Video.url` pointe une ressource YouTube ou Vimeo. La vidéo n'est donc pas hébergée par la plateforme, et **c'est un transfert vers un tiers**, avec ce que cela implique côté RGPD, y compris hors Union européenne. Le §8.3 impose par ailleurs de dire quelles données quittent l'infrastructure : la note de déploiement le détaille. Nous appelons votre attention dessus explicitement.                                                                                                                                                                                                                                                                             |
+| **Consentement**             | Journalisé, pas coché : `Video.acceptedAt` porte la date et l'heure, `Video.consentTextVersion` la version du texte accepté. Les deux colonnes sont `NOT NULL` — une vidéo ne peut pas exister sans son consentement, fixtures de démonstration comprises, qui ne bénéficient d'aucune exemption.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **Révocation**               | `DELETE /videos/{id}` supprime la ligne **et les octets** : le fichier vidéo et sa piste de sous-titres quittent le répertoire de stockage. Il n'existe volontairement **pas** de colonne `revokedAt` — un champ qui ne pourrait s'écrire que sur la ligne qu'on efface resterait vide (colonne supprimée par la migration `20260907092851`). La démonstration « répertoire avant / fiche / répertoire après » que vous demandiez est produite : `docs/preuves/AD-7-sous-titres-et-revocation.txt`. Réserve qui subsiste : pour une vidéo **intégrée** (YouTube/Vimeo), il n'y a aucun fichier chez nous à supprimer, et la vidéo continue d'exister chez l'hébergeur tiers tant que le candidat ne l'y supprime pas — le texte de consentement le dit en ces termes. |
 
 ### 2.4 Questionnaire de certification
 
@@ -141,7 +144,7 @@ absences et qu'une absence ne se voit pas dans un tableau :
 | **Base légale**           | Obligation légale (contenus illicites) et intérêt légitime de l'exploitant.                                                                                                                                                                            |
 | **Personnes concernées**  | Candidats modérés ; administrateurs auteurs des décisions.                                                                                                                                                                                             |
 | **Catégories de données** | Décision, motif, notes internes, auteur, horodatage, statut courant.                                                                                                                                                                                   |
-| **Champs réels**          | `ModerationLog.action`, `.reason`, `.notes`, `.adminId`, `.profileId`, `.createdAt` ; `Profile.moderationStatus` ; `Video.moderationStatus`                                                                                                            |
+| **Champs réels**          | `ModerationLog.action`, `.reason`, `.notes`, `.adminId`, `.profileId`, `.videoId`, `.createdAt` ; `Profile.moderationStatus` ; `Video.moderationStatus`                                                                                                |
 | **Conservation**          | _Proposition_ : 36 mois, la trace ayant vocation probatoire. Non appliquée aujourd'hui.                                                                                                                                                                |
 | **Destinataires**         | Administrateurs. Le candidat n'a pas accès à `ModerationLog.notes`.                                                                                                                                                                                    |
 | **À signaler**            | `notes` est un champ libre renseigné par un administrateur **à propos d'une personne**, non visible d'elle, et pourtant couvert par son droit d'accès. C'est le champ le plus exposé du modèle sur ce point, et il mérite une consigne d'usage écrite. |
@@ -210,21 +213,39 @@ tâche AD-2 traite leur cas.
 
 ---
 
-## 4. Le seul écart qui subsiste
+## 4. L'écart annoncé le 4 septembre est refermé
 
-Les deux traitements que vous imposiez sont au modèle et décrits ci-dessus. Il
-reste une lacune, et elle porte sur votre propre addendum.
+La version de ce registre qui vous a été remise le 4 septembre déclarait une
+lacune : `ModerationLog` était clé sur `profileId` seul et ne pouvait donc pas
+porter la trace « qui a décidé et quand » sur une décision de modération
+**vidéo**, que votre §7.9.2 exige. C'était la tâche VI-10.
 
-| Traitement                               | Ce qui manque                                                                                                                                                                       | Tâche | Échéance    |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----------- |
-| Décision de modération sur une **vidéo** | `ModerationLog` est clé sur `profileId` seul. Il ne peut donc pas porter la trace « qui a décidé et quand » pour une vidéo, que le §7.9.2 exige. Il y faut `ModerationLog.videoId`. | VI-10 | jeudi matin |
+**Elle est faite, et elle l'était déjà quand nous vous avons écrit** — nous
+avons remis un document en retard sur son propre modèle, et nous préférons le
+dire que le laisser passer. Le détail, vérifiable :
 
-En attendant, `Video.moderationStatus` porte l'**état** d'une vidéo — et depuis
-le 2 septembre une vidéo en attente n'est plus servie nulle part
-(`docs/preuves/SOIR-2-video-en-attente.txt`) — mais pas l'**historique** des
-décisions qui l'ont produit. C'est exactement la partie de votre exigence qui
-n'est pas encore tenue, et nous préférons vous la nommer que de vous laisser la
-découvrir.
+| Ce qui a changé                       | Où le lire                                                                             |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| `ModerationLog.videoId` + la relation | `packages/db/prisma/schema.prisma`, modèle `ModerationLog`                             |
+| La migration correspondante           | `packages/db/prisma/migrations/20260902095149_video_moderation_log/`                   |
+| L'écriture de la décision             | `packages/api/src/services/moderation.service.ts:70`                                   |
+| La restitution au candidat            | `packages/api/src/utils/mappers.ts` (`videoDecisionInclude`), champ `moderationReason` |
+
+Une décision de modération vidéo écrit donc aujourd'hui une ligne portant
+`adminId` (qui), `createdAt` (quand), `action`, `reason` et `notes` (quoi et
+pourquoi), au même titre qu'une décision sur un profil. L'historique existe, il
+est indexé sur `videoId`, et le motif d'un refus est rendu à son auteur sur sa
+propre fiche.
+
+`Video.moderationStatus` continue de porter l'**état** courant — et depuis le
+2 septembre une vidéo en attente n'est servie nulle part
+(`docs/preuves/SOIR-2-video-en-attente.txt`). Ce qui manquait était
+l'**historique** ; il est là.
+
+Aucun écart ne subsiste entre ce registre et le modèle. Ce qui reste ouvert
+n'est pas un écart de description mais un arbitrage qui vous revient, et tout
+est au §3 et au §5 : les durées de conservation, qu'aucun code n'applique ; la
+suppression en cascade ; et le journal de connexion, qui n'existe pas (§2.9).
 
 Le texte de consentement v1.0 et le projet de CGU sont rédigés par le domaine A
 (tâche AD-8). Vous annoncez lire le registre et la CGU côte à côte : la relecture

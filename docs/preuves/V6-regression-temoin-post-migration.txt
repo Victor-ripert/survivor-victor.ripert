@@ -1,0 +1,56 @@
+V6 — non-régression sur le témoin après la migration V3
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-07T15:27:25.489Z
+commit      : 002d23b34251c450ed8cb26fadae2330686c6a58
+branche     : 78-abstraction-du-stockage-vidéo---victor
+web         : http://localhost:5173
+compte      : bastien.colin@example.fr (témoin choisi en V5)
+
+connexion réussie, redirigé vers : http://localhost:5173/mon-profil
+
+## 1. La fiche publique s’affiche, la vidéo s’y affiche
+
+  URL                    : http://localhost:5173/profils/cmtrbfm02001w98ocnqz3oedp
+  vidéos affichées       : 1
+  vignette de la première : Lire « Ma manière de gérer un litige »
+
+  capture : 01-fiche-et-video.png
+
+  ✓ la fiche publique se charge et la vidéo du témoin s’y affiche.
+
+## 2. Le profil reste modifiable
+
+  titre avant modification : "Conseiller clientèle"
+  titre après modification : "Conseiller clientèle — vérifié V6"
+  capture : 02-profil-modifie.png
+  titre restauré           : "Conseiller clientèle"
+
+  ✓ l’enregistrement a pris effet, puis a été restauré à l’identique.
+
+## 3. La vidéo reste supprimable (chemin V4)
+
+  vidéo             : « Ma manière de gérer un litige » (cmtre9hkp001kt8ocrb9il9se)
+  Video.providerName : external-link
+  Video.providerRef  : https://www.youtube.com/embed/CevxZvSJLk8
+
+  la ligne porte bien un providerName — deleteVideo() résout le fournisseur via getVideoProviderByName() (chemin normal), pas via le repli getVideoProvider().
+
+$ DELETE .../videos/cmtre9hkp001kt8ocrb9il9se    # via l’interface, authentifié comme bastien.colin@example.fr
+  → HTTP 204
+
+  capture : 03-video-supprimee.png (« Aucune vidéo pour le moment. »)
+
+  ligne Video encore présente en base : false
+
+  ✓ la vidéo a été supprimée bout en bout : 204, ligne disparue, liste vide à l’écran.
+
+## Résultat
+
+  fiche affichée et vidéo visible : true
+  profil modifiable               : true
+  vidéo supprimable (chemin V4)   : true
+
+  Le témoin est à restaurer après ce relevé : npm run db:seed, puis npm run db:migrate-video-providers -w @profils-actifs/db.
+
+fin — 2026-09-07T15:27:34.668Z

@@ -23,10 +23,21 @@ that the deletion has something to delete in front of a witness.
 `DELETE /videos/{videoId}`, the route the candidate's own profile page calls, is
 handled by `deleteVideo` in `packages/api/src/services/video.service.ts`. In
 order: ownership is checked, the `Video` row is deleted, and then — for a video
-we host — the video file and its caption track are removed from disk. The caption
-track goes with the video because it is a transcript of what the candidate said:
+we host — the video file and its caption track are removed from disk through a
+`VideoProvider` (`packages/api/src/services/video-provider.ts`), specifically
+the one this row was actually stored through (`Video.providerName`), not
+whichever provider is configured today — the two can differ if that
+configuration changed since the video was uploaded, and only the row's own
+value is guaranteed to point at where the bytes really are. The caption track
+goes with the video because it is a transcript of what the candidate said:
 it is part of what consent covered, and leaving it behind would leave their words
 in the storage directory after they asked for them to go.
+
+A row written before `providerName` existed (or one the backfill script below
+hasn't reached yet) falls back to whichever provider is configured today —
+today that's still the only provider capable of actually storing a file, so
+deletion still removes the bytes; a warning is logged so the gap is visible
+rather than silent.
 
 Measured, in that transcript: `ls -la` before shows the `.mp4` and the `.fr.vtt`;
 the route answers `204`; `ls -la` after shows an empty directory; the public
@@ -63,9 +74,20 @@ a point for your arbitration (processing register, §5).
 ```bash
 docker compose up -d
 npm run db:migrate && npm run db:seed
+npm run db:migrate-video-providers -w @profils-actifs/db
 npm run dev -w @profils-actifs/api
 npm run dev -w @profils-actifs/web
 npx tsx scripts/preuves/sous-titres-et-revocation.mts
 ```
 
-The run deletes the fixture it demonstrates on. `npm run db:seed` puts it back.
+`npm run db:migrate-video-providers` backfills `providerName`/`providerRef` for
+the fixtures `db:seed` just wrote (it creates `Video` rows directly, bypassing
+the API, so they start without one — see `packages/db/src/migrate-video-
+providers.ts`). Skipping it doesn't break the demonstration — deletion still
+removes the file via the fallback described above — but it does mean the run
+exercises that fallback instead of the normal path, with a warning in the API's
+logs to show it.
+
+The run deletes the fixture it demonstrates on. `npm run db:seed` puts it back
+— followed by `npm run db:migrate-video-providers -w @profils-actifs/db` again,
+for the same reason.

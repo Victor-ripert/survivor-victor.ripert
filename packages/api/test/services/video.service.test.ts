@@ -1,190 +1,127 @@
-import os from 'node:os';
+import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { prisma } from '../../src/config/prisma.js';
 import {
-  normalizeExternalVideoUrl,
-  assertUploadSizeWithinLimit,
-  detectVideoContentType,
-  assertUploadDirOutsideAppCode,
+  addExternalVideo,
+  addUploadedVideo,
+  deleteVideo,
 } from '../../src/services/video.service.js';
-import { HttpError } from '../../src/utils/http-error.js';
+import {
+  createLocalVideoProvider,
+  resolveUploadDir,
+} from '../../src/services/video-providers/local.js';
+import { buildVideoConsent } from '../../src/services/video-consent.js';
 
-describe('normalizeExternalVideoUrl', () => {
-  describe('YouTube', () => {
-    it('normalizes a standard watch link', () => {
-      expect(normalizeExternalVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe(
-        'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      );
-    });
+/**
+ * Integration tests — hits a real database and, for the upload path, the
+ * real local disk (see `moderation.service.test.ts` for why that's the
+ * right call here rather than mocking). This is the proof that V1 actually
+ * wired `addExternalVideo` / `addUploadedVideo` / `deleteVideo` through the
+ * `VideoProvider` abstraction end-to-end, not just that the pure helper
+ * functions still work in isolation.
+ */
+describe('video.service — provider wiring', () => {
+  let applicantId: string;
+  let profileId: string;
 
-    it('normalizes a watch link with extra query params', () => {
-      expect(normalizeExternalVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s')).toBe(
-        'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      );
+  beforeAll(async () => {
+    const applicant = await prisma.user.create({
+      data: {
+        email: `applicant-${randomUUID()}@test.local`,
+        passwordHash: 'not-a-real-hash',
+        firstName: 'Applicant',
+        lastName: 'Test',
+        role: 'APPLICANT',
+      },
     });
+    applicantId = applicant.id;
 
-    it('normalizes a youtu.be share link', () => {
-      expect(normalizeExternalVideoUrl('https://youtu.be/dQw4w9WgXcQ')).toBe(
-        'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      );
+    const profile = await prisma.profile.create({
+      data: { userId: applicantId, location: 'Paris', sector: 'Informatique' },
     });
-
-    it('normalizes a Shorts link', () => {
-      expect(normalizeExternalVideoUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ')).toBe(
-        'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      );
-    });
-
-    it('normalizes an already-embeddable link', () => {
-      expect(normalizeExternalVideoUrl('https://www.youtube.com/embed/dQw4w9WgXcQ')).toBe(
-        'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      );
-    });
-
-    it('accepts the bare (no www) host', () => {
-      expect(normalizeExternalVideoUrl('https://youtube.com/watch?v=dQw4w9WgXcQ')).toBe(
-        'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      );
-    });
-
-    it('rejects a YouTube URL with no video id', () => {
-      expect(() => normalizeExternalVideoUrl('https://www.youtube.com/watch')).toThrow(HttpError);
-    });
+    profileId = profile.id;
   });
 
-  describe('Vimeo', () => {
-    it('normalizes a standard vimeo.com link', () => {
-      expect(normalizeExternalVideoUrl('https://vimeo.com/123456789')).toBe(
-        'https://player.vimeo.com/video/123456789',
-      );
+  afterAll(async () => {
+    await prisma.user.delete({ where: { id: applicantId } });
+    await prisma.$disconnect();
+  });
+
+  it('addExternalVideo stores the normalized embed URL via the external-link provider', async () => {
+    const video = await addExternalVideo(profileId, applicantId, {
+      title: 'Vidéo de présentation',
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      consentAccepted: true,
     });
 
-    it('normalizes an already-embeddable player link', () => {
-      expect(normalizeExternalVideoUrl('https://player.vimeo.com/video/123456789')).toBe(
-        'https://player.vimeo.com/video/123456789',
-      );
+    expect(video.url).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
+
+    // providerRef/providerName aren't in the API DTO (toVideoDto doesn't
+    // project them — they're internal bookkeeping, not in openapi.yaml's
+    // Video schema), so read the raw row to check them.
+    const row = await prisma.video.findUniqueOrThrow({ where: { id: video.id } });
+    expect(row.providerName).toBe('external-link');
+    // The external-link provider's ref *is* the normalized embed URL.
+    expect(row.providerRef).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
+
+    await deleteVideo(video.id, applicantId);
+  });
+
+  it('addUploadedVideo writes real bytes to disk via the local provider, and deleteVideo removes them', async () => {
+    // A synthetic MP4 header — detectVideoContentType only ever looks at the
+    // first bytes, so this is all the local provider needs to accept it.
+    const buffer = Buffer.concat([Buffer.alloc(4), Buffer.from('ftyp'), Buffer.from('isom')]);
+
+    const video = await addUploadedVideo(
+      profileId,
+      applicantId,
+      { title: 'Vidéo déposée', consentAccepted: true },
+      { buffer },
+    );
+
+    expect(video.url.startsWith('/uploads/')).toBe(true);
+    const absolutePath = path.join(resolveUploadDir(), path.basename(video.url));
+    expect(existsSync(absolutePath)).toBe(true);
+
+    const row = await prisma.video.findUniqueOrThrow({ where: { id: video.id } });
+    expect(row.providerName).toBe('local');
+    // The local provider's ref *is* the public URL — no separate identifier.
+    expect(row.providerRef).toBe(video.url);
+
+    await deleteVideo(video.id, applicantId);
+
+    expect(existsSync(absolutePath)).toBe(false);
+    await expect(prisma.video.findUnique({ where: { id: video.id } })).resolves.toBeNull();
+  });
+
+  it('deleteVideo still removes the file for a row that predates the V2 migration (providerName null)', async () => {
+    // Bypasses addUploadedVideo on purpose, to reproduce exactly the row
+    // shape V3's backfill is meant for: a real file on disk, but
+    // providerRef/providerName never set (as if written before V2 landed,
+    // and the V3 backfill script hasn't reached it yet).
+    const provider = createLocalVideoProvider();
+    const buffer = Buffer.concat([Buffer.alloc(4), Buffer.from('ftyp'), Buffer.from('isom')]);
+    const ref = await provider.store({ kind: 'upload', buffer, contentType: 'video/mp4' });
+    const url = await provider.playbackUrl(ref);
+    const absolutePath = path.join(resolveUploadDir(), path.basename(url));
+    expect(existsSync(absolutePath)).toBe(true);
+
+    const video = await prisma.video.create({
+      data: {
+        profileId,
+        title: 'Vidéo pré-V2',
+        type: 'UPLOAD',
+        url,
+        // provider ref/name deliberately omitted — this is the legacy shape.
+        ...buildVideoConsent(),
+      },
     });
+    expect(video.providerName).toBeNull();
 
-    it('ignores a trailing privacy-hash segment', () => {
-      expect(normalizeExternalVideoUrl('https://vimeo.com/123456789/abcdef0123')).toBe(
-        'https://player.vimeo.com/video/123456789',
-      );
-    });
+    await deleteVideo(video.id, applicantId);
 
-    it('rejects a non-numeric Vimeo path (e.g. a channel page)', () => {
-      expect(() => normalizeExternalVideoUrl('https://vimeo.com/channels/staffpicks')).toThrow(
-        HttpError,
-      );
-    });
-  });
-
-  describe('rejections', () => {
-    it('rejects a non-YouTube, non-Vimeo host', () => {
-      expect(() => normalizeExternalVideoUrl('https://example.com/video.mp4')).toThrow(HttpError);
-    });
-
-    it('rejects a host that merely contains "youtube.com" as text', () => {
-      expect(() =>
-        normalizeExternalVideoUrl('https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ'),
-      ).toThrow(HttpError);
-    });
-
-    it('rejects a URL that smuggles the target host in a query string', () => {
-      expect(() => normalizeExternalVideoUrl('https://evil.example/?redirect=youtube.com')).toThrow(
-        HttpError,
-      );
-    });
-
-    it('rejects a malformed URL', () => {
-      expect(() => normalizeExternalVideoUrl('not-a-url')).toThrow(HttpError);
-    });
-
-    it('rejects with a 400 validation_error, per the acceptance criteria', () => {
-      try {
-        normalizeExternalVideoUrl('https://example.com/video.mp4');
-        throw new Error('expected normalizeExternalVideoUrl to throw');
-      } catch (err) {
-        expect(err).toBeInstanceOf(HttpError);
-        expect((err as HttpError).statusCode).toBe(400);
-        expect((err as HttpError).code).toBe('validation_error');
-      }
-    });
-  });
-});
-
-describe('assertUploadSizeWithinLimit', () => {
-  const ONE_MB = 1024 * 1024;
-  const HUNDRED_MB = 100 * ONE_MB;
-
-  it('accepts a file at exactly the 100MB cap', () => {
-    expect(() => assertUploadSizeWithinLimit(HUNDRED_MB)).not.toThrow();
-  });
-
-  it('rejects a file one byte over the cap', () => {
-    expect(() => assertUploadSizeWithinLimit(HUNDRED_MB + 1)).toThrow(HttpError);
-  });
-
-  it('rejects with a 413 payload_too_large', () => {
-    try {
-      assertUploadSizeWithinLimit(HUNDRED_MB + 1);
-      throw new Error('expected assertUploadSizeWithinLimit to throw');
-    } catch (err) {
-      expect(err).toBeInstanceOf(HttpError);
-      expect((err as HttpError).statusCode).toBe(413);
-      expect((err as HttpError).code).toBe('payload_too_large');
-    }
-  });
-
-  it('accepts a small, ordinary file size', () => {
-    expect(() => assertUploadSizeWithinLimit(5 * ONE_MB)).not.toThrow();
-  });
-});
-
-describe('detectVideoContentType', () => {
-  // Minimal synthetic buffers matching just the magic-byte signature —
-  // real video files have far more data after these bytes, but the check
-  // only ever looks at the header, so that's all a test needs to construct.
-  const mp4Header = Buffer.concat([Buffer.alloc(4), Buffer.from('ftyp'), Buffer.from('isom')]);
-  const movHeader = Buffer.concat([Buffer.alloc(4), Buffer.from('ftyp'), Buffer.from('qt  ')]);
-  const webmHeader = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81]);
-
-  it('identifies an MP4 signature', () => {
-    expect(detectVideoContentType(mp4Header)).toBe('video/mp4');
-  });
-
-  it('identifies a QuickTime (.mov) signature', () => {
-    expect(detectVideoContentType(movHeader)).toBe('video/quicktime');
-  });
-
-  it('identifies a WebM (EBML) signature', () => {
-    expect(detectVideoContentType(webmHeader)).toBe('video/webm');
-  });
-
-  it('rejects a file with no recognized signature', () => {
-    expect(detectVideoContentType(Buffer.from('just some plain text, not a video'))).toBeNull();
-  });
-
-  it('rejects a real image signature (JPEG) renamed to look like a video', () => {
-    const jpegHeader = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(8)]);
-    expect(detectVideoContentType(jpegHeader)).toBeNull();
-  });
-
-  it('rejects a buffer too short to contain a signature', () => {
-    expect(detectVideoContentType(Buffer.from([0x00, 0x01]))).toBeNull();
-  });
-});
-
-describe('assertUploadDirOutsideAppCode', () => {
-  it('rejects a directory inside the repository', () => {
-    // The api package itself, e.g. .../survivor/packages/api — always
-    // inside the repo, on any machine this test runs on.
-    expect(() => assertUploadDirOutsideAppCode(process.cwd())).toThrow();
-  });
-
-  it('rejects a directory further up but still inside the repo', () => {
-    expect(() => assertUploadDirOutsideAppCode(path.resolve(process.cwd(), '..'))).toThrow();
-  });
-
-  it('accepts a directory outside the repository', () => {
-    expect(() => assertUploadDirOutsideAppCode(os.tmpdir())).not.toThrow();
+    expect(existsSync(absolutePath)).toBe(false);
+    await expect(prisma.video.findUnique({ where: { id: video.id } })).resolves.toBeNull();
   });
 });

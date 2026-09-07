@@ -33,7 +33,15 @@ const createProvider = (name: VideoProviderName): VideoProvider => {
  * selector. And deleting an *existing* video doesn't use this either — see
  * `getVideoProviderByName` below.
  */
-export const getVideoProvider = (): VideoProvider => createProvider(env.VIDEO_PROVIDER);
+export const getVideoProvider = (): VideoProvider => {
+  if (env.VIDEO_PROVIDER === 'external-link') {
+    throw new Error(
+      "VIDEO_PROVIDER=external-link cannot back uploads; EXTERNAL_LINK videos always use the external-link provider independently of VIDEO_PROVIDER.",
+    );
+  }
+
+  return createProvider(env.VIDEO_PROVIDER);
+};
 
 /**
  * Resolves the provider a `Video` row was actually stored through

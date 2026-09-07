@@ -1080,6 +1080,16 @@ legend {
   background: var(--surface-video);
 }
 
+/* `:focus` and not `:focus-visible`: the player is focused programmatically
+   the moment it replaces its poster, and an <iframe> does not reliably match
+   the `:focus-visible` heuristic — measured on the public profile page, where
+   the frame took focus with no ring at all. Without this rule a keyboard
+   reader who has just activated a video cannot see where the focus went. */
+.video-frame:focus {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
 .video-placeholder {
   display: flex;
   align-items: center;

@@ -53,6 +53,14 @@ describe('video.service — provider wiring', () => {
 
     expect(video.url).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
 
+    // providerRef/providerName aren't in the API DTO (toVideoDto doesn't
+    // project them — they're internal bookkeeping, not in openapi.yaml's
+    // Video schema), so read the raw row to check them.
+    const row = await prisma.video.findUniqueOrThrow({ where: { id: video.id } });
+    expect(row.providerName).toBe('external-link');
+    // The external-link provider's ref *is* the normalized embed URL.
+    expect(row.providerRef).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
+
     await deleteVideo(video.id, applicantId);
   });
 
@@ -71,6 +79,11 @@ describe('video.service — provider wiring', () => {
     expect(video.url.startsWith('/uploads/')).toBe(true);
     const absolutePath = path.join(resolveUploadDir(), path.basename(video.url));
     expect(existsSync(absolutePath)).toBe(true);
+
+    const row = await prisma.video.findUniqueOrThrow({ where: { id: video.id } });
+    expect(row.providerName).toBe('local');
+    // The local provider's ref *is* the public URL — no separate identifier.
+    expect(row.providerRef).toBe(video.url);
 
     await deleteVideo(video.id, applicantId);
 

@@ -13,13 +13,13 @@ enum UserRole {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
   firstName    String
   lastName     String
   role         UserRole
-  isActive     Boolean  @default(true)
+  isActive     Boolean   @default(true)
   birthDate    DateTime?
 
   profile              Profile?
@@ -164,6 +164,22 @@ model Video {
   url         String // external link (YouTube/Vimeo) or storage path, depending on type
   duration    Int? // seconds
 
+  // Which VideoProvider produced this video, and the opaque ref its store()
+  // returned (packages/api/src/services/video-provider.ts). `providerName`
+  // is a plain string, not a Prisma enum: it's written straight from
+  // VideoProviderName ('local' | 'ministry-placeholder' | 'external-link'),
+  // and a second, hand-kept enum here would only give the two a way to drift
+  // apart. Both nullable — rows written before this migration don't have
+  // them yet; a replayable backfill script derives them from `url` + `type`
+  // for the rows that predate it (not written yet). `url` remains what every
+  // reader, including the API's Video DTO, actually serves from; these two
+  // exist so `deleteVideo` can call the provider that really stored the
+  // bytes, rather than whichever provider VIDEO_PROVIDER currently names.
+  // Not in openapi.yaml's Video schema — internal storage bookkeeping, not
+  // something an API consumer needs.
+  providerRef  String?
+  providerName String?
+
   fileSizeBytes Int? // set for UPLOAD only; app layer enforces the 100MB cap (brief §3.2)
 
   // Storage path of the WebVTT caption track, for UPLOAD only — subtitles are
@@ -223,7 +239,7 @@ model ModerationLog {
   profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   videoId String?
-  video   Video? @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  video   Video?  @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   action ModerationAction
   reason String?

@@ -72,6 +72,8 @@ export async function addExternalVideo(
       type: VideoType.EXTERNAL_LINK,
       url: await provider.playbackUrl(ref),
       duration: input.duration,
+      providerRef: ref,
+      providerName: provider.name,
       // Publishing is the consent act (brief §7.1): the timestamp and the
       // version of the accepted text are logged with the video, so a later
       // change to the wording never reinterprets what was agreed to.
@@ -111,8 +113,11 @@ export async function deleteVideo(videoId: string, ownerId: string): Promise<voi
   //
   // getVideoProvider() reflects the *currently configured* provider — if
   // VIDEO_PROVIDER changed since this video was uploaded, this deletes
-  // nothing from the provider that actually stored it. V2/V3 close that gap
-  // by recording each video's provider at store() time; out of scope here.
+  // nothing from the provider that actually stored it. `Video.providerName`
+  // now records the provider each row was actually written through, but
+  // reading it back here is deliberately left for a later change: rows
+  // written before this column existed still carry `providerName: null`
+  // until a backfill runs, and this function has no fallback for that yet.
   const provider = getVideoProvider();
 
   // The caption track carries the candidate's own words transcribed; it is
@@ -176,6 +181,8 @@ export async function addUploadedVideo(
         url: await provider.playbackUrl(ref),
         duration: input.duration,
         fileSizeBytes: file.buffer.length,
+        providerRef: ref,
+        providerName: provider.name,
         ...buildVideoConsent(),
       },
     });

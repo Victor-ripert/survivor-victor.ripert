@@ -69,7 +69,9 @@ export interface BackfillSummary {
  * signal rather than an all-or-nothing gate.
  */
 export async function backfillVideoProviders(): Promise<BackfillSummary> {
-  const before = await prisma.video.count({ where: { providerRef: null } });
+  const before = await prisma.video.count({
+    where: { OR: [{ providerRef: null }, { providerName: null }] },
+  });
 
   const rows = await prisma.video.findMany({
     where: { providerRef: null },

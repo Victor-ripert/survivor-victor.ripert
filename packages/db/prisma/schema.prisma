@@ -298,6 +298,17 @@ enum AttemptStatus {
   EXPIRED
 }
 
+// Single row (id "current"), refreshed every `npm run db:seed`, recording
+// which version of certification/questions.v1.json is currently loaded.
+// CertificationAttempt.questionnaireVersion is stamped from this at creation
+// time — see Thomas Vignal's brief (2026-09-07) on tracking the version a
+// candidate was actually scored against.
+model QuestionnaireVersion {
+  id       String   @id @default("current")
+  version  String
+  loadedAt DateTime @updatedAt
+}
+
 model CertificationAttempt {
   id     String @id @default(cuid())
   userId String
@@ -305,6 +316,12 @@ model CertificationAttempt {
 
   status AttemptStatus @default(IN_PROGRESS)
   score  Int? // computed on completion, 0-100 scale
+
+  // Which certification/questions.v*.json version this attempt was created
+  // against — set once, at creation, from QuestionnaireVersion. The default
+  // exists only so the migration doesn't fail on rows that predate this
+  // column; new rows always get an explicit value.
+  questionnaireVersion String @default("v1")
 
   answers Answer[]
 

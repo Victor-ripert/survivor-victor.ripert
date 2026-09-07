@@ -1,6 +1,6 @@
 import { Prisma, type Answer, type CertificationAttempt } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
-import { forbidden, notFound } from '../../utils/http-error.js';
+import { forbidden, internalError, notFound } from '../../utils/http-error.js';
 
 /** Shared by every route that loads an attempt, so "unknown attempt" and
  *  "someone else's attempt" always read the same way. */
@@ -56,8 +56,21 @@ export const startOrResumeAttempt = async (
             };
           }
 
+          // Stamped once, at creation, from the version `npm run db:seed`
+          // most recently loaded — see Thomas Vignal's brief (2026-09-07):
+          // every passation must stay attributable to the questionnaire
+          // content it was actually scored against.
+          const currentVersion = await tx.questionnaireVersion.findUnique({
+            where: { id: 'current' },
+          });
+          if (!currentVersion) {
+            throw internalError(
+              'Aucune version de questionnaire chargée — lancez `npm run db:seed` avant de démarrer une tentative',
+            );
+          }
+
           const created = await tx.certificationAttempt.create({
-            data: { userId },
+            data: { userId, questionnaireVersion: currentVersion.version },
             include: { answers: true },
           });
 

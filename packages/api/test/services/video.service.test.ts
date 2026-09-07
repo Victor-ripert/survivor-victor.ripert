@@ -7,7 +7,11 @@ import {
   addUploadedVideo,
   deleteVideo,
 } from '../../src/services/video.service.js';
-import { resolveUploadDir } from '../../src/services/video-providers/local.js';
+import {
+  createLocalVideoProvider,
+  resolveUploadDir,
+} from '../../src/services/video-providers/local.js';
+import { buildVideoConsent } from '../../src/services/video-consent.js';
 
 /**
  * Integration tests — hits a real database and, for the upload path, the
@@ -84,6 +88,36 @@ describe('video.service — provider wiring', () => {
     expect(row.providerName).toBe('local');
     // The local provider's ref *is* the public URL — no separate identifier.
     expect(row.providerRef).toBe(video.url);
+
+    await deleteVideo(video.id, applicantId);
+
+    expect(existsSync(absolutePath)).toBe(false);
+    await expect(prisma.video.findUnique({ where: { id: video.id } })).resolves.toBeNull();
+  });
+
+  it('deleteVideo still removes the file for a row that predates the V2 migration (providerName null)', async () => {
+    // Bypasses addUploadedVideo on purpose, to reproduce exactly the row
+    // shape V3's backfill is meant for: a real file on disk, but
+    // providerRef/providerName never set (as if written before V2 landed,
+    // and the V3 backfill script hasn't reached it yet).
+    const provider = createLocalVideoProvider();
+    const buffer = Buffer.concat([Buffer.alloc(4), Buffer.from('ftyp'), Buffer.from('isom')]);
+    const ref = await provider.store({ kind: 'upload', buffer, contentType: 'video/mp4' });
+    const url = await provider.playbackUrl(ref);
+    const absolutePath = path.join(resolveUploadDir(), path.basename(url));
+    expect(existsSync(absolutePath)).toBe(true);
+
+    const video = await prisma.video.create({
+      data: {
+        profileId,
+        title: 'Vidéo pré-V2',
+        type: 'UPLOAD',
+        url,
+        // provider ref/name deliberately omitted — this is the legacy shape.
+        ...buildVideoConsent(),
+      },
+    });
+    expect(video.providerName).toBeNull();
 
     await deleteVideo(video.id, applicantId);
 

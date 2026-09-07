@@ -7,7 +7,7 @@ import type { AddVideoInput } from '../validators/video.js';
 import { buildVideoConsent } from './video-consent.js';
 import { createExternalLinkVideoProvider } from './video-providers/external-link.js';
 import { assertUploadSizeWithinLimit, detectVideoContentType } from './video-providers/local.js';
-import { getVideoProvider } from './video-providers/index.js';
+import { getVideoProvider, getVideoProviderByName } from './video-providers/index.js';
 import { isPublished, isPubliclyVisible } from './visibility.js';
 
 const profileNotFound = () => notFound('Profil introuvable');
@@ -98,6 +98,8 @@ export async function deleteVideo(videoId: string, ownerId: string): Promise<voi
       type: true,
       url: true,
       captionsUrl: true,
+      providerName: true,
+      providerRef: true,
       profile: { select: { userId: true } },
     },
   });
@@ -111,21 +113,29 @@ export async function deleteVideo(videoId: string, ownerId: string): Promise<voi
   // EXTERNAL_LINK video's file, if any, lives on YouTube/Vimeo's own
   // infrastructure, untouched by revoking consent on this platform.
   //
-  // getVideoProvider() reflects the *currently configured* provider — if
-  // VIDEO_PROVIDER changed since this video was uploaded, this deletes
-  // nothing from the provider that actually stored it. `Video.providerName`
-  // now records the provider each row was actually written through (and
-  // `packages/db/src/migrate-video-providers.ts` backfills it for older
-  // rows), but reading it back here to pick the provider is deliberately
-  // left for a later change — this function has no fallback yet for a row
-  // whose `providerName` is still null (backfill not run, or run failed for
-  // that row).
-  const provider = getVideoProvider();
+  // Delete from the provider this row was actually stored through
+  // (Video.providerName/providerRef, V2, backfilled for older rows by
+  // packages/db/src/migrate-video-providers.ts) — never from whichever
+  // provider VIDEO_PROVIDER names *today*, which can be a different one if
+  // the env var changed since this video was uploaded. A null
+  // providerName means the row predates that migration and the backfill
+  // hasn't reached it yet; falling back to getVideoProvider() there keeps
+  // today's (pre-V4) behavior for that row rather than refusing the
+  // deletion outright — revocation must still take effect (brief §7.1)
+  // even for a row the backfill hasn't caught up with.
+  const provider = getVideoProviderByName(video.providerName) ?? getVideoProvider();
+  const ref = video.providerRef ?? video.url;
+
+  if (!video.providerName) {
+    console.warn(
+      `[api] video ${videoId} has no providerName (predates the V2 migration, or its backfill hasn't reached it) — deleted via the currently configured provider instead of the one that actually stored it`,
+    );
+  }
 
   // The caption track carries the candidate's own words transcribed; it is
   // part of what consent covered, so it goes with the video rather than
   // outliving it in the storage directory.
-  await provider.delete(video.url);
+  await provider.delete(ref);
   if (video.captionsUrl) await provider.delete(video.captionsUrl);
 }
 

@@ -125,7 +125,9 @@ async function main(): Promise<void> {
 // backfill would) never also runs the backfill itself as a side effect of
 // the import — only running this file directly (`npm run
 // db:migrate-video-providers`) does.
-const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+const isMainModule =
+  process.argv[1] !== undefined &&
+  import.meta.url === new URL(process.argv[1], `file://${process.cwd()}/`).href;
 
 if (isMainModule) {
   main()

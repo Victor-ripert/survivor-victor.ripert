@@ -294,6 +294,11 @@ function buildApplicantRoster(): ApplicantSeed[] {
   const generatedCount = TOTAL_APPLICANTS - applicants.length;
   const generatedVideoCount = Math.max(0, MIN_APPLICANTS_WITH_VIDEO - curatedWithVideo);
 
+  if (generatedVideoCount > generatedCount) {
+    throw new Error(
+      `MIN_APPLICANTS_WITH_VIDEO (${MIN_APPLICANTS_WITH_VIDEO}) cannot be reached with TOTAL_APPLICANTS (${TOTAL_APPLICANTS}) and ${applicants.length} curated fixtures — lower MIN_APPLICANTS_WITH_VIDEO or raise TOTAL_APPLICANTS.`,
+    );
+  }
   if (generatedCount < 0) {
     throw new Error(
       `TOTAL_APPLICANTS (${TOTAL_APPLICANTS}) is smaller than the ${applicants.length} curated fixtures in applicants.ts — raise it or trim applicants.ts.`,

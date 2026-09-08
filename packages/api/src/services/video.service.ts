@@ -2,13 +2,14 @@ import { VideoType } from '@prisma/client';
 import type { Video } from '@profils-actifs/shared';
 import { prisma } from '../config/prisma.js';
 import { notFound, unprocessableEntity } from '../utils/http-error.js';
-import { toVideoDto, videoDecisionInclude } from '../utils/mappers.js';
 import type { AddVideoInput } from '../validators/video.js';
 import { buildVideoConsent } from './video-consent.js';
 import { createExternalLinkVideoProvider } from './video-providers/external-link.js';
 import { assertUploadSizeWithinLimit, detectVideoContentType } from './video-providers/local.js';
 import { getVideoProvider, getVideoProviderByName } from './video-providers/index.js';
 import { isPublished, isPubliclyVisible } from './visibility.js';
+import { getVideoProviderStatus } from './video-status.service.js';
+import { toVideoDto, videoDecisionInclude, type VideoRow } from '../utils/mappers.js';
 
 const profileNotFound = () => notFound('Profil introuvable');
 const videoNotFound = () => notFound('Vidéo introuvable');
@@ -35,10 +36,13 @@ export async function listVideosForProfile(profileId: string, viewerId?: string)
   if (!profile) return [];
 
   const isOwner = viewerId !== undefined && viewerId === profile.userId;
-  if (isOwner) return profile.videos.map(toVideoDto);
+  if (isOwner) {
+    return Promise.all(profile.videos.map(toVideoDtoWithProviderStatus));
+  }
+
   if (!isPubliclyVisible(profile)) return [];
 
-  return profile.videos.filter(isPublished).map(toVideoDto);
+  return Promise.all(profile.videos.filter(isPublished).map(toVideoDtoWithProviderStatus));
 }
 
 /**
@@ -81,7 +85,7 @@ export async function addExternalVideo(
     },
   });
 
-  return toVideoDto(video);
+  return toVideoDto(video, 'ready');
 }
 
 /**
@@ -204,9 +208,14 @@ export async function addUploadedVideo(
       },
     });
 
-    return toVideoDto(video);
+    return toVideoDtoWithProviderStatus(video);
   } catch (error: unknown) {
     await provider.delete(ref);
     throw error;
   }
 }
+
+const toVideoDtoWithProviderStatus = async (video: VideoRow): Promise<Video> => {
+  const providerStatus = await getVideoProviderStatus(video);
+  return toVideoDto(video, providerStatus);
+};

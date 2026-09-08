@@ -1,6 +1,7 @@
 import { ModerationAction, type Prisma, type Video as PrismaVideo } from '@prisma/client';
 import type { Video, Profile } from '@profils-actifs/shared';
 import { publishedVideoFilter } from '../services/visibility.js';
+import type { Video, Profile, VideoProviderStatus } from '@profils-actifs/shared';
 
 /**
  * The latest moderation decision rides along with every video so the owner's
@@ -54,7 +55,7 @@ const rejectionReason = (video: VideoRow): string | undefined => {
 
 /** Converts a Prisma `Video` row into the shared `Video` DTO — `null` becomes
  *  `undefined` for optional fields, dates become ISO strings. */
-export function toVideoDto(video: VideoRow): Video {
+export function toVideoDto(video: VideoRow, providerStatus: VideoProviderStatus = 'ready'): Video {
   return {
     id: video.id,
     profileId: video.profileId,
@@ -64,6 +65,7 @@ export function toVideoDto(video: VideoRow): Video {
     url: video.url,
     captionsUrl: video.captionsUrl ?? undefined,
     duration: video.duration ?? undefined,
+    providerStatus,
     moderationStatus: video.moderationStatus,
     moderationReason: rejectionReason(video),
     createdAt: video.createdAt.toISOString(),

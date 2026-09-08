@@ -12,6 +12,7 @@ import type { PaginationQuery } from '../validators/common.js';
 import type { AddSkillInput, UpsertProfileInput } from '../validators/profile.js';
 import { findOrCreateSkill } from './skills.service.js';
 import { isPubliclyVisible, publicProfileFilter } from './visibility.js';
+import { getVideoProviderStatuses } from './video-status.service.js';
 
 /** "Not yours" and "does not exist" deliberately read the same from outside,
  *  so the endpoint never confirms that an unapproved profile exists. */
@@ -24,6 +25,7 @@ const ownProfileMissing = () => notFound("Vous n'avez pas encore créé votre pr
  * one yields an empty `data` array, which is the clean result the brief asks
  * for rather than an error.
  */
+
 export const getFeed = async ({ page, limit }: PaginationQuery): Promise<Paginated<Profile>> => {
   const pageRequest = resolvePageRequest(page, limit);
   const where = publicProfileFilter();
@@ -66,7 +68,7 @@ export const getPublicProfile = async (id: string, viewerId?: string): Promise<P
     include: isOwner ? profileInclude : publicProfileInclude,
   });
 
-  return toProfileDto(profile);
+  return toProfileDtoWithProviderStatuses(profile);
 };
 
 /** `GET /profiles/me` — the caller's own profile, by construction. */
@@ -74,7 +76,7 @@ export const getOwnProfile = async (userId: string): Promise<Profile> => {
   const profile = await prisma.profile.findUnique({ where: { userId }, include: profileInclude });
   if (!profile) throw ownProfileMissing();
 
-  return toProfileDto(profile);
+  return toProfileDtoWithProviderStatuses(profile);
 };
 
 /** An omitted field is left untouched, a blank one is cleared. */
@@ -140,7 +142,7 @@ export const addSkill = async (userId: string, input: AddSkillInput): Promise<Pr
     return tx.profile.findUniqueOrThrow({ where: { id: existing.id }, include: profileInclude });
   });
 
-  return toProfileDto(profile);
+  return toProfileDtoWithProviderStatuses(profile);
 };
 
 /** `DELETE /profiles/me/skills/{skillId}` — ownership is part of the `where`,
@@ -151,4 +153,19 @@ export const removeSkill = async (userId: string, skillId: string): Promise<void
   });
 
   if (count === 0) throw notFound('Cette compétence ne figure pas sur votre profil');
+};
+
+const toProfileDtoWithProviderStatuses = async (
+  profile: ProfileWithRelations,
+): Promise<Profile> => {
+  const dto = toProfileDto(profile);
+  const statuses = await getVideoProviderStatuses(profile.videos);
+
+  return {
+    ...dto,
+    videos: dto.videos.map((video) => ({
+      ...video,
+      providerStatus: statuses.get(video.id) ?? 'unavailable',
+    })),
+  };
 };

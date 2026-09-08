@@ -119,7 +119,7 @@ export const VideoPlayer = ({ video, status = 'ready', active, onActivate }: Vid
 
   if (isUpload) {
     if (hasFailed) {
-      return <p className="video-placeholder">Cette vidéo n'a pas pu être chargée.</p>;
+      return <p className="video-placeholder">Cette vidéo n’a pas pu être chargée.</p>;
     }
 
     return (

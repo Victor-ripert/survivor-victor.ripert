@@ -1,0 +1,24 @@
+EW-9 — parcours complet du catalogue, passe 2
+ProfilsActifs — JEB/DNI/2026-003 — courriel du 8 septembre 2026
+
+date      : 2026-09-08T10:48:10+02:00
+commit    : dc14b0c2e823a033b4fba79254219458cad17ba0
+branche   : feat/recruiter-deterministic-ordering
+requête   : GET /recruiter/catalogue?page=N&limit=3 (aucun tri demandé)
+tri       : updatedAt DESC, id ASC — le tri par défaut
+pages     : 4, parcourues de la première à la dernière
+
+Un identifiant de profil par ligne, dans l ordre où le catalogue les a rendus.
+------------------------------------------------------------------------------
+cmtknwo28001ua0iodqfu7dze
+cmtin5p1k00208lio8zpivfkh
+cmtin5p1d001v8liojurjlb95
+cmtin5p16001r8lio2c5yy9co
+cmtin5p0y001m8liojzzzuyik
+cmtin5p0q001h8lio3z1cmim8
+cmtin5p0j001d8liojtg8hk62
+cmtin5p0c00198lioer5xbu0d
+cmtin5p0200138lio5zmgyu34
+cmtin5ozp000x8lioehi73df1
+cmtin5ozf000s8lio5guib6qa
+cmtin5oys000m8liog1rdwln9

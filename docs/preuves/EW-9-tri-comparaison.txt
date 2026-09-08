@@ -1,0 +1,157 @@
+EW-9 — tri déterministe du catalogue : deux parcours et leur comparaison
+ProfilsActifs — JEB/DNI/2026-003
+
+date        : 2026-09-08T10:48:10+02:00
+commit      : dc14b0c2e823a033b4fba79254219458cad17ba0
+branche     : feat/recruiter-deterministic-ordering
+API         : http://localhost:3000/api
+version API : 1.0.0
+courriel    : 8 septembre 2026 — « deux exécutions, ça se prouve en trois minutes »
+page        : limit=3, choisi pour que le parcours traverse 4 pages
+
+Fichiers joints :
+  docs/preuves/EW-9-tri-passe-1.txt   — la séquence obtenue au premier parcours
+  docs/preuves/EW-9-tri-passe-2.txt   — la séquence obtenue au second
+  ce fichier                          — leur comparaison
+
+==============================================================================
+1. L'ordre annoncé
+------------------------------------------------------------------------------
+ORDER BY "updatedAt" DESC, "id" ASC — deux colonnes, la seconde unique.
+
+Il est construit par buildCatalogueOrderBy() dans
+packages/api/src/services/catalogue.filters.ts, appliqué par défaut par le
+validateur (packages/api/src/validators/recruiter.ts) et publié dans
+packages/api/openapi.yaml. Index correspondant, colonne pour colonne :
+
+  CREATE INDEX "Profile_updatedAt_id_idx" ON public."Profile" USING btree ("updatedAt" DESC, id)
+
+Plan d'exécution réellement choisi pour la requête de page :
+
+                                          QUERY PLAN                                        
+  ------------------------------------------------------------------------------------------
+   Limit  (cost=2.69..2.69 rows=3 width=34)
+     ->  Sort  (cost=2.69..2.71 rows=9 width=34)
+           Sort Key: p."updatedAt" DESC, p.id
+           ->  Hash Join  (cost=1.31..2.57 rows=9 width=34)
+                 Hash Cond: (u.id = p."userId")
+                 ->  Seq Scan on "User" u  (cost=0.00..1.21 rows=13 width=26)
+                       Filter: ("isActive" AND (role = 'APPLICANT'::"UserRole"))
+                 ->  Hash  (cost=1.16..1.16 rows=12 width=60)
+                       ->  Seq Scan on "Profile" p  (cost=0.00..1.16 rows=12 width=60)
+                             Filter: ("moderationStatus" <> 'REJECTED'::"ModerationStatus")
+  (10 rows)
+  
+
+Ce plan porte un nœud Sort, et il faut le dire plutôt que le passer sous
+silence : sur 13 lignes, lire la table entière coûte moins cher que
+descendre l'index, et le planificateur a raison. L'index n'est pas décoratif
+pour autant — il sert bien l'ordre demandé, ce qui se vérifie en retirant au
+planificateur le parcours séquentiel. Le nœud Sort disparaît :
+
+                                                  QUERY PLAN                                                 
+  -----------------------------------------------------------------------------------------------------------
+   Limit  (cost=0.14..2.03 rows=3 width=34)
+     ->  Index Only Scan using "Profile_updatedAt_id_idx" on "Profile" p  (cost=0.14..8.33 rows=13 width=34)
+  (2 rows)
+  
+
+Les mesures au volume de recette (50 000 profils) sont dans
+docs/preuves/EW-5-index-catalogue.txt et docs/decisions/02-index-du-catalogue.md.
+
+Le déterminisme, lui, ne dépend d'aucun de ces deux plans : il tient à ce que
+l'ORDER BY porte une clé unique en dernière position, donc à ce qu'aucune
+paire de lignes ne soit à égalité. Un changement de plan réordonne le travail,
+pas le résultat.
+
+==============================================================================
+2. Combien de profils le catalogue doit rendre
+------------------------------------------------------------------------------
+Compté sur la base, pas sur l'API :
+
+  lignes dans "Profile"                      : 13
+  que le catalogue a le droit de montrer     : 12
+  pagination.total rendu par l'API           : 12
+
+L'écart entre les deux premiers nombres n'est pas une perte : ce sont les
+lignes que les règles de visibilité écartent (packages/api/src/services/
+visibility.ts). Elles sont nommées une par une :
+
+  cmtin5p1s00258liom7aqmuoz	profil rejeté par la modération
+
+==============================================================================
+3. Les deux parcours et leur comparaison
+------------------------------------------------------------------------------
+$ diff docs/preuves/EW-9-tri-passe-1.txt docs/preuves/EW-9-tri-passe-2.txt
+
+  (aucune différence — les deux séquences sont identiques, ligne pour ligne)
+
+constat :
+  séquences identiques                       : oui
+  identifiants rendus, passe 1               : 12
+  identifiants rendus, passe 2               : 12
+  identifiants distincts                     : 12
+  doublons                                   : aucun
+  manquants par rapport à la base            : 0
+  compte attendu (12) atteint                : oui
+
+Le tri par défaut est bien celui qui est documenté : la même séquence est
+obtenue sans paramètre `sort` et avec `sort=recent` explicite.
+
+  défaut implicite == sort=recent            : oui
+
+Séquence obtenue, avec la clé de tri lue en base en regard :
+
+    #  identifiant                updatedAt
+    1  cmtknwo28001ua0iodqfu7dze  2026-09-08T08:47:50.030
+    2  cmtin5p1k00208lio8zpivfkh  2026-09-08T08:47:50.011
+    3  cmtin5p1d001v8liojurjlb95  2026-09-08T08:47:50.000
+    4  cmtin5p16001r8lio2c5yy9co  2026-09-08T08:47:49.989
+    5  cmtin5p0y001m8liojzzzuyik  2026-09-08T08:47:49.978
+    6  cmtin5p0q001h8lio3z1cmim8  2026-09-08T08:47:49.968
+    7  cmtin5p0j001d8liojtg8hk62  2026-09-08T08:47:49.955
+    8  cmtin5p0c00198lioer5xbu0d  2026-09-08T08:47:49.945
+    9  cmtin5p0200138lio5zmgyu34  2026-09-08T08:47:49.928
+   10  cmtin5ozp000x8lioehi73df1  2026-09-08T08:47:49.908
+   11  cmtin5ozf000s8lio5guib6qa  2026-09-08T08:47:49.895
+   12  cmtin5oys000m8liog1rdwln9  2026-09-08T08:47:49.866
+
+==============================================================================
+4. Un profil modifié pendant que le recruteur pagine
+------------------------------------------------------------------------------
+Le cas est provoqué exprès, pas attendu : le recruteur lit la page 1, le
+candidat cmtin5oys000m8liog1rdwln9 enregistre son profil, le recruteur demande la page 2.
+L'horodatage d'origine est remis en place à la fin du script.
+
+  dernier profil de la page 1                : cmtin5p1d001v8liojurjlb95
+  profil modifié entre les deux pages        : cmtin5oys000m8liog1rdwln9
+  (il était le dernier de l'ordre, il passe en tête)
+
+  pages 1 puis 2, sans interruption — attendu :
+    cmtknwo28001ua0iodqfu7dze
+    cmtin5p1k00208lio8zpivfkh
+    cmtin5p1d001v8liojurjlb95
+    cmtin5p16001r8lio2c5yy9co
+    cmtin5p0y001m8liojzzzuyik
+    cmtin5p0q001h8lio3z1cmim8
+  pages 1 puis 2, avec la modification :
+    cmtknwo28001ua0iodqfu7dze
+    cmtin5p1k00208lio8zpivfkh
+    cmtin5p1d001v8liojurjlb95
+    cmtin5p1d001v8liojurjlb95
+    cmtin5p16001r8lio2c5yy9co
+    cmtin5p0y001m8liojzzzuyik
+
+  vus deux fois                              : cmtin5p1d001v8liojurjlb95
+  jamais vus                                 : cmtin5p0q001h8lio3z1cmim8
+
+C'est le comportement attendu d'une pagination par OFFSET, et il est
+documenté plutôt que masqué : docs/livrables/note-algorithme-de-classement.md
+§4 dit quelle garantie nous offrons et laquelle nous n'offrons pas.
+
+  horodatage restauré pour cmtin5oys000m8liog1rdwln9 :
+    2026-09-08T08:47:49.866000
+    (valeur d'origine : 2026-09-08T08:47:49.866000)
+
+==============================================================================
+Fin de la transcription — 2026-09-08T10:48:11+02:00

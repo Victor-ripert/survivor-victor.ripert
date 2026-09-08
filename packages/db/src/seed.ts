@@ -12,6 +12,7 @@ import { certificationLevels } from './seed-data/certification-levels.js';
 import { CONTACT_MESSAGE, interactionPlan } from './seed-data/interactions.js';
 import { skills } from './seed-data/skills.js';
 import { DEMO_PASSWORD, primaryRecruiter, staff } from './seed-data/staff.js';
+import { loadQuestionnaire } from '@profils-actifs/shared';
 
 // Every seed function upserts on a deterministic key (never a fresh cuid),
 // so `npm run db:seed` can be re-run safely without duplicating rows.

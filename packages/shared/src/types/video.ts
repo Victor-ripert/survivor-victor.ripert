@@ -17,6 +17,16 @@ import type { ModerationStatus } from './moderation.js';
 export const VIDEO_TYPES = ['EXTERNAL_LINK', 'UPLOAD'] as const;
 export type VideoType = (typeof VIDEO_TYPES)[number];
 
+/**
+ * Mirrors `VideoProvider.status()`'s return type (`api/src/services/
+ * video-provider.ts`) — declared here, not there, because `VideoPlayer.tsx`
+ * (web) needs to render the same three states the provider reports, and web
+ * cannot import from the api package. The API imports this type rather than
+ * redeclaring it, same pattern as `VIDEO_TYPES` above.
+ */
+export const VIDEO_PROVIDER_STATUSES = ['ready', 'processing', 'unavailable'] as const;
+export type VideoProviderStatus = (typeof VIDEO_PROVIDER_STATUSES)[number];
+
 export const VIDEO_TITLE_MAX_LENGTH = 120;
 export const VIDEO_DESCRIPTION_MAX_LENGTH = 500;
 

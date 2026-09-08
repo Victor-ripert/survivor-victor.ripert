@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { VideoType } from '@profils-actifs/shared';
+import type { VideoProviderStatus, VideoType } from '@profils-actifs/shared';
 import { isEmbeddableUrl, resolveUploadedVideoSrc, toPlayerSrc } from '../utils/embed.js';
 import { formatDuration } from '../utils/format.js';
 import { Icon } from './Icon.js';
@@ -15,6 +15,14 @@ export interface PlayableVideo {
 
 interface VideoPlayerProps {
   video: PlayableVideo;
+  /**
+   * Provider-level readiness (`VideoProvider.status()`, A1/A3) — distinct
+   * from `hasFailed` below, which is a *playback* failure on an already-
+   * ready video. Defaults to 'ready' so every existing caller that doesn't
+   * pass this yet (nothing calls the provider's status() today, pending
+   * Victor's V2/V3 migration) keeps behaving exactly as before.
+   */
+  status?: VideoProviderStatus;
   /** Whether this is the one player currently loaded — the parent keeps a
    *  single active id so two streams never play at once (brief §8.6). */
   active: boolean;
@@ -39,7 +47,7 @@ const IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-presentation allow
  * uploaded video that rendered straight away would play alongside whichever
  * embed the viewer had just started, which is the thing §8.6 forbids.
  */
-export const VideoPlayer = ({ video, active, onActivate }: VideoPlayerProps) => {
+export const VideoPlayer = ({ video, status = 'ready', active, onActivate }: VideoPlayerProps) => {
   // A `<video>` reports a missing or undecodable file through an error event,
   // not by throwing: without this the reader gets a black rectangle and no
   // explanation of why nothing plays.
@@ -55,10 +63,34 @@ export const VideoPlayer = ({ video, active, onActivate }: VideoPlayerProps) => 
    *
    * A ref callback rather than an Effect: this has to run exactly when the
    * node appears, which is precisely when a ref callback fires.
+   *
+   * Declared before the status early-returns below, not after: React
+   * requires every hook to run on every render in the same order, and a
+   * hook placed after a conditional `return` would violate that the moment
+   * status is 'processing' or 'unavailable'.
    */
   const focusOnMount = useCallback((node: HTMLElement | null) => {
     node?.focus();
   }, []);
+
+  // Checked before the poster, not after a click: showing "press play" on a
+  // video the provider hasn't got ready yet just moves the failure one step
+  // later, instead of telling the reader what is actually happening now.
+  if (status === 'processing') {
+    return (
+      <p className="video-placeholder" role="status">
+        Cette vidéo est en cours de traitement — réessayez dans quelques instants.
+      </p>
+    );
+  }
+
+  if (status === 'unavailable') {
+    return (
+      <p className="video-placeholder" role="status">
+        Cette vidéo est temporairement indisponible.
+      </p>
+    );
+  }
 
   const isUpload = video.type === 'UPLOAD';
 
@@ -98,20 +130,10 @@ export const VideoPlayer = ({ video, active, onActivate }: VideoPlayerProps) => 
         controls
         autoPlay
         preload="metadata"
-        // The API serves the file and its caption track from its own origin,
-        // and a `<track>` fetched cross-origin is refused unless the media
-        // element opts into CORS. Without this the video plays and the
-        // subtitles silently never load — the track reports `showing` with
-        // zero cues, which looks like success everywhere except on screen.
         crossOrigin="anonymous"
-        // Stated rather than inherited from `controls`: this element is the
-        // focus target the moment it replaces the poster, and a player the
-        // keyboard cannot reach is a player the keyboard cannot pause.
         tabIndex={0}
         onError={() => setHasFailed(true)}
       >
-        {/* `default` enables the track rather than merely offering it: the
-            subtitles show without the viewer having to find the menu. */}
         {video.captionsUrl && (
           <track
             kind="captions"

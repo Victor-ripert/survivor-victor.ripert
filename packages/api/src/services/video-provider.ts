@@ -1,3 +1,5 @@
+import type { VideoProviderStatus } from '@profils-actifs/shared';
+
 /**
  * Abstraction over "wherever video bytes or links actually live" — local
  * disk today (Victor's V1), a non-functional placeholder until the
@@ -24,16 +26,7 @@ export type StoreVideoInput =
   | { kind: 'upload'; buffer: Buffer; contentType: VideoContentType }
   | { kind: 'external-link'; url: string };
 
-/**
- * `ready`      — playbackUrl() will resolve.
- * `processing` — the provider accepted the video but it isn't playable yet
- *                (A3: the profile stays visible, the video shows a
- *                placeholder instead of failing).
- * `unavailable`— the provider cannot currently be reached. This is the
- *                degraded-mode case A3/A6 must render around, not an
- *                exception callers are meant to catch.
- */
-export type VideoProviderStatus = 'ready' | 'processing' | 'unavailable';
+export type { VideoProviderStatus };
 
 export interface VideoProvider {
   readonly name: VideoProviderName;

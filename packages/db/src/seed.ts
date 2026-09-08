@@ -2,23 +2,38 @@ import { copyFile, mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NotificationType, UserRole, VideoType } from '@prisma/client';
-import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
+import { CONSENT_TEXT_VERSION, normalizeExternalVideoUrl } from '@profils-actifs/shared';
 import { resolveUploadDir } from '@profils-actifs/shared/node';
 import bcrypt from 'bcryptjs';
 import { prisma } from './client.js';
+import { deriveVideoProvider } from './migrate-video-providers.js';
 import { loadQuestionnaire } from './questionnaire-loader.js';
-import type { ApplicantSeed, UploadedVideoSeed } from './seed-data/applicants.js';
+import type {
+  ApplicantSeed,
+  EmbeddedVideoSeed,
+  UploadedVideoSeed,
+} from './seed-data/applicants.js';
 import { applicants } from './seed-data/applicants.js';
 import { certificationLevels } from './seed-data/certification-levels.js';
+import { generateApplicants } from './seed-data/generated-applicants.js';
 import { CONTACT_MESSAGE, interactionPlan } from './seed-data/interactions.js';
 import { skills } from './seed-data/skills.js';
 import { DEMO_PASSWORD, primaryRecruiter, staff } from './seed-data/staff.js';
-import { loadQuestionnaire } from './questionnaire-loader.js';
 
 // Every seed function upserts on a deterministic key (never a fresh cuid),
 // so `npm run db:seed` can be re-run safely without duplicating rows.
 
 const SALT_ROUNDS = 12;
+
+/**
+ * Load-test dataset size (Thomas Vignal, 2026-09-08): 500 applicant
+ * profiles, at least 300 with a video. Overridable via env var so the same
+ * generator can produce a lighter dataset for a quick local run without
+ * touching code — `SEED_APPLICANT_COUNT=50 SEED_APPLICANTS_WITH_VIDEO=20
+ * npm run db:seed`.
+ */
+const TOTAL_APPLICANTS = Number(process.env.SEED_APPLICANT_COUNT) || 500;
+const MIN_APPLICANTS_WITH_VIDEO = Number(process.env.SEED_APPLICANTS_WITH_VIDEO) || 300;
 
 async function seedCertificationLevels(): Promise<void> {
   for (const level of certificationLevels) {
@@ -135,6 +150,8 @@ interface StoredUpload {
   url: string;
   captionsUrl: string;
   fileSizeBytes: number;
+  providerName: string;
+  providerRef: string;
 }
 
 /**
@@ -163,13 +180,43 @@ async function storeUploadedFixture(entry: UploadedVideoSeed): Promise<StoredUpl
   );
 
   const { size } = await stat(path.join(uploadDir, videoName));
+  const url = `/uploads/${videoName}`;
+  const { providerName, providerRef } = deriveVideoProvider(VideoType.UPLOAD, url);
 
   return {
     type: VideoType.UPLOAD,
-    url: `/uploads/${videoName}`,
+    url,
     captionsUrl: `/uploads/${captionsName}`,
     fileSizeBytes: size,
+    providerName,
+    providerRef,
   };
+}
+
+/**
+ * The embed-kind counterpart to `storeUploadedFixture` above. Runs the
+ * fixture's URL through `normalizeExternalVideoUrl` — the exact function
+ * `POST /profiles/{id}/videos` calls via `packages/api/src/services/
+ * video-providers/external-link.ts`, both now importing it from
+ * `@profils-actifs/shared` — rather than trusting the fixture to already
+ * hold a canonical embed URL, then derives `providerName`/`providerRef`
+ * with this package's own `deriveVideoProvider` (`migrate-video-
+ * providers.ts`), the same values the real provider's `store()` would
+ * produce. A seeded EXTERNAL_LINK video is the result of the same
+ * validation a candidate's pasted link goes through, not a raw insert.
+ */
+function storeExternalLinkFixture(entry: EmbeddedVideoSeed): StoredExternalLink {
+  const url = normalizeExternalVideoUrl(entry.url);
+  const { providerName, providerRef } = deriveVideoProvider(VideoType.EXTERNAL_LINK, url);
+
+  return { type: VideoType.EXTERNAL_LINK, url, providerName, providerRef };
+}
+
+interface StoredExternalLink {
+  type: typeof VideoType.EXTERNAL_LINK;
+  url: string;
+  providerName: string;
+  providerRef: string;
 }
 
 const seedApplicant = async (applicant: ApplicantSeed, passwordHash: string) => {
@@ -218,9 +265,7 @@ const seedApplicant = async (applicant: ApplicantSeed, passwordHash: string) => 
     const consent = { acceptedAt: new Date(), consentTextVersion: CONSENT_TEXT_VERSION };
 
     const stored =
-      entry.kind === 'upload'
-        ? await storeUploadedFixture(entry)
-        : { type: VideoType.EXTERNAL_LINK as const, url: entry.url };
+      entry.kind === 'upload' ? await storeUploadedFixture(entry) : storeExternalLinkFixture(entry);
 
     await prisma.video.create({
       data: {
@@ -237,15 +282,44 @@ const seedApplicant = async (applicant: ApplicantSeed, passwordHash: string) => 
   return user;
 };
 
+/**
+ * The curated fixtures in `applicants.ts` are named demo accounts —
+ * `interactions.ts` indexes into the result of this function by position,
+ * so they always come first — topped up with enough generated applicants
+ * to reach `TOTAL_APPLICANTS`, with enough of *those* carrying a video to
+ * reach `MIN_APPLICANTS_WITH_VIDEO` across the whole set.
+ */
+function buildApplicantRoster(): ApplicantSeed[] {
+  const curatedWithVideo = applicants.filter((applicant) => applicant.videos.length > 0).length;
+  const generatedCount = TOTAL_APPLICANTS - applicants.length;
+  const generatedVideoCount = Math.max(0, MIN_APPLICANTS_WITH_VIDEO - curatedWithVideo);
+
+  if (generatedCount < 0) {
+    throw new Error(
+      `TOTAL_APPLICANTS (${TOTAL_APPLICANTS}) is smaller than the ${applicants.length} curated fixtures in applicants.ts — raise it or trim applicants.ts.`,
+    );
+  }
+
+  const generated = generateApplicants({
+    count: generatedCount,
+    videoCount: generatedVideoCount,
+    exclude: new Set(applicants.map((applicant) => `${applicant.firstName} ${applicant.lastName}`)),
+  });
+
+  return [...applicants, ...generated];
+}
+
 async function seedApplicants(passwordHash: string): Promise<string[]> {
+  const roster = buildApplicantRoster();
   const ids: string[] = [];
 
-  for (const applicant of applicants) {
+  for (const applicant of roster) {
     const user = await seedApplicant(applicant, passwordHash);
     ids.push(user.id);
   }
 
-  console.log(`Seeded ${applicants.length} applicant profiles`);
+  const withVideo = roster.filter((applicant) => applicant.videos.length > 0).length;
+  console.log(`Seeded ${roster.length} applicant profiles (${withVideo} with a video)`);
 
   return ids;
 }
@@ -314,6 +388,18 @@ async function main(): Promise<void> {
   await seedStaff(passwordHash);
   const applicantIds = await seedApplicants(passwordHash);
   await seedInteractions(applicantIds);
+
+  // Load-test dataset check (Thomas Vignal, 2026-09-08): informative, not a
+  // hard gate — a database someone has already been testing against by hand
+  // can legitimately carry extra rows this script never created, and that
+  // is not this script's problem to report as a failure.
+  const [profileCount, videoCount] = await Promise.all([
+    prisma.profile.count(),
+    prisma.video.count(),
+  ]);
+  console.log(
+    `\nProfiles in database: ${profileCount} (target ${TOTAL_APPLICANTS}) — Videos: ${videoCount} (target >= ${MIN_APPLICANTS_WITH_VIDEO})`,
+  );
 
   console.log(`\nComptes de démonstration — mot de passe commun : ${DEMO_PASSWORD}`);
   console.table(staff.map(({ role, email }) => ({ role, email })));

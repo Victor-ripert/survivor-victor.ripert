@@ -50,6 +50,7 @@ const IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-presentation allow
  */
 export const VideoPlayer = ({ video, status, active, onActivate }: VideoPlayerProps) => {
   const providerStatus = status ?? video.providerStatus ?? 'ready';
+  const [hasFailed, setHasFailed] = useState(false);
 
   /**
    * Activation replaces the poster button with the player, which unmounts the

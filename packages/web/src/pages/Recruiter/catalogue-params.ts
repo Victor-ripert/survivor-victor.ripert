@@ -1,4 +1,9 @@
-import { CATALOGUE_SORTS, type CatalogueQuery, type CatalogueSort } from '@profils-actifs/shared';
+import {
+  CATALOGUE_DEFAULT_SORT,
+  CATALOGUE_SORTS,
+  type CatalogueQuery,
+  type CatalogueSort,
+} from '@profils-actifs/shared';
 
 const isSort = (value: string | null): value is CatalogueSort =>
   value !== null && (CATALOGUE_SORTS as readonly string[]).includes(value);
@@ -29,7 +34,7 @@ export const parseCatalogueParams = (params: URLSearchParams): CatalogueQuery =>
     certifiedOnly: params.get('certifiedOnly') === 'true' || undefined,
     minScore: readNumber(params.get('minScore')),
     hasVideo: params.get('hasVideo') === 'true' || undefined,
-    sort: isSort(sort) ? sort : 'recent',
+    sort: isSort(sort) ? sort : CATALOGUE_DEFAULT_SORT,
   };
 };
 
@@ -46,7 +51,7 @@ export const toCatalogueParams = (query: CatalogueQuery): URLSearchParams => {
   if (query.certifiedOnly) params.set('certifiedOnly', 'true');
   if (query.minScore !== undefined) params.set('minScore', String(query.minScore));
   if (query.hasVideo) params.set('hasVideo', 'true');
-  if (query.sort && query.sort !== 'recent') params.set('sort', query.sort);
+  if (query.sort && query.sort !== CATALOGUE_DEFAULT_SORT) params.set('sort', query.sort);
 
   return params;
 };

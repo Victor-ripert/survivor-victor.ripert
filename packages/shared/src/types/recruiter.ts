@@ -34,8 +34,20 @@ export interface CataloguePreviewVideo {
   url: string;
 }
 
-export const CATALOGUE_SORTS = ['recent', 'score', 'name'] as const;
+/**
+ * Orderings a recruiter may ask for. Each one rests on a criterion the
+ * candidate declared about their work — freshness, certification, sector,
+ * location — and none on anything resembling an audience measurement.
+ *
+ * `name` was withdrawn on 2026-09-08; the reasoning is in
+ * docs/livrables/note-algorithme-de-classement.md §3.1.
+ */
+export const CATALOGUE_SORTS = ['recent', 'score', 'sector', 'location'] as const;
 export type CatalogueSort = (typeof CATALOGUE_SORTS)[number];
+
+/** The ordering applied when the caller asks for none. Declared once so the
+ *  validator, the URL parser and the contract cannot drift apart. */
+export const CATALOGUE_DEFAULT_SORT: CatalogueSort = 'recent';
 
 /** Query string accepted by `GET /recruiter/catalogue`. */
 export interface CatalogueQuery {

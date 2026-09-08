@@ -148,7 +148,14 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, profileId, title, type, url, moderationStatus, createdAt]
+        providerStatus:
+          type: string
+          description: >-
+            Current availability of the provider serving the video. This is
+            independent from moderationStatus: an approved video can be
+            temporarily unavailable when its configured provider is degraded.
+          enum: [ready, processing, unavailable]
+      required: [id, profileId, title, type, url, providerStatus, moderationStatus, createdAt]
 
     ProfileSkill:
       type: object

@@ -11,6 +11,7 @@ export interface PlayableVideo {
   type?: VideoType;
   captionsUrl?: string;
   duration?: number | null;
+  providerStatus?: VideoProviderStatus;
 }
 
 interface VideoPlayerProps {
@@ -47,11 +48,8 @@ const IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-presentation allow
  * uploaded video that rendered straight away would play alongside whichever
  * embed the viewer had just started, which is the thing §8.6 forbids.
  */
-export const VideoPlayer = ({ video, status = 'ready', active, onActivate }: VideoPlayerProps) => {
-  // A `<video>` reports a missing or undecodable file through an error event,
-  // not by throwing: without this the reader gets a black rectangle and no
-  // explanation of why nothing plays.
-  const [hasFailed, setHasFailed] = useState(false);
+export const VideoPlayer = ({ video, status, active, onActivate }: VideoPlayerProps) => {
+  const providerStatus = status ?? video.providerStatus ?? 'ready';
 
   /**
    * Activation replaces the poster button with the player, which unmounts the
@@ -76,7 +74,7 @@ export const VideoPlayer = ({ video, status = 'ready', active, onActivate }: Vid
   // Checked before the poster, not after a click: showing "press play" on a
   // video the provider hasn't got ready yet just moves the failure one step
   // later, instead of telling the reader what is actually happening now.
-  if (status === 'processing') {
+  if (providerStatus === 'processing') {
     return (
       <p className="video-placeholder" role="status">
         Cette vidéo est en cours de traitement — réessayez dans quelques instants.
@@ -84,7 +82,7 @@ export const VideoPlayer = ({ video, status = 'ready', active, onActivate }: Vid
     );
   }
 
-  if (status === 'unavailable') {
+  if (providerStatus === 'unavailable') {
     return (
       <p className="video-placeholder" role="status">
         Cette vidéo est temporairement indisponible.

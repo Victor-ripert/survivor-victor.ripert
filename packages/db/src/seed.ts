@@ -6,6 +6,7 @@ import { CONSENT_TEXT_VERSION } from '@profils-actifs/shared';
 import { resolveUploadDir } from '@profils-actifs/shared/node';
 import bcrypt from 'bcryptjs';
 import { prisma } from './client.js';
+import { loadQuestionnaire } from './questionnaire-loader.js';
 import type { ApplicantSeed, UploadedVideoSeed } from './seed-data/applicants.js';
 import { applicants } from './seed-data/applicants.js';
 import { certificationLevels } from './seed-data/certification-levels.js';

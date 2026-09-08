@@ -15,3 +15,4 @@ export * from './types/recruiter.js';
 export * from './utils/pagination.js';
 export * from './utils/series.js';
 export * from './utils/age.js';
+export * from './utils/video-url.js';

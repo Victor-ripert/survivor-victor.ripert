@@ -25,6 +25,12 @@ const csv = z
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.string().min(1, { error: 'DATABASE_URL is required' }),
+  /** `pg.Pool`'s own default (10) queues every request past it under real
+   *  concurrency — see load-test/results/findings-2026-09-08.md for the
+   *  measurement. 20 leaves headroom under Postgres's own `max_connections`
+   *  (100 by default) for pgAdmin, migrate/seed scripts and a second API
+   *  process, rather than handing the whole ceiling to one pool. */
+  DATABASE_POOL_MAX: z.coerce.number().int().positive().default(20),
   JWT_SECRET: z.string().min(16, {
     error: 'JWT_SECRET must be at least 16 characters',
   }),

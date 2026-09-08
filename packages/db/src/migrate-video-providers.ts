@@ -120,15 +120,26 @@ async function main(): Promise<void> {
   }
 }
 
-main()
-  .catch((error: unknown) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    // A disconnect that fails must not mask a migration error above, and
-    // must not turn a successful run into a non-zero exit either.
-    await prisma.$disconnect().catch((error: unknown) => {
-      console.error('[migrate-video-providers] prisma did not disconnect cleanly', error);
+// Guarded so importing this module for `deriveVideoProvider` alone (the
+// seed script does, to stamp providerName/providerRef the same way this
+// backfill would) never also runs the backfill itself as a side effect of
+// the import — only running this file directly (`npm run
+// db:migrate-video-providers`) does.
+const isMainModule =
+  process.argv[1] !== undefined &&
+  import.meta.url === new URL(process.argv[1], `file://${process.cwd()}/`).href;
+
+if (isMainModule) {
+  main()
+    .catch((error: unknown) => {
+      console.error(error);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      // A disconnect that fails must not mask a migration error above, and
+      // must not turn a successful run into a non-zero exit either.
+      await prisma.$disconnect().catch((error: unknown) => {
+        console.error('[migrate-video-providers] prisma did not disconnect cleanly', error);
+      });
     });
-  });
+}

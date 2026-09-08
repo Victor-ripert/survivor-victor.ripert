@@ -13,7 +13,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,mjs,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,mjs,json,md,yaml,yml}\"",
     "db:migrate": "turbo run db:migrate",
-    "db:seed": "turbo run db:seed"
+    "db:seed": "turbo run db:seed",
+    "load-test": "k6 run load-test/catalogue.js"
   },
   "workspaces": [
     "packages/*"

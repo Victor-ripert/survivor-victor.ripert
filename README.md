@@ -194,16 +194,28 @@ npm run db:seed
 npm run db:studio -w @profils-actifs/db   # GUI dans le navigateur
 ```
 
-Le seed crée un jeu de démonstration (13 candidats dont un mineur, 2 recruteurs, 1 administrateur, 100 questions,
-compétences, vidéos et un historique d'interactions étalé sur 30 jours). Il est
-idempotent et refuse de s'exécuter avec `NODE_ENV=production`.
+Le seed crée un jeu de démonstration : 13 candidats nommés (dont un mineur), 2 recruteurs,
+1 administrateur, 100 questions, compétences, un historique d'interactions étalé sur 30 jours —
+et, pour le test de charge (Thomas Vignal, 08/09), **500 profils candidats au total, dont au moins
+300 avec une vidéo**. Les 487 profils générés en plus des 13 nommés le sont par
+`packages/db/src/seed-data/generated-applicants.ts`, de façon déterministe (même seed → même jeu de
+données à chaque exécution) ; leurs vidéos passent par `normalizeExternalVideoUrl`
+(`@profils-actifs/shared`) et `deriveVideoProvider`, exactement comme `POST /profiles/{id}/videos` en
+production — jamais une insertion Prisma directe. Le seed est idempotent (réexécutable sur une base
+vide comme sur une base déjà semée) et refuse de s'exécuter avec `NODE_ENV=production`.
 
-| Rôle                     | Compte                                    | Mot de passe   |
-| ------------------------ | ----------------------------------------- | -------------- |
-| Administrateur           | `admin@profils-actifs.fr`                 | `Password123!` |
-| Recruteur                | `recruteur@profils-actifs.fr`             | `Password123!` |
-| Candidat                 | `amina.berthier@example.fr` (+ 12 autres) | `Password123!` |
-| Candidat mineur (17 ans) | `lucas.morel@example.fr`                  | `Password123!` |
+Pour une base plus légère en développement courant, sans toucher au code :
+
+```bash
+SEED_APPLICANT_COUNT=50 SEED_APPLICANTS_WITH_VIDEO=20 npm run db:seed
+```
+
+| Rôle                     | Compte                                     | Mot de passe   |
+| ------------------------ | ------------------------------------------ | -------------- |
+| Administrateur           | `admin@profils-actifs.fr`                  | `Password123!` |
+| Recruteur                | `recruteur@profils-actifs.fr`              | `Password123!` |
+| Candidat                 | `amina.berthier@example.fr` (+ 486 autres) | `Password123!` |
+| Candidat mineur (17 ans) | `lucas.morel@example.fr`                   | `Password123!` |
 
 Un second compte recruteur, `recruteur2@profils-actifs.fr`, existe pour tester l'isolation entre
 recruteurs : **il n'a aucun historique**, donc ne le donnez pas pour une démonstration.
@@ -225,6 +237,21 @@ npm test -w @profils-actifs/api -- -t "nom du test"
 Une partie de la suite `api` fait des tests d'intégration contre une vraie base
 partagée (`maxWorkers: 1` dans `jest.config.js`) — Postgres doit être up et migré
 avant de lancer les tests.
+
+### Test de charge
+
+```bash
+k6 run load-test/catalogue.js
+```
+
+Scénario [k6](https://k6.io/) simulant 100 recruteurs simultanés parcourant le catalogue
+(`GET /api/recruiter/catalogue`), puis ouvrant profil et vidéos (`GET /api/profiles/:id`,
+`GET /api/profiles/:id/videos`) pour une partie d'entre eux. Nécessite une base semée
+(`npm run db:seed -w @profils-actifs/db`) et le rate limiter de l'API relevé pour la durée
+du test — voir [`load-test/README.md`](load-test/README.md) pour les prérequis, les
+variables d'override et un problème réel que ce test a mis en évidence
+(des profils `PENDING` visibles dans le catalogue recruteur mais qui répondent 404 une
+fois ouverts).
 
 ### Linting & Formatting
 

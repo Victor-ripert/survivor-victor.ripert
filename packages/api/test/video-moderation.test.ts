@@ -4,6 +4,7 @@ import { createApp } from '../src/app.js';
 import { prisma } from '../src/config/prisma.js';
 import { signToken } from '../src/services/jwt.js';
 import { buildVideoConsent } from '../src/services/video-consent.js';
+import { collectAllPages } from './pagination-helpers.js';
 
 const app = createApp();
 
@@ -79,9 +80,17 @@ describe('video moderation', () => {
     const response = await request(app)
       .get('/api/admin/moderation/videos')
       .set('Authorization', `Bearer ${adminToken}`);
-
     expect(response.status).toBe(200);
-    const item = response.body.data.find((entry: { id: string }) => entry.id === videoId);
+
+    // The seeded load-test dataset means this video is not guaranteed to
+    // land on page 1, so walk every page rather than trusting the first.
+    const allPending = await collectAllPages((page) =>
+      request(app)
+        .get(`/api/admin/moderation/videos?page=${page}&limit=20`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .then((res) => res.body),
+    );
+    const item = allPending.find((entry: { id: string }) => entry.id === videoId);
     expect(item).toMatchObject({
       moderationStatus: 'PENDING',
       applicant: { profileId, firstName: 'Amina', lastName: 'Test' },
@@ -142,15 +151,20 @@ describe('video moderation', () => {
   });
 
   it('filters the queue by status', async () => {
-    const rejected = await request(app)
-      .get('/api/admin/moderation/videos?status=REJECTED')
-      .set('Authorization', `Bearer ${adminToken}`);
-    expect(rejected.body.data.some((entry: { id: string }) => entry.id === videoId)).toBe(true);
+    // Walks every page rather than trusting page 1 — the seeded load-test
+    // dataset means neither queue is guaranteed to fit on the first page.
+    const fetchQueuePage = (status: string) => async (page: number) => {
+      const response = await request(app)
+        .get(`/api/admin/moderation/videos?status=${status}&page=${page}&limit=20`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      return response.body as { data: { id: string }[]; pagination: { pages: number } };
+    };
 
-    const pending = await request(app)
-      .get('/api/admin/moderation/videos')
-      .set('Authorization', `Bearer ${adminToken}`);
-    expect(pending.body.data.some((entry: { id: string }) => entry.id === videoId)).toBe(false);
+    const rejected = await collectAllPages(fetchQueuePage('REJECTED'));
+    expect(rejected.some((entry) => entry.id === videoId)).toBe(true);
+
+    const pending = await collectAllPages(fetchQueuePage('PENDING'));
+    expect(pending.some((entry) => entry.id === videoId)).toBe(false);
   });
 
   it('approves the video and the decision replaces the previous one', async () => {

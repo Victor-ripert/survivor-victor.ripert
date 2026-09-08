@@ -238,6 +238,21 @@ Une partie de la suite `api` fait des tests d'intégration contre une vraie base
 partagée (`maxWorkers: 1` dans `jest.config.js`) — Postgres doit être up et migré
 avant de lancer les tests.
 
+### Test de charge
+
+```bash
+k6 run load-test/catalogue.js
+```
+
+Scénario [k6](https://k6.io/) simulant 100 recruteurs simultanés parcourant le catalogue
+(`GET /api/recruiter/catalogue`), puis ouvrant profil et vidéos (`GET /api/profiles/:id`,
+`GET /api/profiles/:id/videos`) pour une partie d'entre eux. Nécessite une base semée
+(`npm run db:seed -w @profils-actifs/db`) et le rate limiter de l'API relevé pour la durée
+du test — voir [`load-test/README.md`](load-test/README.md) pour les prérequis, les
+variables d'override et un problème réel que ce test a mis en évidence
+(des profils `PENDING` visibles dans le catalogue recruteur mais qui répondent 404 une
+fois ouverts).
+
 ### Linting & Formatting
 
 ```bash

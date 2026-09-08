@@ -3,6 +3,7 @@ import { prisma } from '../../src/config/prisma.js';
 import { applyModeration, listPendingProfiles } from '../../src/services/moderation.service.js';
 import { HttpError } from '../../src/utils/http-error.js';
 import { buildVideoConsent } from '../../src/services/video-consent.js';
+import { collectAllPages } from '../pagination-helpers.js';
 
 /**
  * Integration tests — unlike every other test file in this project so far,
@@ -135,10 +136,12 @@ describe('moderation.service', () => {
   });
 
   it('listPendingProfiles only returns PENDING profiles', async () => {
-    // The profile is PENDING right now, from the FLAG test above.
-    const result = await listPendingProfiles({ page: 1, limit: 20 });
+    // The profile is PENDING right now, from the FLAG test above. Walks
+    // every page rather than just page 1 — the seeded load-test dataset
+    // means this profile is not guaranteed to land on the first one.
+    const allPending = await collectAllPages((page) => listPendingProfiles({ page, limit: 20 }));
 
-    expect(result.data.some((profile) => profile.id === profileId)).toBe(true);
-    expect(result.data.every((profile) => profile.moderationStatus === 'PENDING')).toBe(true);
+    expect(allPending.some((profile) => profile.id === profileId)).toBe(true);
+    expect(allPending.every((profile) => profile.moderationStatus === 'PENDING')).toBe(true);
   });
 });

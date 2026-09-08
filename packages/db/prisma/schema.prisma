@@ -143,9 +143,16 @@ model Profile {
   @@index([location(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([certificationStatus])
   @@index([moderationStatus])
-  // `sort=score` and `sort=recent`, the catalogue's two default orderings.
+  // `sort=score`, the catalogue's certification ordering.
   @@index([certificationScore])
-  @@index([updatedAt])
+  // The default catalogue ordering, column for column: `ORDER BY "updatedAt"
+  // DESC, id ASC`. Both columns are in the index and in the right direction,
+  // so Postgres walks it in order and the paging query needs no sort step.
+  // Supersedes a standalone index on `updatedAt`, which was only its prefix.
+  // The pair is also unique, which is what makes the ordering total — and what
+  // a later move to keyset pagination would seek on. See
+  // docs/livrables/note-algorithme-de-classement.md.
+  @@index([updatedAt(sort: Desc), id])
 }
 
 enum VideoType {

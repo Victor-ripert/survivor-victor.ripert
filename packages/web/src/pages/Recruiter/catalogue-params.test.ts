@@ -39,6 +39,13 @@ describe('parseCatalogueParams', () => {
     expect(parse('sort=popularity').sort).toBe('recent');
   });
 
+  // `sort=name` was a real option until 2026-09-08, so links carrying it are
+  // in circulation. They must still open, on the default ordering, rather than
+  // reach the API and come back a 400.
+  it('opens a bookmark carrying the withdrawn name ordering', () => {
+    expect(parse('sort=name').sort).toBe('recent');
+  });
+
   it('ignores a non-numeric page', () => {
     expect(parse('page=abc').page).toBe(1);
   });
@@ -58,13 +65,18 @@ describe('toCatalogueParams', () => {
   });
 
   it('writes only the filters that are set', () => {
-    const params = toCatalogueParams({ page: 2, q: 'soudeur', skills: ['Soudure'], sort: 'name' });
+    const params = toCatalogueParams({
+      page: 2,
+      q: 'soudeur',
+      skills: ['Soudure'],
+      sort: 'sector',
+    });
 
     expect(params.get('page')).toBe('2');
     expect(params.get('q')).toBe('soudeur');
     expect(params.get('skills')).toBe('Soudure');
-    expect(params.get('sort')).toBe('name');
-    expect(params.get('sector')).toBeNull();
+    expect(params.get('sort')).toBe('sector');
+    expect(params.get('location')).toBeNull();
   });
 
   it('round-trips a filtered view', () => {

@@ -1,3 +1,4 @@
+import { CATALOGUE_DEFAULT_SORT, CATALOGUE_SORTS } from '@profils-actifs/shared';
 import {
   buildCatalogueOrderBy,
   buildCatalogueWhere,
@@ -102,10 +103,30 @@ describe('publishedVideoFilter', () => {
 });
 
 describe('buildCatalogueOrderBy', () => {
-  it.each(['recent', 'score', 'name'] as const)('ends %s ordering on the id', (sort) => {
-    const orderBy = buildCatalogueOrderBy(sort);
+  // Iterating CATALOGUE_SORTS rather than a hand-written list is the point:
+  // a sort added to the vocabulary without a tiebreaker fails here instead of
+  // shipping a catalogue that pages inconsistently.
+  it.each(CATALOGUE_SORTS)('ends %s ordering on the id', (sort) => {
+    expect(buildCatalogueOrderBy(sort).at(-1)).toEqual({ id: 'asc' });
+  });
 
-    expect(orderBy.at(-1)).toEqual({ id: 'asc' });
+  it.each(CATALOGUE_SORTS)('orders %s on at least two columns', (sort) => {
+    expect(buildCatalogueOrderBy(sort).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('never repeats a column within one ordering', () => {
+    for (const sort of CATALOGUE_SORTS) {
+      const columns = buildCatalogueOrderBy(sort).map((entry) => Object.keys(entry)[0]);
+
+      expect(new Set(columns).size).toBe(columns.length);
+    }
+  });
+
+  it('defaults to the freshest profiles first', () => {
+    expect(buildCatalogueOrderBy(CATALOGUE_DEFAULT_SORT)).toEqual([
+      { updatedAt: 'desc' },
+      { id: 'asc' },
+    ]);
   });
 
   it('ranks unscored profiles last rather than first', () => {
@@ -114,10 +135,38 @@ describe('buildCatalogueOrderBy', () => {
     });
   });
 
-  it('sorts people by last name then first name', () => {
-    expect(buildCatalogueOrderBy('name').slice(0, 2)).toEqual([
-      { user: { lastName: 'asc' } },
-      { user: { firstName: 'asc' } },
+  it('orders sector and location alphabetically, freshest first within a value', () => {
+    expect(buildCatalogueOrderBy('sector')).toEqual([
+      { sector: 'asc' },
+      { updatedAt: 'desc' },
+      { id: 'asc' },
     ]);
+    expect(buildCatalogueOrderBy('location')).toEqual([
+      { location: 'asc' },
+      { updatedAt: 'desc' },
+      { id: 'asc' },
+    ]);
+  });
+
+  // Courriel du 8 septembre 2026: the orderings offered to a recruiter rest on
+  // professional criteria only. A candidate's name is not one of them, and no
+  // audience measurement — even a derived one — may reach the ORDER BY.
+  it('never orders people by their name', () => {
+    for (const sort of CATALOGUE_SORTS) {
+      const rendered = JSON.stringify(buildCatalogueOrderBy(sort));
+
+      expect(rendered).not.toContain('firstName');
+      expect(rendered).not.toContain('lastName');
+    }
+  });
+
+  it('orders on declared professional attributes and nothing else', () => {
+    const allowed = ['updatedAt', 'certificationScore', 'sector', 'location', 'id'];
+
+    for (const sort of CATALOGUE_SORTS) {
+      for (const entry of buildCatalogueOrderBy(sort)) {
+        expect(allowed).toContain(Object.keys(entry)[0]);
+      }
+    }
   });
 });

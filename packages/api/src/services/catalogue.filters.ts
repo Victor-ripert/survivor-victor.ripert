@@ -68,7 +68,18 @@ export const buildCatalogueWhere = (filters: CatalogueFilters): Prisma.ProfileWh
 /**
  * Every ordering ends on the primary key so that two profiles sharing a sort
  * value keep a stable relative position across pages — without it, paging can
- * show the same profile twice and skip another.
+ * show the same profile twice and skip another. `id` is unique and never
+ * reused, so appending it makes each ordering *total*: no two rows compare
+ * equal, and the sequence a walk produces is a function of the data alone,
+ * not of the plan Postgres happened to pick.
+ *
+ * The rule is not "add a tiebreaker where ties look likely" — `certificationScore`
+ * is an integer over a hundred values and `sector` is drawn from a short list,
+ * so ties are the norm there, but even `updatedAt` collides whenever two
+ * profiles are written in the same millisecond. Two columns, always.
+ *
+ * Enforced by the unit tests in catalogue.filters.test.ts and demonstrated
+ * end-to-end by scripts/preuves/tri-deterministe.sh.
  */
 export const buildCatalogueOrderBy = (
   sort: CatalogueSort,
@@ -80,8 +91,10 @@ export const buildCatalogueOrderBy = (
         { updatedAt: 'desc' },
         { id: 'asc' },
       ];
-    case 'name':
-      return [{ user: { lastName: 'asc' } }, { user: { firstName: 'asc' } }, { id: 'asc' }];
+    case 'sector':
+      return [{ sector: 'asc' }, { updatedAt: 'desc' }, { id: 'asc' }];
+    case 'location':
+      return [{ location: 'asc' }, { updatedAt: 'desc' }, { id: 'asc' }];
     case 'recent':
       return [{ updatedAt: 'desc' }, { id: 'asc' }];
   }

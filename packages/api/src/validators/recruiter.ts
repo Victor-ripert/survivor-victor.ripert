@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  CATALOGUE_DEFAULT_SORT,
   CATALOGUE_MAX_SKILL_FILTERS,
   CATALOGUE_SEARCH_MAX_LENGTH,
   CATALOGUE_SORTS,
@@ -24,7 +25,7 @@ export const catalogueQuerySchema = paginationQuerySchema.extend({
   minScore: z.coerce.number().int().min(0).max(100).optional(),
   hasVideo: booleanQueryParam.optional(),
   favoritesOnly: booleanQueryParam.optional(),
-  sort: z.enum(CATALOGUE_SORTS).default('recent'),
+  sort: z.enum(CATALOGUE_SORTS).default(CATALOGUE_DEFAULT_SORT),
 });
 
 export type CatalogueQueryInput = z.infer<typeof catalogueQuerySchema>;

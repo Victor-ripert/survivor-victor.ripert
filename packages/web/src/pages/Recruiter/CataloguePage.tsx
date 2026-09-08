@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CATALOGUE_SORTS, type CatalogueQuery, type CatalogueSort } from '@profils-actifs/shared';
+import {
+  CATALOGUE_DEFAULT_SORT,
+  CATALOGUE_SORTS,
+  type CatalogueQuery,
+  type CatalogueSort,
+} from '@profils-actifs/shared';
 import { ProfileResults } from '../../components/ProfileResults.js';
 import { useAsyncResource } from '../../hooks/useAsyncResource.js';
 import { fetchCatalogue, fetchFacets } from '../../services/recruiter.js';
@@ -10,7 +15,8 @@ import { CatalogueFilters } from './CatalogueFilters.js';
 const SORT_LABELS: Record<CatalogueSort, string> = {
   recent: 'Profils récents',
   score: 'Score de certification',
-  name: 'Nom',
+  sector: 'Secteur (A-Z)',
+  location: 'Ville (A-Z)',
 };
 
 export const CataloguePage = () => {
@@ -84,7 +90,7 @@ export const CataloguePage = () => {
                   </label>
                   <select
                     id="sort"
-                    value={query.sort ?? 'recent'}
+                    value={query.sort ?? CATALOGUE_DEFAULT_SORT}
                     onChange={(event) => applyPatch({ sort: event.target.value as CatalogueSort })}
                   >
                     {CATALOGUE_SORTS.map((sort) => (

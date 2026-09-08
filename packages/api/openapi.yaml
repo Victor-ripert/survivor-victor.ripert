@@ -1961,6 +1961,14 @@ paths:
         Rows deliberately carry no email address — a recruiter reaches an
         applicant through `POST /interactions`, which keeps the contact
         auditable and notifies the applicant.
+
+
+        Ordering is total: every `sort` value ends on the profile id, so no two
+        rows compare equal and a walk over an unchanging data set yields the
+        same sequence every time. What that does *not* buy is a snapshot across
+        pages — a profile written between two page requests moves within the
+        order and can be seen twice or skipped. See
+        docs/livrables/note-algorithme-de-classement.md.
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/LimitParam'
@@ -2014,9 +2022,14 @@ paths:
             type: boolean
         - name: sort
           in: query
+          description: >-
+            Ordering, drawn from professional criteria only — freshness of the
+            profile, certification score, declared sector, declared location.
+            `name` was withdrawn on 2026-09-08; see
+            docs/livrables/note-algorithme-de-classement.md.
           schema:
             type: string
-            enum: [recent, score, name]
+            enum: [recent, score, sector, location]
             default: recent
       responses:
         '200':
@@ -2061,9 +2074,10 @@ paths:
         - $ref: '#/components/parameters/LimitParam'
         - name: sort
           in: query
+          description: Same ordering vocabulary as `GET /recruiter/catalogue`.
           schema:
             type: string
-            enum: [recent, score, name]
+            enum: [recent, score, sector, location]
             default: recent
       responses:
         '200':

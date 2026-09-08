@@ -32,8 +32,19 @@ const SALT_ROUNDS = 12;
  * touching code — `SEED_APPLICANT_COUNT=50 SEED_APPLICANTS_WITH_VIDEO=20
  * npm run db:seed`.
  */
-const TOTAL_APPLICANTS = Number(process.env.SEED_APPLICANT_COUNT) || 500;
-const MIN_APPLICANTS_WITH_VIDEO = Number(process.env.SEED_APPLICANTS_WITH_VIDEO) || 300;
+const totalApplicantsEnv = process.env.SEED_APPLICANT_COUNT;
+const TOTAL_APPLICANTS = totalApplicantsEnv === undefined ? 500 : Number(totalApplicantsEnv);
+const minApplicantsWithVideoEnv = process.env.SEED_APPLICANTS_WITH_VIDEO;
+const MIN_APPLICANTS_WITH_VIDEO =
+  minApplicantsWithVideoEnv === undefined ? 300 : Number(minApplicantsWithVideoEnv);
+
+if (!Number.isInteger(TOTAL_APPLICANTS) || TOTAL_APPLICANTS <= 0) {
+  throw new Error('SEED_APPLICANT_COUNT must be a positive integer');
+}
+
+if (!Number.isInteger(MIN_APPLICANTS_WITH_VIDEO) || MIN_APPLICANTS_WITH_VIDEO < 0) {
+  throw new Error('SEED_APPLICANTS_WITH_VIDEO must be a non-negative integer');
+}
 
 async function seedCertificationLevels(): Promise<void> {
   for (const level of certificationLevels) {

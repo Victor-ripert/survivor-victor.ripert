@@ -36,7 +36,7 @@ const createProvider = (name: VideoProviderName): VideoProvider => {
 export const getVideoProvider = (): VideoProvider => {
   if (env.VIDEO_PROVIDER === 'external-link') {
     throw new Error(
-      "VIDEO_PROVIDER=external-link cannot back uploads; EXTERNAL_LINK videos always use the external-link provider independently of VIDEO_PROVIDER.",
+      'VIDEO_PROVIDER=external-link cannot back uploads; EXTERNAL_LINK videos always use the external-link provider independently of VIDEO_PROVIDER.',
     );
   }
 

@@ -2,7 +2,8 @@
 
 **Destinataire** Florine Pontaillac, conseillère juridique
 **Référence** JEB/DNI/2026-003 §7.2 · Code du travail, art. L1132-1
-**Échéance** vendredi 4 septembre, 12h00 · **Tâche** EW-8
+**Échéance** vendredi 11 septembre, 12h00 · **Tâche** EW-8
+**Relue ligne à ligne contre le code le** jeudi 10 septembre 2026
 **Rédacteur** Ewan — domaine D (espace recruteur), contrat d'API
 
 ---
@@ -21,6 +22,15 @@ et la page profil sont accessibles sans authentification mais ne portent aucun
 filtre ; l'espace d'administration ne filtre que sur le statut de modération,
 qui n'est pas un critère de sélection de candidats.
 
+**L'interface n'en expose ni plus ni autre chose que l'API**, vérifié contrôle
+par contrôle et non supposé : `packages/web/src/pages/Recruiter/CatalogueFilters.tsx`
+porte huit contrôles — recherche libre, secteur, ville, disponibilité,
+compétences, score minimal, « certifiés seulement », « avec vidéo » — et
+`CataloguePage.tsx` porte le sélecteur d'ordre. Chacun écrit dans un paramètre
+du §1 et dans aucun autre ; `favoritesOnly` n'est pas un contrôle mais la route
+`/recruteur/favoris` elle-même. Il n'existe aucun champ d'interface sans
+paramètre correspondant, ni l'inverse.
+
 **Note jointe.** L'ordre dans lequel le catalogue rend les profils — l'algorithme
 de classement, ce qu'il garantit et ce qu'il ne garantit pas — fait l'objet d'une
 note séparée, `note-algorithme-de-classement.md`, accompagnée de sa démonstration
@@ -31,20 +41,21 @@ note séparée, `note-algorithme-de-classement.md`, accompagnée de sa démonstr
 ## 1. Critères conservés
 
 Un critère par ligne, une phrase de justification professionnelle chacune,
-comme demandé.
+comme demandé. Dix paramètres.
 
-| Paramètre       | Ce qu'il filtre                                                                                 | Justification professionnelle                                                                                                                                                                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `q`             | Recherche libre sur l'intitulé, la présentation, le secteur, la localisation et les compétences | Permet de retrouver une compétence ou un métier exprimé avec d'autres mots que ceux du référentiel, sans ajouter de critère de sélection nouveau : chaque champ couvert est déjà filtrable séparément.                                                                        |
-| `sector`        | Secteur d'activité visé, déclaré par le candidat                                                | Le secteur est l'objet même du rapprochement entre une offre et une candidature, et il est renseigné par le candidat pour être vu.                                                                                                                                            |
-| `location`      | Localisation déclarée par le candidat                                                           | Le lieu de travail est une condition d'exécution du contrat de travail, et le candidat le renseigne pour indiquer où il est disponible.                                                                                                                                       |
-| `skills`        | Compétences du référentiel portées par le profil                                                | Une compétence professionnelle est le critère de sélection le plus directement lié à l'aptitude à tenir le poste.                                                                                                                                                             |
-| `certifiedOnly` | Restreint aux profils dont la certification JEB est achevée                                     | La certification atteste d'une évaluation d'aptitude passée dans les mêmes conditions par tous les candidats, sans intervention du recruteur.                                                                                                                                 |
-| `minScore`      | Score de certification minimal                                                                  | Même justification, exprimée en seuil plutôt qu'en tout ou rien ; le score est calculé côté serveur à partir d'un barème identique pour tous.                                                                                                                                 |
-| `hasVideo`      | Restreint aux profils portant au moins une vidéo **validée par la modération**                  | Filtre sur la complétude du dossier — la présence d'une pièce validée, pas son contenu — et non sur ce que la vidéo montre. Une vidéo en attente n'y ouvre pas droit (§7.9.2). **Voir la réserve au §3.**                                                                     |
-| `favoritesOnly` | Restreint à la liste retenue par le recruteur lui-même                                          | Ne porte sur aucune caractéristique du candidat : c'est le recruteur qui filtre sur ses propres actions passées.                                                                                                                                                              |
-| `sort`          | Ordre d'affichage : `recent`, `score`, `sector`, `location`                                     | Quatre ordres reposant chacun sur un critère professionnel — fraîcheur du profil, score de certification, secteur et localisation déclarés. `name` a été retiré le 8 septembre ; l'algorithme de classement et sa démonstration sont dans `note-algorithme-de-classement.md`. |
-| `page`, `limit` | Pagination, plafonnée à 20 par page côté serveur                                                | Contrainte technique du §8.6, sans effet de sélection.                                                                                                                                                                                                                        |
+| Paramètre       | Ce qu'il filtre                                                                                 | Justification professionnelle                                                                                                                                                                                                                                                                                |
+| --------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `q`             | Recherche libre sur l'intitulé, la présentation, le secteur, la localisation et les compétences | Permet de retrouver une compétence ou un métier exprimé avec d'autres mots que ceux du référentiel, sans ajouter de critère de sélection nouveau : chaque champ couvert est déjà filtrable séparément.                                                                                                       |
+| `sector`        | Secteur d'activité visé, déclaré par le candidat                                                | Le secteur est l'objet même du rapprochement entre une offre et une candidature, et il est renseigné par le candidat pour être vu.                                                                                                                                                                           |
+| `location`      | Localisation déclarée par le candidat                                                           | Le lieu de travail est une condition d'exécution du contrat de travail, et le candidat le renseigne pour indiquer où il est disponible.                                                                                                                                                                      |
+| `skills`        | Compétences du référentiel portées par le profil                                                | Une compétence professionnelle est le critère de sélection le plus directement lié à l'aptitude à tenir le poste.                                                                                                                                                                                            |
+| `certifiedOnly` | Restreint aux profils dont la certification JEB est achevée                                     | La certification atteste d'une évaluation d'aptitude passée dans les mêmes conditions par tous les candidats, sans intervention du recruteur.                                                                                                                                                                |
+| `minScore`      | Score de certification minimal                                                                  | Même justification, exprimée en seuil plutôt qu'en tout ou rien ; le score est calculé côté serveur à partir d'un barème identique pour tous.                                                                                                                                                                |
+| `hasVideo`      | Restreint aux profils portant au moins une vidéo **validée par la modération**                  | Filtre sur la complétude du dossier — la présence d'une pièce validée, pas son contenu — et non sur ce que la vidéo montre. Une vidéo en attente n'y ouvre pas droit (§7.9.2). **Voir la réserve au §3.**                                                                                                    |
+| `availability`  | Disponibilité déclarée par le candidat, parmi quatre valeurs                                    | Le délai auquel un candidat peut prendre un poste est une condition d'exécution du contrat, et il est déclaré par le candidat pour être vu. Un profil qui n'a rien déclaré n'est jamais rendu par ce filtre, quelle que soit la valeur demandée. **Ajouté le 10 septembre.**                                 |
+| `favoritesOnly` | Restreint à la liste retenue par le recruteur lui-même                                          | Ne porte sur aucune caractéristique du candidat : c'est le recruteur qui filtre sur ses propres actions passées.                                                                                                                                                                                             |
+| `sort`          | Ordre d'affichage : `recent`, `certification`, `score`, `sector`, `location`, `availability`    | Six ordres, un par critère professionnel de votre énumération — date, statut de certification, score, secteur, localisation, disponibilité. Aucun ne référence une table d'interactions. `name` a été retiré le 8 septembre ; l'algorithme et sa démonstration sont dans `note-algorithme-de-classement.md`. |
+| `page`, `limit` | Pagination, plafonnée à 20 par page côté serveur                                                | Contrainte technique du §8.6, sans effet de sélection.                                                                                                                                                                                                                                                       |
 
 ---
 

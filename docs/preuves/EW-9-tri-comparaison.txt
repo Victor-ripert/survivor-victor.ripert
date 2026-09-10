@@ -1,13 +1,13 @@
 EW-9 — tri déterministe du catalogue : deux parcours et leur comparaison
 ProfilsActifs — JEB/DNI/2026-003
 
-date        : 2026-09-08T10:48:10+02:00
-commit      : dc14b0c2e823a033b4fba79254219458cad17ba0
-branche     : feat/recruiter-deterministic-ordering
+date        : 2026-09-10T14:43:08+02:00
+commit      : bc053ee15608ef38b43a4953aaacacca51645085
+branche     : fix/green-build-and-demo-videos
 API         : http://localhost:3000/api
 version API : 1.0.0
 courriel    : 8 septembre 2026 — « deux exécutions, ça se prouve en trois minutes »
-page        : limit=3, choisi pour que le parcours traverse 4 pages
+page        : limit=3, choisi pour que le parcours traverse 155 pages
 
 Fichiers joints :
   docs/preuves/EW-9-tri-passe-1.txt   — la séquence obtenue au premier parcours
@@ -28,31 +28,28 @@ packages/api/openapi.yaml. Index correspondant, colonne pour colonne :
 
 Plan d'exécution réellement choisi pour la requête de page :
 
-                                          QUERY PLAN                                        
-  ------------------------------------------------------------------------------------------
-   Limit  (cost=2.69..2.69 rows=3 width=34)
-     ->  Sort  (cost=2.69..2.71 rows=9 width=34)
-           Sort Key: p."updatedAt" DESC, p.id
-           ->  Hash Join  (cost=1.31..2.57 rows=9 width=34)
-                 Hash Cond: (u.id = p."userId")
-                 ->  Seq Scan on "User" u  (cost=0.00..1.21 rows=13 width=26)
-                       Filter: ("isActive" AND (role = 'APPLICANT'::"UserRole"))
-                 ->  Hash  (cost=1.16..1.16 rows=12 width=60)
-                       ->  Seq Scan on "Profile" p  (cost=0.00..1.16 rows=12 width=60)
-                             Filter: ("moderationStatus" <> 'REJECTED'::"ModerationStatus")
-  (10 rows)
+                                                    QUERY PLAN                                                   
+  ---------------------------------------------------------------------------------------------------------------
+   Limit  (cost=0.55..2.81 rows=3 width=34)
+     ->  Nested Loop  (cost=0.55..347.65 rows=460 width=34)
+           ->  Index Scan using "Profile_updatedAt_id_idx" on "Profile" p  (cost=0.27..140.10 rows=464 width=60)
+                 Filter: ("moderationStatus" <> 'REJECTED'::"ModerationStatus")
+           ->  Index Scan using "User_pkey" on "User" u  (cost=0.27..0.45 rows=1 width=26)
+                 Index Cond: (id = p."userId")
+                 Filter: ("isActive" AND (role = 'APPLICANT'::"UserRole"))
+  (7 rows)
   
 
 Ce plan porte un nœud Sort, et il faut le dire plutôt que le passer sous
-silence : sur 13 lignes, lire la table entière coûte moins cher que
+silence : sur 500 lignes, lire la table entière coûte moins cher que
 descendre l'index, et le planificateur a raison. L'index n'est pas décoratif
 pour autant — il sert bien l'ordre demandé, ce qui se vérifie en retirant au
 planificateur le parcours séquentiel. Le nœud Sort disparaît :
 
-                                                  QUERY PLAN                                                 
-  -----------------------------------------------------------------------------------------------------------
-   Limit  (cost=0.14..2.03 rows=3 width=34)
-     ->  Index Only Scan using "Profile_updatedAt_id_idx" on "Profile" p  (cost=0.14..8.33 rows=13 width=34)
+                                                    QUERY PLAN                                                  
+  --------------------------------------------------------------------------------------------------------------
+   Limit  (cost=0.27..0.94 rows=3 width=34)
+     ->  Index Only Scan using "Profile_updatedAt_id_idx" on "Profile" p  (cost=0.27..111.16 rows=500 width=34)
   (2 rows)
   
 
@@ -69,15 +66,50 @@ pas le résultat.
 ------------------------------------------------------------------------------
 Compté sur la base, pas sur l'API :
 
-  lignes dans "Profile"                      : 13
-  que le catalogue a le droit de montrer     : 12
-  pagination.total rendu par l'API           : 12
+  lignes dans "Profile"                      : 500
+  que le catalogue a le droit de montrer     : 464
+  pagination.total rendu par l'API           : 464
 
 L'écart entre les deux premiers nombres n'est pas une perte : ce sont les
 lignes que les règles de visibilité écartent (packages/api/src/services/
 visibility.ts). Elles sont nommées une par une :
 
   cmtin5p1s00258liom7aqmuoz	profil rejeté par la modération
+  cmtvhcfl30032doioh47z8xgl	profil rejeté par la modération
+  cmtvhcfs40077doionlrztjm9	profil rejeté par la modération
+  cmtvhcfsi007gdoiownpcgzxi	profil rejeté par la modération
+  cmtvhcfuv008udoio8uivdai0	profil rejeté par la modération
+  cmtvhcfxu00amdoiocp7sqt7e	profil rejeté par la modération
+  cmtvhcg2e00dedoiop6qnl3j9	profil rejeté par la modération
+  cmtvhcg6v00g2doioctq20b8g	profil rejeté par la modération
+  cmtvhcgbp00iydoio6bcnn7d3	profil rejeté par la modération
+  cmtvhcgcn00jldoioh06i570m	profil rejeté par la modération
+  cmtvhcggw00m3doio8y7df3om	profil rejeté par la modération
+  cmtvhcgju00ntdoiotyoakst9	profil rejeté par la modération
+  cmtvhcgmq00p8doio2n008e1j	profil rejeté par la modération
+  cmtvhcgnk00prdoio4l6672gn	profil rejeté par la modération
+  cmtvhcgoi00qadoioz60smbkk	profil rejeté par la modération
+  cmtvhch5100v8doioqmg9arkt	profil rejeté par la modération
+  cmtvhch7m00x3doiobdsxg1vl	profil rejeté par la modération
+  cmtvhchan00zbdoion9dgt9cl	profil rejeté par la modération
+  cmtvhchb000zkdoioyb9m2mru	profil rejeté par la modération
+  cmtvhchbq0103doioiub7cgw8	profil rejeté par la modération
+  cmtvhchej0127doioc419b4ez	profil rejeté par la modération
+  cmtvhchgv013xdoio4lf6pto3	profil rejeté par la modération
+  cmtvhchh60145doiotid8qvmr	profil rejeté par la modération
+  cmtvhchkd016adoiontr02llc	profil rejeté par la modération
+  cmtvhchkk016fdoio8e51pqto	profil rejeté par la modération
+  cmtvhchm5017edoiouy6zi7mz	profil rejeté par la modération
+  cmtvhchmk017ndoiowltoldyj	profil rejeté par la modération
+  cmtvhchnq018ddoio0luwunpb	profil rejeté par la modération
+  cmtvhchrd01amdoior2hwmoci	profil rejeté par la modération
+  cmtvhchu101cadoio3i8ohy5k	profil rejeté par la modération
+  cmtvhchwm01dvdoios23nnzp1	profil rejeté par la modération
+  cmtvhchwr01dydoio1pte69bj	profil rejeté par la modération
+  cmtvhchxv01epdoiohsy2np31	profil rejeté par la modération
+  cmtvhci0f01g3doioa9ftzkik	profil rejeté par la modération
+  cmtvhci3r01i3doio472w523t	profil rejeté par la modération
+  cmtvhciao01m7doioqlrrwpwr	profil rejeté par la modération
 
 ==============================================================================
 3. Les deux parcours et leur comparaison
@@ -88,12 +120,12 @@ $ diff docs/preuves/EW-9-tri-passe-1.txt docs/preuves/EW-9-tri-passe-2.txt
 
 constat :
   séquences identiques                       : oui
-  identifiants rendus, passe 1               : 12
-  identifiants rendus, passe 2               : 12
-  identifiants distincts                     : 12
+  identifiants rendus, passe 1               : 464
+  identifiants rendus, passe 2               : 464
+  identifiants distincts                     : 464
   doublons                                   : aucun
   manquants par rapport à la base            : 0
-  compte attendu (12) atteint                : oui
+  compte attendu (464) atteint               : oui
 
 Le tri par défaut est bien celui qui est documenté : la même séquence est
 obtenue sans paramètre `sort` et avec `sort=recent` explicite.
@@ -103,18 +135,470 @@ obtenue sans paramètre `sort` et avec `sort=recent` explicite.
 Séquence obtenue, avec la clé de tri lue en base en regard :
 
     #  identifiant                updatedAt
-    1  cmtknwo28001ua0iodqfu7dze  2026-09-08T08:47:50.030
-    2  cmtin5p1k00208lio8zpivfkh  2026-09-08T08:47:50.011
-    3  cmtin5p1d001v8liojurjlb95  2026-09-08T08:47:50.000
-    4  cmtin5p16001r8lio2c5yy9co  2026-09-08T08:47:49.989
-    5  cmtin5p0y001m8liojzzzuyik  2026-09-08T08:47:49.978
-    6  cmtin5p0q001h8lio3z1cmim8  2026-09-08T08:47:49.968
-    7  cmtin5p0j001d8liojtg8hk62  2026-09-08T08:47:49.955
-    8  cmtin5p0c00198lioer5xbu0d  2026-09-08T08:47:49.945
-    9  cmtin5p0200138lio5zmgyu34  2026-09-08T08:47:49.928
-   10  cmtin5ozp000x8lioehi73df1  2026-09-08T08:47:49.908
-   11  cmtin5ozf000s8lio5guib6qa  2026-09-08T08:47:49.895
-   12  cmtin5oys000m8liog1rdwln9  2026-09-08T08:47:49.866
+    1  cmtvhcikd01sadoiorbngrvht  2026-09-10T12:41:02.265
+    2  cmtvhcik901s7doiopijzk1lw  2026-09-10T12:41:02.261
+    3  cmtvhcik301s3doiobk8ctagk  2026-09-10T12:41:02.254
+    4  cmtvhcijw01rzdoiok7dupnwl  2026-09-10T12:41:02.247
+    5  cmtvhcijo01rudoio7qwle82g  2026-09-10T12:41:02.239
+    6  cmtvhcijh01rpdoiopm5nf1fn  2026-09-10T12:41:02.228
+    7  cmtvhcij801rjdoiobcxitdhm  2026-09-10T12:41:02.085
+    8  cmtvhcij101rfdoiorfiemveq  2026-09-10T12:41:02.073
+    9  cmtvhciir01r9doionuymx5ge  2026-09-10T12:41:02.058
+   10  cmtvhciih01r3doiolf96g215  2026-09-10T12:41:02.042
+   11  cmtvhcii801qydoiohd6aihbe  2026-09-10T12:41:02.029
+   12  cmtvhcihy01qtdoio07b1mmr7  2026-09-10T12:41:02.015
+   13  cmtvhcihp01qndoiosrl1iuft  2026-09-10T12:41:01.998
+   14  cmtvhcihh01qidoiokce51ao4  2026-09-10T12:41:01.985
+   15  cmtvhcih701qcdoio00btuoit  2026-09-10T12:41:01.967
+   16  cmtvhcih001q7doio1z4nl5cu  2026-09-10T12:41:01.955
+   17  cmtvhcigs01q1doiozm853qyq  2026-09-10T12:41:01.939
+   18  cmtvhcigk01pvdoiohx82x6jo  2026-09-10T12:41:01.926
+   19  cmtvhcigd01pqdoiodfvyf31h  2026-09-10T12:41:01.912
+   20  cmtvhcig701pmdoio8o2yc6pp  2026-09-10T12:41:01.899
+   21  cmtvhcig201pidoiown306bza  2026-09-10T12:41:01.888
+   22  cmtvhcifv01pddoiorqsthe2o  2026-09-10T12:41:01.872
+   23  cmtvhcifm01p8doiodt1n39ht  2026-09-10T12:41:01.857
+   24  cmtvhciff01p4doioytwbujkq  2026-09-10T12:41:01.848
+   25  cmtvhcifb01p1doio5sltsfyd  2026-09-10T12:41:01.839
+   26  cmtvhcif401owdoioebymhxwt  2026-09-10T12:41:01.826
+   27  cmtvhciex01osdoio8hmrayiz  2026-09-10T12:41:01.816
+   28  cmtvhcier01oodoio0qynvkkg  2026-09-10T12:41:01.804
+   29  cmtvhciek01ojdoiovd8bgmly  2026-09-10T12:41:01.790
+   30  cmtvhcief01ogdoiodw2gtvco  2026-09-10T12:41:01.781
+   31  cmtvhcie501oadoiop6ohvpq4  2026-09-10T12:41:01.766
+   32  cmtvhcidu01o4doioalbxvt0k  2026-09-10T12:41:01.751
+   33  cmtvhcidq01o1doioverfdj0o  2026-09-10T12:41:01.744
+   34  cmtvhcidk01nxdoiowv601a7f  2026-09-10T12:41:01.736
+   35  cmtvhcidd01ntdoiokr0yt6pw  2026-09-10T12:41:01.724
+   36  cmtvhcid301nndoio8g9ugv5f  2026-09-10T12:41:01.707
+   37  cmtvhcicv01nidoios53e4d5y  2026-09-10T12:41:01.692
+   38  cmtvhcicn01nddoio40cengiu  2026-09-10T12:41:01.679
+   39  cmtvhcici01nadoio7noybnbo  2026-09-10T12:41:01.672
+   40  cmtvhcic901n4doiobl5crw2c  2026-09-10T12:41:01.655
+   41  cmtvhcic201n1doioq35ml8bx  2026-09-10T12:41:01.645
+   42  cmtvhcibu01mwdoiozahfxsle  2026-09-10T12:41:01.631
+   43  cmtvhcibo01msdoioyck0ss0l  2026-09-10T12:41:01.621
+   44  cmtvhcibi01modoiodo5z1d3g  2026-09-10T12:41:01.609
+   45  cmtvhciba01mkdoiouypqy4ar  2026-09-10T12:41:01.598
+   46  cmtvhcib101mfdoionx20180n  2026-09-10T12:41:01.583
+   47  cmtvhciav01mbdoiosvm65v67  2026-09-10T12:41:01.570
+   48  cmtvhciah01m3doioa83pdfam  2026-09-10T12:41:01.544
+   49  cmtvhcia701lxdoiogsspls5i  2026-09-10T12:41:01.528
+   50  cmtvhci9x01lsdoioadb79t5y  2026-09-10T12:41:01.516
+   51  cmtvhci9o01lmdoio8wbcc4mo  2026-09-10T12:41:01.501
+   52  cmtvhci9f01lgdoiowuog6t64  2026-09-10T12:41:01.484
+   53  cmtvhci9401ladoio3jt7cqba  2026-09-10T12:41:01.467
+   54  cmtvhci8y01l6doiordew0nnc  2026-09-10T12:41:01.456
+   55  cmtvhci8r01l2doioyuda24fo  2026-09-10T12:41:01.449
+   56  cmtvhci8k01kxdoionbgk7m3s  2026-09-10T12:41:01.439
+   57  cmtvhci8a01ksdoioa00c0ajb  2026-09-10T12:41:01.422
+   58  cmtvhci8201kndoioojpsrz8n  2026-09-10T12:41:01.407
+   59  cmtvhci7u01kidoioirwq5c1i  2026-09-10T12:41:01.391
+   60  cmtvhci7m01kddoiozr7pb214  2026-09-10T12:41:01.378
+   61  cmtvhci7b01k7doios9pdk2gl  2026-09-10T12:41:01.363
+   62  cmtvhci7401k3doioj736fcjl  2026-09-10T12:41:01.353
+   63  cmtvhci6u01jxdoioo8yro0nc  2026-09-10T12:41:01.340
+   64  cmtvhci6n01jtdoioj3ixciz8  2026-09-10T12:41:01.329
+   65  cmtvhci6f01jodoiod2tdgitg  2026-09-10T12:41:01.315
+   66  cmtvhci6901jldoiouuorfy7s  2026-09-10T12:41:01.304
+   67  cmtvhci6101jgdoioh87rd3ov  2026-09-10T12:41:01.292
+   68  cmtvhci5u01jcdoio1qzr1nso  2026-09-10T12:41:01.282
+   69  cmtvhci5m01j7doiox6vehus3  2026-09-10T12:41:01.268
+   70  cmtvhci5h01j4doiowm0t6v09  2026-09-10T12:41:01.261
+   71  cmtvhci5801izdoio16k2z0iv  2026-09-10T12:41:01.246
+   72  cmtvhci4x01itdoioevj0o74b  2026-09-10T12:41:01.232
+   73  cmtvhci4o01iodoio89h78e1a  2026-09-10T12:41:01.220
+   74  cmtvhci4f01iidoiohr9l78jc  2026-09-10T12:41:01.204
+   75  cmtvhci4601icdoiotgaokodv  2026-09-10T12:41:01.191
+   76  cmtvhci3w01i6doiofpkhgwa1  2026-09-10T12:41:01.175
+   77  cmtvhci3i01hxdoioj733sn7q  2026-09-10T12:41:01.151
+   78  cmtvhci3b01hudoio5co3k2dk  2026-09-10T12:41:01.143
+   79  cmtvhci3201hpdoiovjgr7ws9  2026-09-10T12:41:01.131
+   80  cmtvhci2y01hmdoiogj5ea7r8  2026-09-10T12:41:01.123
+   81  cmtvhci2n01hgdoiohv8e6w31  2026-09-10T12:41:01.106
+   82  cmtvhci2j01hddoio375qg9c1  2026-09-10T12:41:01.098
+   83  cmtvhci2d01hadoioqqi7pkgb  2026-09-10T12:41:01.090
+   84  cmtvhci2501h5doioabc44vpw  2026-09-10T12:41:01.078
+   85  cmtvhci1u01gzdoiohz5oeyf1  2026-09-10T12:41:01.061
+   86  cmtvhci1q01gwdoiod47sg17u  2026-09-10T12:41:01.054
+   87  cmtvhci1j01grdoiodldyl78g  2026-09-10T12:41:01.041
+   88  cmtvhci1b01gmdoiovivk1e43  2026-09-10T12:41:01.030
+   89  cmtvhci1301ghdoiodbuycdin  2026-09-10T12:41:01.019
+   90  cmtvhci0v01gddoio8n07thnp  2026-09-10T12:41:01.006
+   91  cmtvhci0p01g9doiom0e15l4h  2026-09-10T12:41:00.994
+   92  cmtvhci0701fzdoioky1hxiia  2026-09-10T12:41:00.961
+   93  cmtvhci0301fwdoiosga0y3th  2026-09-10T12:41:00.951
+   94  cmtvhchzr01fqdoiow9o6wixu  2026-09-10T12:41:00.933
+   95  cmtvhchzg01fkdoiomex6b91o  2026-09-10T12:41:00.911
+   96  cmtvhchz501fedoioxzya2adc  2026-09-10T12:41:00.892
+   97  cmtvhchyu01f8doiovf0ey8ix  2026-09-10T12:41:00.872
+   98  cmtvhchym01f4doiogik1bxa8  2026-09-10T12:41:00.858
+   99  cmtvhchyg01f1doiongdxp5gx  2026-09-10T12:41:00.847
+  100  cmtvhchy501evdoiop00blbxo  2026-09-10T12:41:00.828
+  101  cmtvhchxo01eldoiownq3u97x  2026-09-10T12:41:00.797
+  102  cmtvhchxj01eidoiomabnn8e2  2026-09-10T12:41:00.788
+  103  cmtvhchxb01eedoioarrfkjt0  2026-09-10T12:41:00.775
+  104  cmtvhchx401e9doiowyfbdml3  2026-09-10T12:41:00.759
+  105  cmtvhchwx01e3doiowibzondo  2026-09-10T12:41:00.743
+  106  cmtvhchwh01drdoio1k02x36n  2026-09-10T12:41:00.711
+  107  cmtvhchw901dmdoio0uofa8xd  2026-09-10T12:41:00.695
+  108  cmtvhchvy01dgdoiovg6k1rg7  2026-09-10T12:41:00.679
+  109  cmtvhchvp01dbdoiooh7gn3el  2026-09-10T12:41:00.667
+  110  cmtvhchvh01d6doio2ntu2krh  2026-09-10T12:41:00.656
+  111  cmtvhchv701d0doioxblutn6m  2026-09-10T12:41:00.639
+  112  cmtvhchux01cudoiovzmrwsjc  2026-09-10T12:41:00.622
+  113  cmtvhchup01cpdoioz2i1c81h  2026-09-10T12:41:00.608
+  114  cmtvhchui01cldoio5lyu7inf  2026-09-10T12:41:00.597
+  115  cmtvhchu801cfdoiojj4je7c2  2026-09-10T12:41:00.579
+  116  cmtvhchts01c4doiodlqcdaks  2026-09-10T12:41:00.549
+  117  cmtvhchtj01bzdoiocb4hkwdh  2026-09-10T12:41:00.537
+  118  cmtvhchtb01bvdoiob3vadt89  2026-09-10T12:41:00.525
+  119  cmtvhcht601bsdoioc2yor7xj  2026-09-10T12:41:00.518
+  120  cmtvhchsv01bmdoiokxbbah5c  2026-09-10T12:41:00.503
+  121  cmtvhchsp01bidoiodm4phe94  2026-09-10T12:41:00.491
+  122  cmtvhchsk01bfdoiod39h2lyc  2026-09-10T12:41:00.482
+  123  cmtvhchsd01badoio82klgxkf  2026-09-10T12:41:00.466
+  124  cmtvhchs701b6doio9boren2q  2026-09-10T12:41:00.456
+  125  cmtvhchs301b3doiol30f5v1f  2026-09-10T12:41:00.447
+  126  cmtvhchrx01azdoiokmaq1tzw  2026-09-10T12:41:00.437
+  127  cmtvhchrq01avdoiontao9ffs  2026-09-10T12:41:00.425
+  128  cmtvhchrl01ardoio1pwiz3st  2026-09-10T12:41:00.416
+  129  cmtvhchr601aidoioqrdbrn79  2026-09-10T12:41:00.393
+  130  cmtvhchqy01addoiog4774a2a  2026-09-10T12:41:00.378
+  131  cmtvhchqq01a8doiokuf36d55  2026-09-10T12:41:00.363
+  132  cmtvhchqh01a3doiobxrqzzcn  2026-09-10T12:41:00.348
+  133  cmtvhchqa019zdoioem3m7scr  2026-09-10T12:41:00.337
+  134  cmtvhchq3019udoiolilo9jt0  2026-09-10T12:41:00.322
+  135  cmtvhchpx019qdoiogjjlhzs5  2026-09-10T12:41:00.310
+  136  cmtvhchpp019ldoiod1e0ed4v  2026-09-10T12:41:00.299
+  137  cmtvhchpj019hdoiow6mh9263  2026-09-10T12:41:00.289
+  138  cmtvhchpd019ddoio7sbpn8ry  2026-09-10T12:41:00.279
+  139  cmtvhchp50198doiordzpidq9  2026-09-10T12:41:00.264
+  140  cmtvhchoz0194doiosu0ptn7y  2026-09-10T12:41:00.254
+  141  cmtvhchou0191doioq4cijkl2  2026-09-10T12:41:00.246
+  142  cmtvhchok018wdoioit5uq9lm  2026-09-10T12:41:00.231
+  143  cmtvhchoe018rdoiobhq49p7z  2026-09-10T12:41:00.214
+  144  cmtvhcho5018mdoioojh235pc  2026-09-10T12:41:00.196
+  145  cmtvhchny018idoioovl5o6gz  2026-09-10T12:41:00.184
+  146  cmtvhchnm018adoio73pajvr2  2026-09-10T12:41:00.161
+  147  cmtvhchne0185doiof8b52w1j  2026-09-10T12:41:00.145
+  148  cmtvhchn50180doiofw640fru  2026-09-10T12:41:00.131
+  149  cmtvhchmy017wdoio29c8jkjq  2026-09-10T12:41:00.117
+  150  cmtvhchmr017rdoioc2g33ddh  2026-09-10T12:41:00.101
+  151  cmtvhchme017jdoiobfvp5se5  2026-09-10T12:41:00.082
+  152  cmtvhchlx0179doior31q504f  2026-09-10T12:41:00.057
+  153  cmtvhchln0173doiobmnsdrry  2026-09-10T12:41:00.040
+  154  cmtvhchle016xdoiod14vmtir  2026-09-10T12:41:00.020
+  155  cmtvhchl8016tdoioegw6bznc  2026-09-10T12:41:00.004
+  156  cmtvhchkz016odoio5ti0ypxo  2026-09-10T12:40:59.986
+  157  cmtvhchks016kdoioc3h5aeml  2026-09-10T12:40:59.971
+  158  cmtvhchk50165doiopd86g77r  2026-09-10T12:40:59.924
+  159  cmtvhchk00161doioca29qdec  2026-09-10T12:40:59.909
+  160  cmtvhchjt015wdoio1655v4xe  2026-09-10T12:40:59.894
+  161  cmtvhchjj015qdoiokbx8539z  2026-09-10T12:40:59.873
+  162  cmtvhchja015ldoio7ue3b0nv  2026-09-10T12:40:59.859
+  163  cmtvhchj0015gdoio1fwbvvc0  2026-09-10T12:40:59.843
+  164  cmtvhchit015cdoiow782lz6i  2026-09-10T12:40:59.828
+  165  cmtvhchik0156doiowhazohb7  2026-09-10T12:40:59.809
+  166  cmtvhchid0151doiogzy5ni6h  2026-09-10T12:40:59.793
+  167  cmtvhchi6014wdoiou4fvyyl6  2026-09-10T12:40:59.779
+  168  cmtvhchi1014sdoioojljafao  2026-09-10T12:40:59.767
+  169  cmtvhchhv014odoioc7xrjafz  2026-09-10T12:40:59.756
+  170  cmtvhchhq014kdoio63puiaxx  2026-09-10T12:40:59.743
+  171  cmtvhchhj014fdoiog75ppobw  2026-09-10T12:40:59.728
+  172  cmtvhchhd014adoio2vmru5n1  2026-09-10T12:40:59.711
+  173  cmtvhchh00141doiojdnktsiw  2026-09-10T12:40:59.684
+  174  cmtvhchgs013udoio3z6e1wew  2026-09-10T12:40:59.661
+  175  cmtvhchgn013qdoioqbvmuumr  2026-09-10T12:40:59.648
+  176  cmtvhchgg013ldoiorv5ou73z  2026-09-10T12:40:59.634
+  177  cmtvhchga013hdoiobre1lsoj  2026-09-10T12:40:59.621
+  178  cmtvhchg2013bdoioqfldsutc  2026-09-10T12:40:59.606
+  179  cmtvhchfx0137doio8d0r3sou  2026-09-10T12:40:59.594
+  180  cmtvhchfo0132doio53d3poa8  2026-09-10T12:40:59.580
+  181  cmtvhchfi012ydoiovb3weoqu  2026-09-10T12:40:59.567
+  182  cmtvhchfc012udoio5fxdszls  2026-09-10T12:40:59.554
+  183  cmtvhchf6012pdoio4yf0jxm0  2026-09-10T12:40:59.538
+  184  cmtvhchf2012mdoiodh2wehfs  2026-09-10T12:40:59.528
+  185  cmtvhchex012idoiozpdtkzur  2026-09-10T12:40:59.514
+  186  cmtvhcheq012ddoiocvh72eb8  2026-09-10T12:40:59.496
+  187  cmtvhcheg0124doioz6jvvkf4  2026-09-10T12:40:59.467
+  188  cmtvhchec0121doio69k6m9da  2026-09-10T12:40:59.458
+  189  cmtvhche8011ydoioclnn7c5n  2026-09-10T12:40:59.450
+  190  cmtvhche5011vdoiog67m9vbe  2026-09-10T12:40:59.440
+  191  cmtvhche0011rdoio7b9tt2b2  2026-09-10T12:40:59.426
+  192  cmtvhchdv011ndoiove5xuyb6  2026-09-10T12:40:59.413
+  193  cmtvhchdo011hdoio3oza0qlf  2026-09-10T12:40:59.392
+  194  cmtvhchdk011edoioz1wyw51a  2026-09-10T12:40:59.382
+  195  cmtvhchde0119doiom638wf4y  2026-09-10T12:40:59.364
+  196  cmtvhchd90115doioz0av9wsp  2026-09-10T12:40:59.349
+  197  cmtvhchd40111doioc6iaoomz  2026-09-10T12:40:59.334
+  198  cmtvhchcy010xdoionspuec1l  2026-09-10T12:40:59.322
+  199  cmtvhchct010tdoioraljnp30  2026-09-10T12:40:59.308
+  200  cmtvhchck010ndoio1peydw93  2026-09-10T12:40:59.288
+  201  cmtvhchcg010kdoiokmzluj9i  2026-09-10T12:40:59.278
+  202  cmtvhchcc010hdoioq1j1wj87  2026-09-10T12:40:59.268
+  203  cmtvhchc6010ddoioze56ay5p  2026-09-10T12:40:59.254
+  204  cmtvhchbz0108doiobvie36u4  2026-09-10T12:40:59.237
+  205  cmtvhchbl00zzdoiovljdfxhj  2026-09-10T12:40:59.204
+  206  cmtvhchbd00ztdoiojy0rwzya  2026-09-10T12:40:59.183
+  207  cmtvhchb800zpdoiofugzxqsw  2026-09-10T12:40:59.171
+  208  cmtvhchau00zgdoioiihlkdb3  2026-09-10T12:40:59.141
+  209  cmtvhchaf00z5doioog5mwm7v  2026-09-10T12:40:59.103
+  210  cmtvhcha700yzdoioz77r7d05  2026-09-10T12:40:59.082
+  211  cmtvhcha200yvdoiohadcvlld  2026-09-10T12:40:59.067
+  212  cmtvhch9x00yrdoio5zaid8c8  2026-09-10T12:40:59.053
+  213  cmtvhch9q00yndoiox1fu0973  2026-09-10T12:40:59.038
+  214  cmtvhch9k00yjdoiozwkyz0cm  2026-09-10T12:40:59.028
+  215  cmtvhch9g00ygdoiodrdn59sr  2026-09-10T12:40:59.020
+  216  cmtvhch9a00ybdoiorhu2nun8  2026-09-10T12:40:59.008
+  217  cmtvhch9500y8doio62o0k2xn  2026-09-10T12:40:59.000
+  218  cmtvhch9000y4doio90ej8bju  2026-09-10T12:40:58.991
+  219  cmtvhch8t00xzdoiof6ynpzs9  2026-09-10T12:40:58.978
+  220  cmtvhch8n00xvdoio3udpnrc5  2026-09-10T12:40:58.966
+  221  cmtvhch8j00xsdoioaee5h74a  2026-09-10T12:40:58.958
+  222  cmtvhch8e00xodoiojy2bci04  2026-09-10T12:40:58.948
+  223  cmtvhch8600xidoioolki32gm  2026-09-10T12:40:58.931
+  224  cmtvhch8000xedoio6rb6lx8o  2026-09-10T12:40:58.919
+  225  cmtvhch7t00x9doiocxsacoid  2026-09-10T12:40:58.905
+  226  cmtvhch7f00wydoioyfdgtfcb  2026-09-10T12:40:58.875
+  227  cmtvhch7700wsdoioclzwdmv8  2026-09-10T12:40:58.861
+  228  cmtvhch7200wpdoio0hyyoh1i  2026-09-10T12:40:58.854
+  229  cmtvhch6x00wldoioax6r9zmz  2026-09-10T12:40:58.845
+  230  cmtvhch6o00wfdoiom7pt7xfz  2026-09-10T12:40:58.830
+  231  cmtvhch6h00w9doiowd4eac6s  2026-09-10T12:40:58.817
+  232  cmtvhch6800w3doiooc1pd1m8  2026-09-10T12:40:58.806
+  233  cmtvhch6200vydoio2mo46sy7  2026-09-10T12:40:58.796
+  234  cmtvhch5y00vvdoioe31h2zlz  2026-09-10T12:40:58.789
+  235  cmtvhch5q00vqdoio18gzvzxf  2026-09-10T12:40:58.779
+  236  cmtvhch5k00vmdoiobw1x28mm  2026-09-10T12:40:58.768
+  237  cmtvhch5d00vhdoiocmq952tw  2026-09-10T12:40:58.757
+  238  cmtvhch5500vbdoiofuod14ls  2026-09-10T12:40:58.743
+  239  cmtvhch4v00v3doiof4b1enfi  2026-09-10T12:40:58.723
+  240  cmtvhch4n00uxdoioh5kqx635  2026-09-10T12:40:58.706
+  241  cmtvhch4g00usdoiov7irjaie  2026-09-10T12:40:58.692
+  242  cmtvhch4800umdoio5w149fxf  2026-09-10T12:40:58.677
+  243  cmtvhch3z00ugdoiocgjbl8lc  2026-09-10T12:40:58.660
+  244  cmtvhcgyf00ubdoioej5ou24k  2026-09-10T12:40:58.644
+  245  cmtvhcgy800u7doio21w4r6ds  2026-09-10T12:40:58.635
+  246  cmtvhcgy100u3doiou5cog55d  2026-09-10T12:40:58.625
+  247  cmtvhcgxq00txdoioz1occmv6  2026-09-10T12:40:58.610
+  248  cmtvhcgxj00ttdoiobxrovkhw  2026-09-10T12:40:58.598
+  249  cmtvhcgxd00tqdoiomrmc4q06  2026-09-10T12:40:58.590
+  250  cmtvhcgx600tndoiovwikei9f  2026-09-10T12:40:58.582
+  251  cmtvhcgwt00thdoiot8zt00s3  2026-09-10T12:40:58.567
+  252  cmtvhcgwo00tedoiorvsxk431  2026-09-10T12:40:58.559
+  253  cmtvhcgwi00tbdoio50baiuwa  2026-09-10T12:40:58.551
+  254  cmtvhcgw400t5doiofxnibcus  2026-09-10T12:40:58.537
+  255  cmtvhcgvu00t1doiop4trerxn  2026-09-10T12:40:58.525
+  256  cmtvhcgvg00svdoioa7gt7k3w  2026-09-10T12:40:58.511
+  257  cmtvhcgv000spdoiot3yla78c  2026-09-10T12:40:58.495
+  258  cmtvhcgui00sjdoioq1954za5  2026-09-10T12:40:58.478
+  259  cmtvhcgu600sfdoioifdp0og1  2026-09-10T12:40:58.467
+  260  cmtvhcgtx00scdoioipofbnd2  2026-09-10T12:40:58.460
+  261  cmtvhcgtg00s6doio03nrf9dg  2026-09-10T12:40:58.447
+  262  cmtvhcgsy00s0doiop16gjyjx  2026-09-10T12:40:58.432
+  263  cmtvhcgsn00rwdoio4e65o8gt  2026-09-10T12:40:58.420
+  264  cmtvhcgsb00rsdoioee5a0rx2  2026-09-10T12:40:58.409
+  265  cmtvhcgrz00rodoiod8ckpx6h  2026-09-10T12:40:58.400
+  266  cmtvhcgrk00rjdoion5yelwzh  2026-09-10T12:40:58.387
+  267  cmtvhcgr200redoiobwlrhqye  2026-09-10T12:40:58.374
+  268  cmtvhcgqo00rbdoiopuebag9a  2026-09-10T12:40:58.364
+  269  cmtvhcgqb00r7doiokg8irdxb  2026-09-10T12:40:58.355
+  270  cmtvhcgpx00r1doio37xaz545  2026-09-10T12:40:58.342
+  271  cmtvhcgpj00qwdoioeyz0ca7d  2026-09-10T12:40:58.331
+  272  cmtvhcgpd00qtdoioyminribp  2026-09-10T12:40:58.323
+  273  cmtvhcgp400qndoioup7hgru0  2026-09-10T12:40:58.309
+  274  cmtvhcgoy00qjdoioj9fd4k3q  2026-09-10T12:40:58.300
+  275  cmtvhcgop00qedoio3nt92fcm  2026-09-10T12:40:58.289
+  276  cmtvhcgob00q6doio029iy7jz  2026-09-10T12:40:58.272
+  277  cmtvhcgo400q2doiom6tpw6ja  2026-09-10T12:40:58.265
+  278  cmtvhcgnt00pwdoioty278hhh  2026-09-10T12:40:58.256
+  279  cmtvhcgne00pndoiousudy6j1  2026-09-10T12:40:58.236
+  280  cmtvhcgn700pjdoio4ib7m1bm  2026-09-10T12:40:58.228
+  281  cmtvhcgmy00pedoiom6jeells  2026-09-10T12:40:58.216
+  282  cmtvhcgmk00p4doiof4x4ov79  2026-09-10T12:40:58.192
+  283  cmtvhcgme00p1doiohra9gxj8  2026-09-10T12:40:58.187
+  284  cmtvhcgm700oxdoiokavllv4y  2026-09-10T12:40:58.177
+  285  cmtvhcgly00osdoio5hdxmieb  2026-09-10T12:40:58.167
+  286  cmtvhcglr00oodoioqg7hbrys  2026-09-10T12:40:58.161
+  287  cmtvhcglg00ojdoioshsf1v4e  2026-09-10T12:40:58.151
+  288  cmtvhcgl700ofdoios0yxztm4  2026-09-10T12:40:58.141
+  289  cmtvhcgl000ocdoiou3gfl5a3  2026-09-10T12:40:58.134
+  290  cmtvhcgko00o6doiogndqqvaa  2026-09-10T12:40:58.122
+  291  cmtvhcgk900o1doiocmevuymp  2026-09-10T12:40:58.112
+  292  cmtvhcgk000nwdoio5aeruz7c  2026-09-10T12:40:58.103
+  293  cmtvhcgjn00npdoio4zaemxez  2026-09-10T12:40:58.090
+  294  cmtvhcgji00nmdoioz41l0wc7  2026-09-10T12:40:58.083
+  295  cmtvhcgja00nhdoio0eg9r8w6  2026-09-10T12:40:58.073
+  296  cmtvhcgj000nbdoioqay1mg9h  2026-09-10T12:40:58.059
+  297  cmtvhcgis00n6doiol1eav5yv  2026-09-10T12:40:58.048
+  298  cmtvhcgil00n2doiodfiko30f  2026-09-10T12:40:58.041
+  299  cmtvhcgia00mxdoioirunc8di  2026-09-10T12:40:58.031
+  300  cmtvhcgi300mtdoionn17ph4b  2026-09-10T12:40:58.022
+  301  cmtvhcghv00modoioh1g8hwau  2026-09-10T12:40:58.011
+  302  cmtvhcgho00mjdoiomq4vgzqh  2026-09-10T12:40:58.002
+  303  cmtvhcghf00medoio1l0a9kgb  2026-09-10T12:40:57.992
+  304  cmtvhcgh800madoiowzj796gs  2026-09-10T12:40:57.982
+  305  cmtvhcgh200m7doioqurzz9rf  2026-09-10T12:40:57.976
+  306  cmtvhcggn00lydoio7f5bseif  2026-09-10T12:40:57.956
+  307  cmtvhcggh00ludoiomhiumjmh  2026-09-10T12:40:57.945
+  308  cmtvhcgga00lqdoio2b569iky  2026-09-10T12:40:57.934
+  309  cmtvhcgg500lmdoiov551v8tw  2026-09-10T12:40:57.927
+  310  cmtvhcgfw00lhdoiodsmnbxmk  2026-09-10T12:40:57.918
+  311  cmtvhcgfq00ledoior5e3n3js  2026-09-10T12:40:57.911
+  312  cmtvhcgfh00ladoioos31wb40  2026-09-10T12:40:57.901
+  313  cmtvhcgf800l5doio24hkyntb  2026-09-10T12:40:57.889
+  314  cmtvhcgf000l0doio6vfpivia  2026-09-10T12:40:57.877
+  315  cmtvhcger00kudoio80igb6mc  2026-09-10T12:40:57.866
+  316  cmtvhcgel00kqdoiou7w06x43  2026-09-10T12:40:57.857
+  317  cmtvhcgeg00kndoioinwqn5gz  2026-09-10T12:40:57.851
+  318  cmtvhcgeb00kkdoiogsyh7btn  2026-09-10T12:40:57.845
+  319  cmtvhcge500kgdoioqjhfe30c  2026-09-10T12:40:57.836
+  320  cmtvhcgdw00kadoiodn5yhngw  2026-09-10T12:40:57.822
+  321  cmtvhcgdq00k6doio31608law  2026-09-10T12:40:57.813
+  322  cmtvhcgde00k0doio6fl44rdr  2026-09-10T12:40:57.802
+  323  cmtvhcgd600jwdoiou2sqji5u  2026-09-10T12:40:57.792
+  324  cmtvhcgcv00jqdoio6jam7pnt  2026-09-10T12:40:57.780
+  325  cmtvhcgch00jhdoiosmwj4m6u  2026-09-10T12:40:57.753
+  326  cmtvhcgc900jcdoio1ud6uv0f  2026-09-10T12:40:57.738
+  327  cmtvhcgc500j9doiouk65xcs3  2026-09-10T12:40:57.729
+  328  cmtvhcgby00j4doiodh5fgdjc  2026-09-10T12:40:57.715
+  329  cmtvhcgbk00ivdoiotntdo6qw  2026-09-10T12:40:57.687
+  330  cmtvhcgbb00ipdoioawikkyn9  2026-09-10T12:40:57.674
+  331  cmtvhcgb300ikdoio56h3r42t  2026-09-10T12:40:57.661
+  332  cmtvhcgau00igdoiovjg1gzr3  2026-09-10T12:40:57.651
+  333  cmtvhcgam00ibdoiok9ynukv0  2026-09-10T12:40:57.639
+  334  cmtvhcgae00i6doioqcfjkjyg  2026-09-10T12:40:57.627
+  335  cmtvhcga400i0doio35lwfkzu  2026-09-10T12:40:57.613
+  336  cmtvhcg9t00hudoiojoujngk2  2026-09-10T12:40:57.599
+  337  cmtvhcg9l00hodoion8091uvu  2026-09-10T12:40:57.586
+  338  cmtvhcg9d00hjdoiosd3f05qa  2026-09-10T12:40:57.575
+  339  cmtvhcg9400hddoioq5xviyzn  2026-09-10T12:40:57.565
+  340  cmtvhcg8w00h9doio11pxkcbo  2026-09-10T12:40:57.558
+  341  cmtvhcg8n00h4doiozqpw0jh0  2026-09-10T12:40:57.549
+  342  cmtvhcg8d00gzdoio8ora39v4  2026-09-10T12:40:57.537
+  343  cmtvhcg8700gvdoioqmqd4851  2026-09-10T12:40:57.529
+  344  cmtvhcg7y00gqdoioxqe158u2  2026-09-10T12:40:57.518
+  345  cmtvhcg7s00gmdoiocpyat291  2026-09-10T12:40:57.508
+  346  cmtvhcg7l00gidoiolwgbu3st  2026-09-10T12:40:57.500
+  347  cmtvhcg7d00gddoiovlvce4u7  2026-09-10T12:40:57.490
+  348  cmtvhcg7300g7doioije625ib  2026-09-10T12:40:57.476
+  349  cmtvhcg6o00fxdoioeqmeyacf  2026-09-10T12:40:57.450
+  350  cmtvhcg6f00fsdoiopmt02eg6  2026-09-10T12:40:57.438
+  351  cmtvhcg6600fndoiopalostrk  2026-09-10T12:40:57.426
+  352  cmtvhcg5v00fidoionkxqehjb  2026-09-10T12:40:57.413
+  353  cmtvhcg5m00fddoioxb3q23eo  2026-09-10T12:40:57.403
+  354  cmtvhcg5c00f7doio8nwlrcbx  2026-09-10T12:40:57.389
+  355  cmtvhcg5500f3doiotyixejc0  2026-09-10T12:40:57.379
+  356  cmtvhcg4y00ezdoiop6idcmsq  2026-09-10T12:40:57.370
+  357  cmtvhcg4o00etdoio5nmwqhtb  2026-09-10T12:40:57.358
+  358  cmtvhcg4i00eqdoio4clpx2nn  2026-09-10T12:40:57.352
+  359  cmtvhcg4900eldoio97wh93bi  2026-09-10T12:40:57.340
+  360  cmtvhcg4200egdoioz151hsq2  2026-09-10T12:40:57.329
+  361  cmtvhcg3s00eadoiot8qtg0vq  2026-09-10T12:40:57.316
+  362  cmtvhcg3l00e5doioaqillecq  2026-09-10T12:40:57.306
+  363  cmtvhcg3d00e0doiot0zil4y8  2026-09-10T12:40:57.298
+  364  cmtvhcg3500dudoio7ch91e5n  2026-09-10T12:40:57.286
+  365  cmtvhcg2w00dpdoioo5sjgd4y  2026-09-10T12:40:57.276
+  366  cmtvhcg2n00dkdoioff1bc04l  2026-09-10T12:40:57.267
+  367  cmtvhcg2400d8doiops2hloq0  2026-09-10T12:40:57.242
+  368  cmtvhcg1y00d4doio61tgf51g  2026-09-10T12:40:57.233
+  369  cmtvhcg1q00cydoio7w5nvf2f  2026-09-10T12:40:57.219
+  370  cmtvhcg1k00cudoio3bp6ktbw  2026-09-10T12:40:57.211
+  371  cmtvhcg1c00cpdoiourkxxyes  2026-09-10T12:40:57.200
+  372  cmtvhcg1300cjdoioi5zg46zp  2026-09-10T12:40:57.188
+  373  cmtvhcg0w00cedoios9uprb48  2026-09-10T12:40:57.177
+  374  cmtvhcg0r00cadoio7wu7vinp  2026-09-10T12:40:57.168
+  375  cmtvhcg0j00c6doionhhresj4  2026-09-10T12:40:57.160
+  376  cmtvhcg0d00c2doiorn1nfb1w  2026-09-10T12:40:57.152
+  377  cmtvhcg0200bwdoio05009cmq  2026-09-10T12:40:57.138
+  378  cmtvhcfzx00btdoio0dmrkqy3  2026-09-10T12:40:57.131
+  379  cmtvhcfzs00bqdoiorduv2wj6  2026-09-10T12:40:57.123
+  380  cmtvhcfzk00bldoioh7auif8l  2026-09-10T12:40:57.112
+  381  cmtvhcfzf00bidoiodzlkgers  2026-09-10T12:40:57.104
+  382  cmtvhcfz700bedoiokb9pr8ot  2026-09-10T12:40:57.094
+  383  cmtvhcfyv00b8doiogpctivxw  2026-09-10T12:40:57.080
+  384  cmtvhcfyl00b3doio20qq5vp4  2026-09-10T12:40:57.068
+  385  cmtvhcfyc00axdoio5jpatqdb  2026-09-10T12:40:57.054
+  386  cmtvhcfy700audoiozhdv9k6r  2026-09-10T12:40:57.047
+  387  cmtvhcfy200ardoioia2gzusv  2026-09-10T12:40:57.040
+  388  cmtvhcfxn00aidoioq081ba7t  2026-09-10T12:40:57.016
+  389  cmtvhcfxf00addoioqatvokh5  2026-09-10T12:40:57.004
+  390  cmtvhcfx600a8doioq7z53m3x  2026-09-10T12:40:56.990
+  391  cmtvhcfwz00a4doioz0dh60q7  2026-09-10T12:40:56.980
+  392  cmtvhcfws009zdoiog0lybksl  2026-09-10T12:40:56.968
+  393  cmtvhcfwj009vdoioaenr9yhx  2026-09-10T12:40:56.958
+  394  cmtvhcfwc009rdoio6omyqp3y  2026-09-10T12:40:56.949
+  395  cmtvhcfw6009ndoioypvlidjo  2026-09-10T12:40:56.940
+  396  cmtvhcfvz009idoiopoxftkol  2026-09-10T12:40:56.929
+  397  cmtvhcfvt009fdoioiozr6kqb  2026-09-10T12:40:56.923
+  398  cmtvhcfvn009bdoiondh2lotn  2026-09-10T12:40:56.913
+  399  cmtvhcfvf0096doioxfs22q4a  2026-09-10T12:40:56.903
+  400  cmtvhcfva0093doion8hfh2hl  2026-09-10T12:40:56.896
+  401  cmtvhcfv1008ydoioetcposov  2026-09-10T12:40:56.885
+  402  cmtvhcfun008qdoioza905j7y  2026-09-10T12:40:56.864
+  403  cmtvhcfuc008kdoioaf8wk909  2026-09-10T12:40:56.851
+  404  cmtvhcfu5008gdoio999z1zjz  2026-09-10T12:40:56.841
+  405  cmtvhcftv008adoioken2j5i2  2026-09-10T12:40:56.829
+  406  cmtvhcfto0085doio22xhs62c  2026-09-10T12:40:56.818
+  407  cmtvhcftg0080doio9yn9jrw2  2026-09-10T12:40:56.808
+  408  cmtvhcft9007wdoioegbb5800  2026-09-10T12:40:56.798
+  409  cmtvhcft0007rdoiorlc6p4gd  2026-09-10T12:40:56.785
+  410  cmtvhcfsu007ndoiogx29modo  2026-09-10T12:40:56.775
+  411  cmtvhcfso007kdoio7xahbjn6  2026-09-10T12:40:56.769
+  412  cmtvhcfsd007ddoiobwh4hd6r  2026-09-10T12:40:56.751
+  413  cmtvhcfrv0071doio2s7bnw0v  2026-09-10T12:40:56.723
+  414  cmtvhcfrl006vdoioj2genzce  2026-09-10T12:40:56.708
+  415  cmtvhcfrf006rdoiot7p2l459  2026-09-10T12:40:56.699
+  416  cmtvhcfr7006mdoioaybjsooc  2026-09-10T12:40:56.686
+  417  cmtvhcfr0006idoiowd75mp1h  2026-09-10T12:40:56.677
+  418  cmtvhcfqu006edoioifsfy6lh  2026-09-10T12:40:56.666
+  419  cmtvhcfqm0069doiotc2018g4  2026-09-10T12:40:56.654
+  420  cmtvhcfqh0066doio0id5ohz6  2026-09-10T12:40:56.647
+  421  cmtvhcfqd0063doioqmsp5wra  2026-09-10T12:40:56.639
+  422  cmtvhcfq5005ydoiovig5lb7r  2026-09-10T12:40:56.626
+  423  cmtvhcfpy005udoioz3yugii8  2026-09-10T12:40:56.616
+  424  cmtvhcfpp005pdoioeikmy4rp  2026-09-10T12:40:56.604
+  425  cmtvhcfpj005ldoiokw4q5t2s  2026-09-10T12:40:56.594
+  426  cmtvhcfpd005hdoio8b1xuf2d  2026-09-10T12:40:56.586
+  427  cmtvhcfp4005cdoion9v3a2lu  2026-09-10T12:40:56.576
+  428  cmtvhcfoz0058doio00rjy6hj  2026-09-10T12:40:56.567
+  429  cmtvhcfor0053doioh25mp5rf  2026-09-10T12:40:56.556
+  430  cmtvhcfoi004zdoio3nctts9n  2026-09-10T12:40:56.549
+  431  cmtvhcfo8004udoiox54inxif  2026-09-10T12:40:56.539
+  432  cmtvhcfnz004pdoiox6in36o6  2026-09-10T12:40:56.527
+  433  cmtvhcfns004ldoioqs4r701c  2026-09-10T12:40:56.518
+  434  cmtvhcfnk004fdoiouhao6aio  2026-09-10T12:40:56.506
+  435  cmtvhcfne004bdoioe6mh1fgh  2026-09-10T12:40:56.496
+  436  cmtvhcfn70047doiouhek0s2q  2026-09-10T12:40:56.486
+  437  cmtvhcfmy0041doioev1eeqqm  2026-09-10T12:40:56.474
+  438  cmtvhcfmq003xdoiosgwfb0xu  2026-09-10T12:40:56.463
+  439  cmtvhcfmi003sdoioiz38s6bi  2026-09-10T12:40:56.452
+  440  cmtvhcfma003ndoioezu1qrak  2026-09-10T12:40:56.438
+  441  cmtvhcfm1003jdoiokl28owhc  2026-09-10T12:40:56.427
+  442  cmtvhcflq003ddoiok94ajr4n  2026-09-10T12:40:56.412
+  443  cmtvhcflg0038doiotphvzol2  2026-09-10T12:40:56.400
+  444  cmtvhcfkn002xdoio3g8bqpcu  2026-09-10T12:40:56.373
+  445  cmtvhcfke002sdoiogf4zogtf  2026-09-10T12:40:56.360
+  446  cmtvhcfk8002pdoiofeusdcto  2026-09-10T12:40:56.352
+  447  cmtvhcfk0002kdoiode3gi7o2  2026-09-10T12:40:56.340
+  448  cmtvhcfjp002fdoiolc8rozfy  2026-09-10T12:40:56.322
+  449  cmtvhcfjg002bdoio5ig3zdzs  2026-09-10T12:40:56.307
+  450  cmtvhcfiz0025doioag7h706u  2026-09-10T12:40:56.289
+  451  cmtvhcfiv0022doioozlkldh5  2026-09-10T12:40:56.280
+  452  cmtvhcfim001ydoio1sdiv7be  2026-09-10T12:40:56.261
+  453  cmtknwo28001ua0iodqfu7dze  2026-09-10T12:40:56.250
+  454  cmtin5p1k00208lio8zpivfkh  2026-09-10T12:40:56.227
+  455  cmtin5p1d001v8liojurjlb95  2026-09-10T12:40:56.212
+  456  cmtin5p16001r8lio2c5yy9co  2026-09-10T12:40:56.199
+  457  cmtin5p0y001m8liojzzzuyik  2026-09-10T12:40:56.184
+  458  cmtin5p0q001h8lio3z1cmim8  2026-09-10T12:40:56.172
+  459  cmtin5p0j001d8liojtg8hk62  2026-09-10T12:40:56.162
+  460  cmtin5p0c00198lioer5xbu0d  2026-09-10T12:40:56.153
+  461  cmtin5p0200138lio5zmgyu34  2026-09-10T12:40:56.141
+  462  cmtin5ozp000x8lioehi73df1  2026-09-10T12:40:56.127
+  463  cmtin5ozf000s8lio5guib6qa  2026-09-10T12:40:56.112
+  464  cmtin5oys000m8liog1rdwln9  2026-09-10T12:40:56.094
 
 ==============================================================================
 4. Un profil modifié pendant que le recruteur pagine
@@ -123,35 +607,58 @@ Le cas est provoqué exprès, pas attendu : le recruteur lit la page 1, le
 candidat cmtin5oys000m8liog1rdwln9 enregistre son profil, le recruteur demande la page 2.
 L'horodatage d'origine est remis en place à la fin du script.
 
-  dernier profil de la page 1                : cmtin5p1d001v8liojurjlb95
+  dernier profil de la page 1                : cmtvhcik301s3doiobk8ctagk
   profil modifié entre les deux pages        : cmtin5oys000m8liog1rdwln9
   (il était le dernier de l'ordre, il passe en tête)
 
   pages 1 puis 2, sans interruption — attendu :
-    cmtknwo28001ua0iodqfu7dze
-    cmtin5p1k00208lio8zpivfkh
-    cmtin5p1d001v8liojurjlb95
-    cmtin5p16001r8lio2c5yy9co
-    cmtin5p0y001m8liojzzzuyik
-    cmtin5p0q001h8lio3z1cmim8
+    cmtvhcikd01sadoiorbngrvht
+    cmtvhcik901s7doiopijzk1lw
+    cmtvhcik301s3doiobk8ctagk
+    cmtvhcijw01rzdoiok7dupnwl
+    cmtvhcijo01rudoio7qwle82g
+    cmtvhcijh01rpdoiopm5nf1fn
   pages 1 puis 2, avec la modification :
-    cmtknwo28001ua0iodqfu7dze
-    cmtin5p1k00208lio8zpivfkh
-    cmtin5p1d001v8liojurjlb95
-    cmtin5p1d001v8liojurjlb95
-    cmtin5p16001r8lio2c5yy9co
-    cmtin5p0y001m8liojzzzuyik
+    cmtvhcikd01sadoiorbngrvht
+    cmtvhcik901s7doiopijzk1lw
+    cmtvhcik301s3doiobk8ctagk
+    cmtvhcik301s3doiobk8ctagk
+    cmtvhcijw01rzdoiok7dupnwl
+    cmtvhcijo01rudoio7qwle82g
 
-  vus deux fois                              : cmtin5p1d001v8liojurjlb95
-  jamais vus                                 : cmtin5p0q001h8lio3z1cmim8
+  vus deux fois                              : cmtvhcik301s3doiobk8ctagk
+  jamais vus                                 : cmtvhcijh01rpdoiopm5nf1fn
 
 C'est le comportement attendu d'une pagination par OFFSET, et il est
 documenté plutôt que masqué : docs/livrables/note-algorithme-de-classement.md
 §4 dit quelle garantie nous offrons et laquelle nous n'offrons pas.
 
   horodatage restauré pour cmtin5oys000m8liog1rdwln9 :
-    2026-09-08T08:47:49.866000
-    (valeur d'origine : 2026-09-08T08:47:49.866000)
+    2026-09-10T12:40:56.094000
+    (valeur d'origine : 2026-09-10T12:40:56.094000)
 
 ==============================================================================
-Fin de la transcription — 2026-09-08T10:48:11+02:00
+5. Chacun des tris proposés, parcouru deux fois
+------------------------------------------------------------------------------
+La démonstration du §3 porte sur l'ordre par défaut. Elle est reprise ici
+pour chaque valeur de `sort` que le contrat publie, à 20 profils par
+page. Un tri dont les deux parcours divergeraient, ou qui rendrait un
+identifiant deux fois, apparaîtrait dans ce tableau.
+
+    tri              deux parcours    rendus  distincts
+    recent           identiques          464        464
+    certification    identiques          464        464
+    score            identiques          464        464
+    sector           identiques          464        464
+    location         identiques          464        464
+    availability     identiques          464        464
+
+  tris vérifiés                              : 6
+  tris dont les deux parcours divergent      : 0
+
+Chacun se termine sur `id`, ce que deux tests unitaires tiennent en
+itérant CATALOGUE_SORTS plutôt qu'une liste écrite à la main
+(packages/api/src/services/catalogue.filters.test.ts).
+
+==============================================================================
+Fin de la transcription — 2026-09-10T14:43:08+02:00

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  AVAILABILITY_STATUSES,
   PROFILE_BIO_MAX_LENGTH,
   PROFILE_FIELD_MAX_LENGTH,
   PROFILE_HEADLINE_MAX_LENGTH,
@@ -27,6 +28,11 @@ export const profileFormSchema = z.object({
     .min(1, { error: 'Localisation requise' })
     .max(PROFILE_FIELD_MAX_LENGTH),
   sector: z.string().trim().min(1, { error: 'Secteur requis' }).max(PROFILE_FIELD_MAX_LENGTH),
+  /** `''` is the "not stated" option of the select, not a value the API
+   *  accepts — `ProfileForm` turns it into the `null` that clears the column.
+   *  Declaring the field as an optional enum instead would make an untouched
+   *  select indistinguishable from a deliberate clear. */
+  availability: z.enum(['', ...AVAILABILITY_STATUSES], { error: 'Disponibilité invalide' }),
 });
 
 export type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -36,6 +42,7 @@ export const EMPTY_PROFILE_FORM: ProfileFormValues = {
   bio: '',
   location: '',
   sector: '',
+  availability: '',
 };
 
 export const videoFormSchema = z.object({

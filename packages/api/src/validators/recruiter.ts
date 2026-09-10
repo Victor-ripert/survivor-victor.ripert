@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  AVAILABILITY_STATUSES,
   CATALOGUE_DEFAULT_SORT,
   CATALOGUE_MAX_SKILL_FILTERS,
   CATALOGUE_SEARCH_MAX_LENGTH,
@@ -24,6 +25,7 @@ export const catalogueQuerySchema = paginationQuerySchema.extend({
   certifiedOnly: booleanQueryParam.optional(),
   minScore: z.coerce.number().int().min(0).max(100).optional(),
   hasVideo: booleanQueryParam.optional(),
+  availability: z.enum(AVAILABILITY_STATUSES, { error: 'Disponibilité invalide' }).optional(),
   favoritesOnly: booleanQueryParam.optional(),
   sort: z.enum(CATALOGUE_SORTS).default(CATALOGUE_DEFAULT_SORT),
 });

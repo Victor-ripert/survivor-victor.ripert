@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { AVAILABILITY_LABELS } from '@profils-actifs/shared';
 import { CertificationBadge } from '../../components/CertificationBadge.js';
 import { ContactDialog } from '../../components/ContactDialog.js';
 import { Icon } from '../../components/Icon.js';
@@ -83,6 +84,12 @@ export const ProfilePage = () => {
               <span>{profile.sector}</span>
               <span aria-hidden="true">·</span>
               <span>{profile.location}</span>
+              {profile.availability && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>Disponible : {AVAILABILITY_LABELS[profile.availability]}</span>
+                </>
+              )}
             </p>
           </header>
 

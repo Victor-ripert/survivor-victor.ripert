@@ -1,5 +1,6 @@
 import { InteractionType, Prisma } from '@prisma/client';
 import {
+  AVAILABILITY_STATUSES,
   buildPaginationMeta,
   resolvePageRequest,
   type CatalogueFacets,
@@ -30,6 +31,7 @@ const catalogueSelect = {
   certificationStatus: true,
   certificationScore: true,
   certificationBadge: true,
+  availability: true,
   updatedAt: true,
   user: { select: { firstName: true, lastName: true } },
   skills: {
@@ -39,7 +41,7 @@ const catalogueSelect = {
   },
   videos: {
     where: publishedVideoFilter,
-    select: { id: true, title: true, url: true },
+    select: { id: true, title: true, type: true, url: true, captionsUrl: true },
     orderBy: { createdAt: 'asc' },
     take: 1,
   },
@@ -47,6 +49,22 @@ const catalogueSelect = {
 } satisfies Prisma.ProfileSelect;
 
 type CatalogueRow = Prisma.ProfileGetPayload<{ select: typeof catalogueSelect }>;
+
+/** `type` is what tells the player a hosted file from an embed: without it an
+ *  uploaded video reaches the recruiter looking like an unknown embed, and is
+ *  refused. */
+const toPreviewVideo = (
+  video: CatalogueRow['videos'][number] | undefined,
+): CatalogueProfile['previewVideo'] =>
+  video
+    ? {
+        id: video.id,
+        title: video.title,
+        type: video.type,
+        url: video.url,
+        captionsUrl: video.captionsUrl ?? undefined,
+      }
+    : null;
 
 const toCatalogueProfile = (
   row: CatalogueRow,
@@ -63,13 +81,14 @@ const toCatalogueProfile = (
   certificationStatus: row.certificationStatus,
   certificationScore: row.certificationScore,
   certificationBadge: row.certificationBadge,
+  availability: row.availability,
   skills: row.skills.map((entry) => ({
     id: entry.skill.id,
     name: entry.skill.name,
     level: entry.level,
   })),
   videoCount: row._count.videos,
-  previewVideo: row.videos[0] ?? null,
+  previewVideo: toPreviewVideo(row.videos[0]),
   isFavorite: favoriteUserIds.has(row.userId),
   lastContactedAt: lastContactedAt.get(row.userId)?.toISOString() ?? null,
   updatedAt: row.updatedAt.toISOString(),
@@ -196,7 +215,7 @@ const toFacetValues = (rows: { value: string | null; count: number }[]): FacetVa
  * never offers a dropdown entry that returns nothing.
  */
 export const getCatalogueFacets = async (): Promise<CatalogueFacets> => {
-  const [sectors, locations, skills] = await Promise.all([
+  const [sectors, locations, skills, availabilities] = await Promise.all([
     prisma.profile.groupBy({
       by: ['sector'],
       where: visibleProfileFilter,
@@ -220,6 +239,11 @@ export const getCatalogueFacets = async (): Promise<CatalogueFacets> => {
       orderBy: { profiles: { _count: 'desc' } },
       take: MAX_FACET_VALUES,
     }),
+    prisma.profile.groupBy({
+      by: ['availability'],
+      where: visibleProfileFilter,
+      _count: { _all: true },
+    }),
   ]);
 
   return {
@@ -228,5 +252,14 @@ export const getCatalogueFacets = async (): Promise<CatalogueFacets> => {
       locations.map((row) => ({ value: row.location, count: row._count._all })),
     ),
     skills: toFacetValues(skills.map((row) => ({ value: row.name, count: row._count.profiles }))),
+    // Ordered by the enum rather than by count, unlike the three facets above:
+    // this list is a scale, and showing "Sous 3 mois" before "Immédiate"
+    // because more candidates picked it would misread it as a ranking.
+    // Profiles that declared nothing are not a value here — they are what is
+    // left when none of these is selected.
+    availabilities: AVAILABILITY_STATUSES.flatMap((status) => {
+      const count = availabilities.find((row) => row.availability === status)?._count._all ?? 0;
+      return count > 0 ? [{ value: status, count }] : [];
+    }),
   };
 };

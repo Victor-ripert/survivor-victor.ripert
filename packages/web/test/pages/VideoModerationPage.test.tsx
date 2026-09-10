@@ -26,7 +26,9 @@ const video = (overrides: Partial<VideoModerationItem> = {}): VideoModerationIte
   id: 'video-1',
   title: 'Présentation en 90 secondes',
   description: null,
+  type: 'EXTERNAL_LINK',
   url: 'https://www.youtube.com/embed/abc123',
+  captionsUrl: null,
   durationSeconds: 92,
   moderationStatus: 'PENDING',
   submittedAt: '2026-09-01T10:00:00.000Z',
@@ -146,6 +148,32 @@ describe('VideoModerationPage', () => {
 
     expect(container.querySelector('iframe')).toBeNull();
     expect(screen.getByRole('alert')).toHaveTextContent(/pas une intégration reconnue/);
+  });
+
+  // An upload is a file this API serves, not a framed page: the embed
+  // allowlist must not keep the administrator from watching it before ruling.
+  it('plays a pending upload with its captions for review', async () => {
+    fetchVideoModerationQueue.mockResolvedValue(
+      page([
+        video({
+          type: 'UPLOAD',
+          url: '/uploads/3f9a6c21-5d84-4b17-9e0c-8a2fd1b64e05.mp4',
+          captionsUrl: '/uploads/3f9a6c21-5d84-4b17-9e0c-8a2fd1b64e05.fr.vtt',
+        }),
+      ]),
+    );
+
+    const { container } = renderPage();
+    await screen.findByRole('heading', { name: 'Présentation en 90 secondes' });
+    expect(screen.queryByText(/pas une intégration reconnue/)).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Lire « Présentation en 90 secondes », sous-titrée' }),
+    );
+
+    const player = container.querySelector('video');
+    expect(player).toHaveAttribute('src', expect.stringMatching(/\/uploads\/3f9a6c21.*\.mp4$/));
+    expect(player?.querySelector('track')).toHaveAttribute('kind', 'captions');
   });
 
   it('shows the API error rather than an empty queue', async () => {

@@ -159,12 +159,17 @@ const VideoRow = ({ video, onDecided, active, onActivate }: VideoRowProps) => (
 
       {video.description && <p className="moderation-item__meta">{video.description}</p>}
 
-      {isEmbeddableUrl(video.url) ? (
+      {/* An upload is a file this API serves, played by <video>: the embed
+          allowlist guards frames, and must not keep the administrator from
+          watching a hosted video before ruling on it. */}
+      {video.type === 'UPLOAD' || isEmbeddableUrl(video.url) ? (
         <VideoPlayer
           video={{
             id: video.id,
             title: video.title,
+            type: video.type,
             url: video.url,
+            captionsUrl: video.captionsUrl ?? undefined,
             duration: video.durationSeconds,
           }}
           active={active}

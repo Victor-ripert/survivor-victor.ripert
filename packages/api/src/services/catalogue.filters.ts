@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import type { CatalogueSort } from '@profils-actifs/shared';
+import type { AvailabilityStatus, CatalogueSort } from '@profils-actifs/shared';
 import { publishedVideoFilter, visibleProfileFilter } from './visibility.js';
 
 export interface CatalogueFilters {
@@ -10,6 +10,7 @@ export interface CatalogueFilters {
   certifiedOnly?: boolean;
   minScore?: number;
   hasVideo?: boolean;
+  availability?: AvailabilityStatus;
   /** Restricts the result set to these applicant user ids (favourites view). */
   restrictToUserIds?: string[];
 }
@@ -60,6 +61,7 @@ export const buildCatalogueWhere = (filters: CatalogueFilters): Prisma.ProfileWh
   if (filters.certifiedOnly) and.push({ certificationStatus: 'COMPLETED' });
   if (filters.minScore !== undefined) and.push({ certificationScore: { gte: filters.minScore } });
   if (filters.hasVideo) and.push({ videos: { some: publishedVideoFilter } });
+  if (filters.availability) and.push({ availability: filters.availability });
   if (filters.restrictToUserIds) and.push({ userId: { in: filters.restrictToUserIds } });
 
   return { AND: and };
@@ -85,6 +87,23 @@ export const buildCatalogueOrderBy = (
   sort: CatalogueSort,
 ): Prisma.ProfileOrderByWithRelationInput[] => {
   switch (sort) {
+    /**
+     * Certification *status*, which is not the same question as `score`
+     * below. `certificationBadge` is written only when an attempt completes,
+     * so ordering it ascending with nulls last puts every certified profile
+     * ahead of every uncertified one — the grouping a recruiter asks for by
+     * name. Within the certified, the key is the badge label, which is the
+     * level's name and not its rank: alphabetical, and said so in the note
+     * rather than dressed up as a hierarchy. `certificationStatus` then
+     * separates the rest, and it is the enum's own order that applies.
+     */
+    case 'certification':
+      return [
+        { certificationBadge: { sort: 'asc', nulls: 'last' } },
+        { certificationStatus: 'asc' },
+        { updatedAt: 'desc' },
+        { id: 'asc' },
+      ];
     case 'score':
       return [
         { certificationScore: { sort: 'desc', nulls: 'last' } },
@@ -95,6 +114,18 @@ export const buildCatalogueOrderBy = (
       return [{ sector: 'asc' }, { updatedAt: 'desc' }, { id: 'asc' }];
     case 'location':
       return [{ location: 'asc' }, { updatedAt: 'desc' }, { id: 'asc' }];
+    /**
+     * `AvailabilityStatus` is declared soonest-first in `schema.prisma`, and
+     * Postgres ranks an enum by declaration order, so ascending *is* the
+     * professional order. Nulls last, which Postgres already does for ASC: a
+     * candidate who declared nothing is not a candidate available today.
+     */
+    case 'availability':
+      return [
+        { availability: { sort: 'asc', nulls: 'last' } },
+        { updatedAt: 'desc' },
+        { id: 'asc' },
+      ];
     case 'recent':
       return [{ updatedAt: 'desc' }, { id: 'asc' }];
   }

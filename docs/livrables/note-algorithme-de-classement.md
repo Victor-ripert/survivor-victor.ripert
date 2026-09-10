@@ -13,12 +13,12 @@ ci-dessous en donne le sommaire pour que la lecture soit d'un seul tenant.
 Tout ce qui suit est relevé sur le code qui tourne. La démonstration demandée
 est en pièce jointe et re-jouable :
 
-| Pièce                                   | Ce qu'elle contient                                                                       |
-| --------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `docs/preuves/EW-9-tri-passe-1.txt`     | Le catalogue parcouru de la première à la dernière page, identifiants dans l'ordre obtenu |
-| `docs/preuves/EW-9-tri-passe-2.txt`     | Le même parcours, recommencé                                                              |
-| `docs/preuves/EW-9-tri-comparaison.txt` | Leur comparaison, les comptes lus en base, et le cas de la modification concurrente       |
-| `scripts/preuves/tri-deterministe.sh`   | Le script qui produit les trois, re-jouable                                               |
+| Pièce                                   | Ce qu'elle contient                                                                                                                                   |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/preuves/EW-9-tri-passe-1.txt`     | Le catalogue parcouru de la première à la dernière page, identifiants dans l'ordre obtenu                                                             |
+| `docs/preuves/EW-9-tri-passe-2.txt`     | Le même parcours, recommencé                                                                                                                          |
+| `docs/preuves/EW-9-tri-comparaison.txt` | Leur comparaison, les comptes lus en base, le cas de la modification concurrente, et le §5 qui reprend les deux parcours pour **chacun** des six tris |
+| `scripts/preuves/tri-deterministe.sh`   | Le script qui produit les trois, re-jouable                                                                                                           |
 
 ---
 
@@ -54,17 +54,29 @@ départage fait échouer la suite au lieu d'être livré.
 
 ## 2. Les tris proposés au recruteur
 
-Quatre, et une phrase de justification professionnelle chacun.
+Six — un par critère professionnel que votre courriel énumère — et une phrase
+de justification chacun.
 
-| `sort`     | Ordre                                                        | Justification professionnelle                                                                                                                                                                                  |
-| ---------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `recent`   | `updatedAt DESC, id ASC` — **défaut**                        | La fraîcheur du profil est le meilleur indice disponible qu'un candidat est effectivement en recherche ; elle dépend de son seul geste, et elle est à la portée de tous de la même manière.                    |
-| `score`    | `certificationScore DESC NULLS LAST, updatedAt DESC, id ASC` | Le score de certification mesure une aptitude professionnelle, évaluée pour tous au même barème et calculée côté serveur. **Voir la réserve au §3 de la note sur les critères de filtrage, toujours ouverte.** |
-| `sector`   | `sector ASC, updatedAt DESC, id ASC`                         | Le secteur est l'objet même du rapprochement entre une offre et une candidature ; il est déclaré par le candidat pour être vu.                                                                                 |
-| `location` | `location ASC, updatedAt DESC, id ASC`                       | Le lieu de travail est une condition d'exécution du contrat ; le candidat le renseigne pour indiquer où il est disponible.                                                                                     |
+| `sort`          | Ordre                                                                                | Justification professionnelle                                                                                                                                                                                                                                                                                |
+| --------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `recent`        | `updatedAt DESC, id ASC` — **défaut**                                                | La fraîcheur du profil est le meilleur indice disponible qu'un candidat est effectivement en recherche ; elle dépend de son seul geste, et elle est à la portée de tous de la même manière.                                                                                                                  |
+| `certification` | `certificationBadge ASC NULLS LAST, certificationStatus ASC, updatedAt DESC, id ASC` | Le **statut** de certification, que votre liste nomme, et qui n'est pas la même question que le score. `certificationBadge` n'est écrit qu'à l'issue d'une passation réussie : trier dessus en plaçant les vides en dernier met les profils certifiés devant les autres, ce qui est le regroupement demandé. |
+| `score`         | `certificationScore DESC NULLS LAST, updatedAt DESC, id ASC`                         | Le score de certification mesure une aptitude professionnelle, évaluée pour tous au même barème et calculée côté serveur. **Voir la réserve au §3 de la note sur les critères de filtrage, toujours ouverte.**                                                                                               |
+| `sector`        | `sector ASC, updatedAt DESC, id ASC`                                                 | Le secteur est l'objet même du rapprochement entre une offre et une candidature ; il est déclaré par le candidat pour être vu.                                                                                                                                                                               |
+| `location`      | `location ASC, updatedAt DESC, id ASC`                                               | Le lieu de travail est une condition d'exécution du contrat ; le candidat le renseigne pour indiquer où il est disponible.                                                                                                                                                                                   |
+| `availability`  | `availability ASC NULLS LAST, updatedAt DESC, id ASC`                                | La disponibilité déclarée par le candidat. Elle décrit une condition d'exécution du contrat, elle est déclarée pour être vue, et elle est à la portée de tous de la même manière.                                                                                                                            |
 
 Les profils sans score sont rangés en dernier (`NULLS LAST`) et non en premier :
 l'absence de certification n'est pas un score parfait.
+
+**Deux réserves nommées plutôt que laissées à la lecture.** Au sein des profils
+certifiés, `sort=certification` ordonne sur le _libellé_ du badge, qui est le
+nom du niveau et non son rang : l'ordre y est alphabétique, et nous le disons
+plutôt que de le faire passer pour une hiérarchie. Qui veut la hiérarchie
+prend `sort=score`, qui ordonne sur la valeur numérique. Et sur
+`sort=availability`, un profil qui n'a rien déclaré est rangé en dernier, jamais
+traité comme disponible aujourd'hui : `NULLS LAST` est ici une règle métier, pas
+un détail de SQL.
 
 ### 2.1 Retiré — le tri par nom
 
@@ -99,13 +111,37 @@ n'émet jamais la requête. Un appel direct à l'API, lui, reçoit un
 paramètre de requête hors domaine. Nous n'avons pas fait d'exception tolérante
 pour cette valeur-là : il n'y a qu'une façon d'échouer dans cette API.
 
-### 2.2 Non disponible — le tri par disponibilité
+### 2.2 La disponibilité — ajoutée au modèle le 10 septembre
 
-Votre liste cite la disponibilité. **Elle n'existe pas au modèle** : aucune
-colonne du schéma ne porte de date de disponibilité ni de statut de recherche,
-et nous préférons l'écrire plutôt que de faire passer `updatedAt` pour une
-disponibilité qu'il n'est pas. C'est un ajout de domaine B (profils), pas un
-tri à câbler ; nous ne l'inventons pas dans notre coin.
+Cette section disait, jusqu'au 10 septembre, que la disponibilité n'existait pas
+au modèle et qu'il n'était pas de notre ressort de l'inventer. Elle a été
+arbitrée depuis, et ajoutée : `Profile.availability`, énumération
+`AvailabilityStatus` à quatre valeurs — `IMMEDIATE`, `WITHIN_ONE_MONTH`,
+`WITHIN_THREE_MONTHS`, `LATER` — migration
+`20260910123717_add_profile_availability`.
+
+Trois choix méritent d'être écrits :
+
+- **La colonne est nullable, et le reste.** Un profil créé avant cette
+  migration n'a rien déclaré ; lui attribuer une valeur par défaut mettrait une
+  affirmation dans la bouche du candidat. Le formulaire porte donc une option
+  « Non renseignée », et c'est elle qui est retenue tant que le candidat ne
+  choisit pas.
+- **L'ordre de l'énumération _est_ le classement.** PostgreSQL range une
+  énumération par ordre de déclaration ; les quatre valeurs sont déclarées du
+  plus tôt au plus tard, si bien que `ORDER BY availability ASC` est l'ordre
+  professionnel sans expression `CASE` ni colonne de rang à tenir en cohérence.
+  Un test unitaire tient l'ordre côté `@profils-actifs/shared`, où le même
+  tableau est recopié pour l'interface.
+- **Le filtre est un égal, pas un « au plus tard ».** `availability=IMMEDIATE`
+  rend les profils qui ont déclaré cette valeur-là, et aucun profil sans
+  déclaration — quelle que soit la valeur demandée. La liste déroulante est
+  alimentée par `GET /recruiter/catalogue/facets`, qui rend les
+  disponibilités **dans l'ordre de l'énumération et non par effectif** : c'est
+  une échelle, et la classer par popularité la ferait lire comme un palmarès.
+
+Index correspondant, colonne pour colonne :
+`Profile_availability_updatedAt_id_idx` sur `(availability, "updatedAt" DESC, id)`.
 
 ## 3. Aucun critère de popularité, ni dérivé, ni indirect
 
@@ -160,10 +196,10 @@ tri.
 ## 5. Les critères de filtrage disponibles — sommaire
 
 Le détail, avec la justification de chacun et la liste de ce qui a été retiré,
-est dans `note-criteres-de-filtrage.md`. En bref, neuf paramètres :
+est dans `note-criteres-de-filtrage.md`. En bref, dix paramètres :
 `q` (recherche libre, hors nom et prénom), `sector`, `location`, `skills`,
-`certifiedOnly`, `minScore`, `hasVideo`, `favoritesOnly`, plus `page`/`limit`
-plafonnés à 20 profils par page côté serveur.
+`certifiedOnly`, `minScore`, `hasVideo`, `availability`, `favoritesOnly`, plus
+`page`/`limit` plafonnés à 20 profils par page côté serveur.
 
 Le fil public de profils ne porte **aucun** filtre. L'espace d'administration
 ne filtre que sur le statut de modération, qui n'est pas un critère de
@@ -171,8 +207,6 @@ sélection de candidats.
 
 ## 6. Ce qui reste ouvert
 
-- **La disponibilité** (§2.2) — donnée absente du modèle, à arbitrer avec le
-  domaine B avant d'être un tri.
 - **`minScore` et `sort=score`** au regard du §7.9.3 — question posée à Florine
   Pontaillac le 4 septembre, sans réponse à ce jour. Elle porte autant sur le
   filtre que sur le tri, et nous la reposons ici.

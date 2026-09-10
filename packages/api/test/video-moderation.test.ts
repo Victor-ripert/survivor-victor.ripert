@@ -92,6 +92,8 @@ describe('video moderation', () => {
     );
     const item = allPending.find((entry: { id: string }) => entry.id === videoId);
     expect(item).toMatchObject({
+      type: 'EXTERNAL_LINK',
+      captionsUrl: null,
       moderationStatus: 'PENDING',
       applicant: { profileId, firstName: 'Amina', lastName: 'Test' },
       lastDecision: null,

@@ -1,3 +1,5 @@
+import type { VideoType } from './video.js';
+
 /**
  * Mirrors `schema.prisma`'s `ModerationStatus` enum. Lives in its own file
  * (rather than inside `profile.ts`, where it originated) because both
@@ -35,7 +37,11 @@ export interface VideoModerationItem {
   id: string;
   title: string;
   description: string | null;
+  type: VideoType;
   url: string;
+  /** WebVTT track of an uploaded video; `null` for an embed, or for an upload
+   *  without subtitles. */
+  captionsUrl: string | null;
   durationSeconds: number | null;
   moderationStatus: ModerationStatus;
   submittedAt: string;

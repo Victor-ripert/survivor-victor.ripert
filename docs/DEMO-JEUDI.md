@@ -9,10 +9,11 @@ lint, Prettier, **275 tests API, 95 tests web, 18 tests partagés**.
 > [`livrables/guide-d-utilisation.md`](livrables/guide-d-utilisation.md). Les pannes probables et
 > la phrase à dire sont dans [`livrables/plan-b-direct.md`](livrables/plan-b-direct.md).
 >
-> **Avant toute démonstration publique, rejouer le seed** : cinq écarts sur les données de
-> démonstration sont relevés au §3 de
-> [`livrables/recensement-du-3-septembre.md`](livrables/recensement-du-3-septembre.md), dont dix URL
-> de vidéos qui pointent vers des clips musicaux et non vers des présentations de candidats.
+> **Avant toute démonstration publique, rejouer le seed** : les écarts relevés au §3 de
+> [`livrables/recensement-du-3-septembre.md`](livrables/recensement-du-3-septembre.md) le
+> supposent. Celui des dix vidéos pointant vers des clips musicaux est refermé depuis le
+> 10 septembre : les fixtures nommées portent une vidéo hébergée par nous et sous-titrée
+> (FP-4, `scripts/generer-videos-de-demonstration.mts`).
 
 ## Démarrer
 

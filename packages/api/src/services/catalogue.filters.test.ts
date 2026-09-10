@@ -63,6 +63,12 @@ describe('buildCatalogueWhere', () => {
     });
   });
 
+  it('matches a declared availability exactly, never a profile without one', () => {
+    expect(conditions(buildCatalogueWhere({ availability: 'IMMEDIATE' }))).toContainEqual({
+      availability: 'IMMEDIATE',
+    });
+  });
+
   // §7.9.2: moderation is a priori. A video awaiting review is not "not yet
   // rejected", it is simply not published, and `hasVideo` must not surface a
   // profile on the strength of one.
@@ -148,9 +154,31 @@ describe('buildCatalogueOrderBy', () => {
     ]);
   });
 
-  // Courriel du 8 septembre 2026: the orderings offered to a recruiter rest on
-  // professional criteria only. A candidate's name is not one of them, and no
-  // audience measurement — even a derived one — may reach the ORDER BY.
+  // Courriel du 8 septembre 2026 names availability among the professional
+  // criteria. `AvailabilityStatus` is declared soonest-first in schema.prisma
+  // and Postgres ranks an enum by declaration order, so ascending *is* the
+  // professional order — and a profile that declared nothing ranks last
+  // rather than passing for available today.
+  it('orders availability soonest first and leaves undeclared profiles last', () => {
+    expect(buildCatalogueOrderBy('availability')).toEqual([
+      { availability: { sort: 'asc', nulls: 'last' } },
+      { updatedAt: 'desc' },
+      { id: 'asc' },
+    ]);
+  });
+
+  it('puts certified profiles ahead of the rest when ordering by status', () => {
+    expect(buildCatalogueOrderBy('certification')).toEqual([
+      { certificationBadge: { sort: 'asc', nulls: 'last' } },
+      { certificationStatus: 'asc' },
+      { updatedAt: 'desc' },
+      { id: 'asc' },
+    ]);
+  });
+
+  // Same letter: the orderings offered to a recruiter rest on professional
+  // criteria only. A candidate's name is not one of them, and no audience
+  // measurement — even a derived one — may reach the ORDER BY.
   it('never orders people by their name', () => {
     for (const sort of CATALOGUE_SORTS) {
       const rendered = JSON.stringify(buildCatalogueOrderBy(sort));
@@ -161,7 +189,16 @@ describe('buildCatalogueOrderBy', () => {
   });
 
   it('orders on declared professional attributes and nothing else', () => {
-    const allowed = ['updatedAt', 'certificationScore', 'sector', 'location', 'id'];
+    const allowed = [
+      'updatedAt',
+      'certificationStatus',
+      'certificationScore',
+      'certificationBadge',
+      'sector',
+      'location',
+      'availability',
+      'id',
+    ];
 
     for (const sort of CATALOGUE_SORTS) {
       for (const entry of buildCatalogueOrderBy(sort)) {

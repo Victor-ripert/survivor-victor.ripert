@@ -1,4 +1,9 @@
-import { CertificationStatus, ModerationStatus, SkillLevel } from '@prisma/client';
+import {
+  AvailabilityStatus,
+  CertificationStatus,
+  ModerationStatus,
+  SkillLevel,
+} from '@prisma/client';
 
 export interface ApplicantSeed {
   firstName: string;
@@ -17,6 +22,10 @@ export interface ApplicantSeed {
    *  whose score and badge disagree would make the catalogue lie. */
   certificationScore?: number;
   certificationBadge?: string;
+  /** Omitted on purpose for some fixtures: a catalogue where every profile has
+   *  declared an availability never exercises `sort=availability`'s NULLS LAST
+   *  branch, which is where the "not stated is not available" rule lives. */
+  availability?: AvailabilityStatus;
   moderationStatus: ModerationStatus;
   videos: VideoSeed[];
 }
@@ -53,13 +62,6 @@ export interface UploadedVideoSeed {
 
 export type VideoSeed = EmbeddedVideoSeed | UploadedVideoSeed;
 
-const video = (title: string, id: string, duration: number): EmbeddedVideoSeed => ({
-  kind: 'embed',
-  title,
-  url: `https://www.youtube.com/embed/${id}`,
-  duration,
-});
-
 const uploadedVideo = (
   title: string,
   basename: string,
@@ -67,6 +69,19 @@ const uploadedVideo = (
   duration: number,
 ): UploadedVideoSeed => ({ kind: 'upload', title, basename, storedName, duration });
 
+/**
+ * Les fixtures nommées portent toutes une vidéo que nous hébergeons (FP-4,
+ * relevé du 7 septembre). Elles embarquaient jusqu'ici dix vidéos YouTube
+ * par identifiant, dont neuf clips musicaux commerciaux — `dQw4w9WgXcQ` sous
+ * le titre « Présentation en 90 secondes » — ce qui posait trois problèmes
+ * dans cet ordre : un usage illicite, un contenu sans rapport avec le titre
+ * affiché, et l'impossibilité d'y attacher la piste de sous-titres exigée.
+ *
+ * `scripts/generer-videos-de-demonstration.mts` produit les fichiers, que ce
+ * module référence par `basename`. Le chemin d'intégration par lien externe
+ * reste exercé : les 487 profils générés de `generated-applicants.ts` sont
+ * des embeds, et la démonstration ajoute une vidéo YouTube en direct.
+ */
 export const applicants: ApplicantSeed[] = [
   {
     firstName: 'Amina',
@@ -84,8 +99,16 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 93,
     certificationBadge: 'Certifié JEB Expert',
+    availability: AvailabilityStatus.IMMEDIATE,
     moderationStatus: ModerationStatus.APPROVED,
-    videos: [video('Présentation en 90 secondes', 'dQw4w9WgXcQ', 92)],
+    videos: [
+      uploadedVideo(
+        'Présentation en 90 secondes',
+        'presentation-amina-berthier',
+        'e9d1dbe1-7bc6-5e2d-a254-00a9e2583e6f',
+        12,
+      ),
+    ],
   },
   {
     firstName: 'Marc',
@@ -102,8 +125,16 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 74,
     certificationBadge: 'Certifié JEB Confirmé',
+    availability: AvailabilityStatus.WITHIN_ONE_MONTH,
     moderationStatus: ModerationStatus.APPROVED,
-    videos: [video('Mon parcours en atelier', 'ScMzIvxBSi4', 120)],
+    videos: [
+      uploadedVideo(
+        'Mon parcours en atelier',
+        'presentation-marc-delaunay',
+        'ff60caaf-8613-5a40-932d-9f9a928b5c5c',
+        12,
+      ),
+    ],
   },
   {
     firstName: 'Sofia',
@@ -121,8 +152,16 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 68,
     certificationBadge: 'Certifié JEB',
+    availability: AvailabilityStatus.WITHIN_THREE_MONTHS,
     moderationStatus: ModerationStatus.APPROVED,
-    videos: [video('Pourquoi la reconversion', 'aqz-KE-bpKQ', 105)],
+    videos: [
+      uploadedVideo(
+        'Pourquoi la reconversion',
+        'presentation-sofia-nguyen',
+        '4e3082bd-d35d-5378-a68d-ec5bcab3e57c',
+        12,
+      ),
+    ],
   },
   {
     firstName: 'Yanis',
@@ -138,8 +177,16 @@ export const applicants: ApplicantSeed[] = [
       ['TypeScript', SkillLevel.ADVANCED],
     ],
     certificationStatus: CertificationStatus.IN_PROGRESS,
+    availability: AvailabilityStatus.IMMEDIATE,
     moderationStatus: ModerationStatus.APPROVED,
-    videos: [video('Démonstration de projet', 'ZXsQAXx_ao0', 140)],
+    videos: [
+      uploadedVideo(
+        'Démonstration de projet',
+        'presentation-yanis-oubrahim',
+        '09b41fb7-1b54-5a1e-8549-8a6e39f759ce',
+        12,
+      ),
+    ],
   },
   {
     firstName: 'Claire',
@@ -156,6 +203,7 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 57,
     certificationBadge: 'Certifié JEB',
+    availability: AvailabilityStatus.WITHIN_ONE_MONTH,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [],
   },
@@ -169,8 +217,16 @@ export const applicants: ApplicantSeed[] = [
     sector: 'Logistique',
     skills: [['Logistique', SkillLevel.ADVANCED]],
     certificationStatus: CertificationStatus.PENDING,
+    availability: AvailabilityStatus.IMMEDIATE,
     moderationStatus: ModerationStatus.PENDING,
-    videos: [video('Mon expérience en entrepôt', 'kJQP7kiw5Fk', 88)],
+    videos: [
+      uploadedVideo(
+        'Mon expérience en entrepôt',
+        'presentation-idriss-kamara',
+        'e5318a0d-3bad-5dbb-b72d-c846b0c27fd6',
+        12,
+      ),
+    ],
   },
   {
     firstName: 'Élise',
@@ -187,8 +243,16 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 81,
     certificationBadge: 'Certifié JEB Confirmé',
+    availability: AvailabilityStatus.WITHIN_THREE_MONTHS,
     moderationStatus: ModerationStatus.APPROVED,
-    videos: [video('En cuisine avec Élise', 'e-ORhEE9VVg', 110)],
+    videos: [
+      uploadedVideo(
+        'En cuisine avec Élise',
+        'presentation-elise-marchand',
+        '925c3116-ac36-575d-acc1-34822f754e31',
+        12,
+      ),
+    ],
   },
   {
     firstName: 'Thomas',
@@ -205,8 +269,16 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 63,
     certificationBadge: 'Certifié JEB',
+    availability: AvailabilityStatus.LATER,
     moderationStatus: ModerationStatus.APPROVED,
-    videos: [video('Mon projet de fin de formation', 'RgKAFK5djSk', 130)],
+    videos: [
+      uploadedVideo(
+        'Mon projet de fin de formation',
+        'presentation-thomas-riviere',
+        '50adf95d-2ee0-5908-997d-9a4b841efc98',
+        12,
+      ),
+    ],
   },
   {
     firstName: 'Nadia',
@@ -237,8 +309,16 @@ export const applicants: ApplicantSeed[] = [
       ['Anglais', SkillLevel.INTERMEDIATE],
     ],
     certificationStatus: CertificationStatus.PENDING,
+    availability: AvailabilityStatus.WITHIN_ONE_MONTH,
     moderationStatus: ModerationStatus.APPROVED,
-    videos: [video('Ma manière de gérer un litige', 'CevxZvSJLk8', 95)],
+    videos: [
+      uploadedVideo(
+        'Ma manière de gérer un litige',
+        'presentation-bastien-colin',
+        'b785b485-a94c-5013-b588-2a997b143cf3',
+        12,
+      ),
+    ],
   },
   {
     firstName: 'Leïla',
@@ -255,6 +335,7 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 79,
     certificationBadge: 'Certifié JEB Confirmé',
+    availability: AvailabilityStatus.IMMEDIATE,
     moderationStatus: ModerationStatus.APPROVED,
     // The one fixture ProfilsActifs hosts itself, and the only one that can
     // therefore carry a caption track our own player displays — subtitles are
@@ -292,7 +373,15 @@ export const applicants: ApplicantSeed[] = [
     sector: 'Restauration',
     skills: [['Cuisine', SkillLevel.BEGINNER]],
     certificationStatus: CertificationStatus.PENDING,
+    availability: AvailabilityStatus.LATER,
     moderationStatus: ModerationStatus.APPROVED,
-    videos: [video('Mon premier fournil', '9bZkp7q19f0', 75)],
+    videos: [
+      uploadedVideo(
+        'Mon premier fournil',
+        'presentation-lucas-morel',
+        'c509ea35-35e7-50f7-99bc-175c613b83ba',
+        12,
+      ),
+    ],
   },
 ];

@@ -1,5 +1,11 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { PROFILE_BIO_MAX_LENGTH, type Profile } from '@profils-actifs/shared';
+import {
+  AVAILABILITY_LABELS,
+  AVAILABILITY_STATUSES,
+  AVAILABILITY_UNSTATED_LABEL,
+  PROFILE_BIO_MAX_LENGTH,
+  type Profile,
+} from '@profils-actifs/shared';
 import { FormField } from '../../components/FormField.js';
 import { Notice } from '../../components/StatusMessages.js';
 import { useFormErrors } from '../../hooks/useFormErrors.js';
@@ -16,6 +22,7 @@ const toFormValues = (profile: Profile | null): ProfileFormValues =>
         bio: profile.bio ?? '',
         location: profile.location,
         sector: profile.sector,
+        availability: profile.availability ?? '',
       }
     : EMPTY_PROFILE_FORM;
 
@@ -33,7 +40,7 @@ export const ProfileForm = ({ profile, onSaved }: ProfileFormProps) => {
 
   const update =
     (field: Field) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
       const { value } = event.target;
       setForm((current) => ({ ...current, [field]: value }));
       clear(field);
@@ -54,7 +61,13 @@ export const ProfileForm = ({ profile, onSaved }: ProfileFormProps) => {
     setSaveError(null);
 
     try {
-      const next = await saveOwnProfile(parsed.data);
+      // `''` is the select's "not stated" option; the API clears the column
+      // on `null` and leaves it alone on an absent key, so the two must not
+      // reach it as the same thing.
+      const next = await saveOwnProfile({
+        ...parsed.data,
+        availability: parsed.data.availability === '' ? null : parsed.data.availability,
+      });
       setForm(toFormValues(next));
       setSaved(true);
       onSaved(next);
@@ -100,6 +113,23 @@ export const ProfileForm = ({ profile, onSaved }: ProfileFormProps) => {
           <input type="text" value={form.location} onChange={update('location')} required />
         </FormField>
       </div>
+
+      <FormField
+        id="availability"
+        label="Disponibilité"
+        hint="Visible des recruteurs, et l'un des tris qu'ils peuvent appliquer."
+        error={errors.availability}
+        optional
+      >
+        <select value={form.availability} onChange={update('availability')}>
+          <option value="">{AVAILABILITY_UNSTATED_LABEL}</option>
+          {AVAILABILITY_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {AVAILABILITY_LABELS[status]}
+            </option>
+          ))}
+        </select>
+      </FormField>
 
       <FormField
         id="bio"

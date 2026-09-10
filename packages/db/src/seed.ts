@@ -248,6 +248,7 @@ const seedApplicant = async (applicant: ApplicantSeed, passwordHash: string) => 
     certificationStatus: applicant.certificationStatus,
     certificationScore: applicant.certificationScore ?? null,
     certificationBadge: applicant.certificationBadge ?? null,
+    availability: applicant.availability ?? null,
     moderationStatus: applicant.moderationStatus,
   };
 

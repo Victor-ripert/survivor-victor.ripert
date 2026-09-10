@@ -41,7 +41,7 @@ const catalogueSelect = {
   },
   videos: {
     where: publishedVideoFilter,
-    select: { id: true, title: true, url: true },
+    select: { id: true, title: true, type: true, url: true, captionsUrl: true },
     orderBy: { createdAt: 'asc' },
     take: 1,
   },
@@ -49,6 +49,22 @@ const catalogueSelect = {
 } satisfies Prisma.ProfileSelect;
 
 type CatalogueRow = Prisma.ProfileGetPayload<{ select: typeof catalogueSelect }>;
+
+/** `type` is what tells the player a hosted file from an embed: without it an
+ *  uploaded video reaches the recruiter looking like an unknown embed, and is
+ *  refused. */
+const toPreviewVideo = (
+  video: CatalogueRow['videos'][number] | undefined,
+): CatalogueProfile['previewVideo'] =>
+  video
+    ? {
+        id: video.id,
+        title: video.title,
+        type: video.type,
+        url: video.url,
+        captionsUrl: video.captionsUrl ?? undefined,
+      }
+    : null;
 
 const toCatalogueProfile = (
   row: CatalogueRow,
@@ -72,7 +88,7 @@ const toCatalogueProfile = (
     level: entry.level,
   })),
   videoCount: row._count.videos,
-  previewVideo: row.videos[0] ?? null,
+  previewVideo: toPreviewVideo(row.videos[0]),
   isFavorite: favoriteUserIds.has(row.userId),
   lastContactedAt: lastContactedAt.get(row.userId)?.toISOString() ?? null,
   updatedAt: row.updatedAt.toISOString(),

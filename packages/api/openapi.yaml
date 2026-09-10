@@ -396,12 +396,25 @@ components:
         description:
           type: string
           nullable: true
+        type:
+          type: string
+          enum: [EXTERNAL_LINK, UPLOAD]
+          description: >-
+            Tells the player whether `url` is a YouTube/Vimeo embed or a file
+            served by this API under `/uploads/`.
         url:
           type: string
           description: >-
             Disclosed on this admin-only route even while the video is PENDING,
             because moderating it means watching it. Never present on any
             recruiter- or public-facing response.
+        captionsUrl:
+          type: string
+          nullable: true
+          description: >-
+            WebVTT caption track of an `UPLOAD` video, so the administrator
+            reviews it as it will be published. `null` for an `EXTERNAL_LINK`,
+            and for an upload without subtitles.
         durationSeconds:
           type: integer
           nullable: true
@@ -428,7 +441,7 @@ components:
           nullable: true
           allOf:
             - $ref: '#/components/schemas/VideoModerationDecision'
-      required: [id, title, url, moderationStatus, submittedAt, applicant]
+      required: [id, title, type, url, captionsUrl, moderationStatus, submittedAt, applicant]
 
     VideoModerationDecision:
       type: object
@@ -518,9 +531,20 @@ components:
           type: string
         title:
           type: string
+        type:
+          type: string
+          enum: [EXTERNAL_LINK, UPLOAD]
+          description: >-
+            Tells the player whether `url` is a YouTube/Vimeo embed or a file
+            served by this API under `/uploads/`.
         url:
           type: string
-      required: [id, title, url]
+        captionsUrl:
+          type: string
+          description: >-
+            WebVTT caption track of an `UPLOAD` video, served under `/uploads/`.
+            Absent for an `EXTERNAL_LINK`, and for an upload without subtitles.
+      required: [id, title, type, url]
 
     CatalogueProfile:
       type: object

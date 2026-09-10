@@ -1,5 +1,6 @@
 import type { CertificationStatus, InteractionType, SkillLevel, UserRole } from './domain.js';
 import type { AvailabilityStatus } from './profile.js';
+import type { VideoType } from './video.js';
 
 /** One catalogue row. Deliberately carries no email: recruiters reach an
  *  applicant through `POST /interactions/{recipientId}`, which keeps the
@@ -34,7 +35,12 @@ export interface CatalogueSkill {
 export interface CataloguePreviewVideo {
   id: string;
   title: string;
+  /** What tells the player a file ProfilsActifs hosts from a YouTube/Vimeo
+   *  embed — without it an uploaded video is refused as an unknown embed. */
+  type: VideoType;
   url: string;
+  /** Present on a hosted video that carries subtitles; an embed never has one. */
+  captionsUrl?: string;
 }
 
 /**

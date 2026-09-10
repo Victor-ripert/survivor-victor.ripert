@@ -168,9 +168,9 @@ interface StoredUpload {
 /**
  * Copies a fixture video and its caption track into `UPLOAD_DIR` — the very
  * directory the API serves over `/uploads` and empties when a candidate
- * revokes consent. Seeding writes the files rather than posting them through
- * the API because no route parses a multipart body yet; everything downstream
- * of storage — the row, the consent record, the player, the deletion — is the
+ * revokes consent. Seeding writes the files directly rather than posting them
+ * through the API, same as every other seeded row: everything downstream of
+ * storage — the row, the consent record, the player, the deletion — is the
  * real code path.
  *
  * `resolveUploadDir` throws for a directory inside the repository, so a clone

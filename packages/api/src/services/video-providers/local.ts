@@ -35,16 +35,21 @@ const EXTENSION_BY_CONTENT_TYPE: Record<VideoContentType, string> = {
 };
 
 /**
+ * Shared with `middleware/error-handler.ts`, which reports the same limit
+ * when multer itself rejects a body for exceeding it — before the buffer
+ * this function checks ever exists.
+ */
+export const uploadSizeLimitMessage = (): string =>
+  `Une vidéo ne peut pas dépasser ${Math.floor(env.MAX_VIDEO_SIZE / BYTES_PER_MEGABYTE)} Mo`;
+
+/**
  * Checks the real byte count Node received, never a client-reported size.
  * Applies regardless of which provider ends up storing the bytes, but lives
  * here because local disk is the only backend today that actually receives
  * a buffer to size-check.
  */
 export function assertUploadSizeWithinLimit(sizeBytes: number): void {
-  if (sizeBytes > env.MAX_VIDEO_SIZE) {
-    const megabytes = Math.floor(env.MAX_VIDEO_SIZE / BYTES_PER_MEGABYTE);
-    throw payloadTooLarge(`Une vidéo ne peut pas dépasser ${megabytes} Mo`);
-  }
+  if (sizeBytes > env.MAX_VIDEO_SIZE) throw payloadTooLarge(uploadSizeLimitMessage());
 }
 
 /**

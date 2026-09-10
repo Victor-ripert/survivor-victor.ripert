@@ -53,17 +53,34 @@ export interface Video {
   createdAt: string;
 }
 
+interface VideoInputBase {
+  title: string;
+  description?: string;
+  duration?: number;
+  /** Submitting the video is the consent act the API logs with
+   *  `CONSENT_TEXT_VERSION` (brief §7.1), so this must be `true`. */
+  consentAccepted: true;
+}
+
+/** `type: 'EXTERNAL_LINK'` — sent as JSON. */
+export interface ExternalLinkVideoInput extends VideoInputBase {
+  type: 'EXTERNAL_LINK';
+  url: string;
+}
+
+/**
+ * `type: 'UPLOAD'` — sent as `multipart/form-data`. Deliberately excludes
+ * the file itself: the browser `File` a candidate picked lives in web-only
+ * form state, not in this shared, browser-and-node-safe type; `services/
+ * videos.ts` takes it as a separate argument and builds the `FormData`.
+ */
+export interface UploadVideoInput extends VideoInputBase {
+  type: 'UPLOAD';
+}
+
 /**
  * Payload for `POST /profiles/{profileId}/videos`. Deliberately excludes
  * moderation/id/profileId fields — those are server-assigned, never
- * client-supplied. `consentAccepted` must be `true`: submitting the video is
- * the consent act the API logs with `CONSENT_TEXT_VERSION` (brief §7.1).
+ * client-supplied.
  */
-export interface VideoInput {
-  title: string;
-  description?: string;
-  type: VideoType;
-  url: string;
-  duration?: number;
-  consentAccepted: true;
-}
+export type VideoInput = ExternalLinkVideoInput | UploadVideoInput;

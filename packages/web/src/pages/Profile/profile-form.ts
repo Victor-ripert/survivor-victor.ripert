@@ -45,23 +45,54 @@ export const EMPTY_PROFILE_FORM: ProfileFormValues = {
   availability: '',
 };
 
-export const videoFormSchema = z.object({
-  title: z
-    .string()
-    .trim()
-    .min(1, { error: 'Titre requis' })
-    .max(VIDEO_TITLE_MAX_LENGTH, {
-      error: `Le titre ne peut pas dépasser ${VIDEO_TITLE_MAX_LENGTH} caractères`,
-    }),
-  url: z
-    .string()
-    .trim()
-    .pipe(z.url({ error: 'Collez un lien YouTube ou Vimeo valide' })),
-  consentAccepted: z.literal(true, {
-    error: 'Cochez la case de consentement pour publier la vidéo',
-  }),
+const videoTitle = z
+  .string()
+  .trim()
+  .min(1, { error: 'Titre requis' })
+  .max(VIDEO_TITLE_MAX_LENGTH, {
+    error: `Le titre ne peut pas dépasser ${VIDEO_TITLE_MAX_LENGTH} caractères`,
+  });
+
+const videoConsentAccepted = z.literal(true, {
+  error: 'Cochez la case de consentement pour publier la vidéo',
 });
 
-export type VideoFormValues = { title: string; url: string; consentAccepted: boolean };
+/** Client-side twin of the API's `addVideoSchema` — same two shapes for the
+ *  same two values of `type`, for instant feedback before the round trip. */
+export const videoFormSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('EXTERNAL_LINK'),
+    title: videoTitle,
+    url: z.string().trim().pipe(z.url({ error: 'Collez un lien YouTube ou Vimeo valide' })),
+    consentAccepted: videoConsentAccepted,
+  }),
+  z.object({
+    type: z.literal('UPLOAD'),
+    title: videoTitle,
+    file: z.instanceof(File, { error: 'Choisissez un fichier vidéo (mp4, webm ou mov)' }),
+    consentAccepted: videoConsentAccepted,
+  }),
+]);
 
-export const EMPTY_VIDEO_FORM: VideoFormValues = { title: '', url: '', consentAccepted: false };
+/**
+ * Controlled form state, flat regardless of `type` so a single `update()`
+ * helper can drive every field — `url`/`file` just sit unused while the
+ * other type is selected, same as `ProfileFormValues.availability`'s `''`
+ * sentinel for "not stated". `videoFormSchema` is what actually enforces
+ * which fields matter for the selected type.
+ */
+export type VideoFormValues = {
+  type: 'EXTERNAL_LINK' | 'UPLOAD';
+  title: string;
+  url: string;
+  file: File | null;
+  consentAccepted: boolean;
+};
+
+export const EMPTY_VIDEO_FORM: VideoFormValues = {
+  type: 'EXTERNAL_LINK',
+  title: '',
+  url: '',
+  file: null,
+  consentAccepted: false,
+};

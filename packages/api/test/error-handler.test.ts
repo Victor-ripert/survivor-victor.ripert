@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { Prisma } from '@prisma/client';
 import type { NextFunction, Request, Response } from 'express';
+import { MulterError } from 'multer';
 import { z } from 'zod';
 import { errorHandler, notFoundHandler } from '../src/middleware/error-handler.js';
 import { HttpError } from '../src/utils/http-error.js';
@@ -151,6 +152,23 @@ describe('errorHandler', () => {
     expect(captured.status).toBe(500);
     expect(captured.body).toMatchObject({ error: 'internal_error', message: 'Erreur interne' });
     expect(consoleError).toHaveBeenCalled();
+  });
+
+  // multer rejects a multipart body itself, before validation ever sees it —
+  // an oversized video file, or a form shaped in a way the route doesn't
+  // expect.
+  it('answers an oversized upload with 413, reusing the same limit message', () => {
+    const { captured } = handle(new MulterError('LIMIT_FILE_SIZE'));
+
+    expect(captured.status).toBe(413);
+    expect(captured.body).toMatchObject({ error: 'payload_too_large' });
+  });
+
+  it('answers any other multer failure with 400', () => {
+    const { captured } = handle(new MulterError('LIMIT_UNEXPECTED_FILE'));
+
+    expect(captured.status).toBe(400);
+    expect(captured.body).toMatchObject({ error: 'validation_error' });
   });
 
   // A database that refuses the connection is retryable, and saying so beats

@@ -1,7 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 import type { ApiErrorResponse } from '@profils-actifs/shared';
+import { uploadSizeLimitMessage } from '../services/video-providers/local.js';
 import { HttpError } from '../utils/http-error.js';
 
 const send = (res: Response, body: ApiErrorResponse): void => {
@@ -133,6 +135,19 @@ export const errorHandler = (
       message: 'Corps de requête trop volumineux',
       statusCode: 413,
     });
+    return;
+  }
+
+  // multer rejects a multipart body itself for reasons validation never
+  // sees — an oversized file, or a form shaped in a way the route doesn't
+  // expect (extra files, an unknown field name).
+  if (error instanceof MulterError) {
+    send(
+      res,
+      error.code === 'LIMIT_FILE_SIZE'
+        ? { error: 'payload_too_large', message: uploadSizeLimitMessage(), statusCode: 413 }
+        : { error: 'validation_error', message: 'Fichier envoyé invalide', statusCode: 400 },
+    );
     return;
   }
 

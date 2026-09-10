@@ -2,7 +2,7 @@ import { VideoType } from '@prisma/client';
 import type { Video } from '@profils-actifs/shared';
 import { prisma } from '../config/prisma.js';
 import { notFound, unprocessableEntity } from '../utils/http-error.js';
-import type { AddVideoInput } from '../validators/video.js';
+import type { AddExternalVideoInput, AddUploadedVideoInput } from '../validators/video.js';
 import { buildVideoConsent } from './video-consent.js';
 import { createExternalLinkVideoProvider } from './video-providers/external-link.js';
 import { assertUploadSizeWithinLimit, detectVideoContentType } from './video-providers/local.js';
@@ -14,9 +14,10 @@ import { toVideoDto, videoDecisionInclude, type VideoRow } from '../utils/mapper
 const profileNotFound = () => notFound('Profil introuvable');
 const videoNotFound = () => notFound('Vidéo introuvable');
 
-/** Everything `addVideoSchema` accepts except `type`: this function only ever
- *  adds an `EXTERNAL_LINK`, and the controller is what dispatches on `type`. */
-export type ExternalVideoInput = Omit<AddVideoInput, 'type'>;
+/** Everything `addExternalVideoSchema` accepts except `type`: this function
+ *  only ever adds an `EXTERNAL_LINK`, and the controller is what dispatches
+ *  on `type`. */
+export type ExternalVideoInput = Omit<AddExternalVideoInput, 'type'>;
 
 /**
  * `GET /profiles/{profileId}/videos` — public, same visibility rule as the
@@ -148,17 +149,17 @@ export async function deleteVideo(videoId: string, ownerId: string): Promise<voi
   if (video.captionsUrl) await provider.delete(video.captionsUrl);
 }
 
-export type UploadVideoInput = Omit<AddVideoInput, 'type' | 'url'>;
+export type UploadVideoInput = Omit<AddUploadedVideoInput, 'type'>;
 
 export interface UploadedFile {
   buffer: Buffer;
 }
 
 /**
- * `POST /profiles/{profileId}/videos` with `type: 'UPLOAD'`, once a route
- * feeds it a multipart body. No route parses a multipart body yet (the
- * controller answers 501 for `type: UPLOAD`), so this works from an
- * already-fully-read `Buffer`.
+ * `POST /profiles/{profileId}/videos` with `type: 'UPLOAD'`.
+ * `middleware/video-upload.ts` parses the multipart body ahead of the
+ * controller and hands this an already-fully-read `Buffer`, so this function
+ * itself stays agnostic to how that buffer was produced.
  *
  * Content-sniffing happens here, before `store()`: the `VideoProvider`
  * interface's `kind: 'upload'` input carries an already-known `contentType`,

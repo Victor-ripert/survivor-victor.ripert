@@ -35,6 +35,18 @@ export const VideosSection = ({ profile, onChanged }: VideosSectionProps) => {
       setError(null);
     };
 
+  const updateType = (type: VideoFormValues['type']): void => {
+    setForm((current) => ({ ...current, type }));
+    clear('type');
+    setError(null);
+  };
+
+  const updateFile = (event: ChangeEvent<HTMLInputElement>): void => {
+    setForm((current) => ({ ...current, file: event.target.files?.[0] ?? null }));
+    clear('file');
+    setError(null);
+  };
+
   const add = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     if (!profile) return;
@@ -49,7 +61,19 @@ export const VideosSection = ({ profile, onChanged }: VideosSectionProps) => {
     setError(null);
 
     try {
-      const created = await addVideo(profile.id, { ...parsed.data, type: 'EXTERNAL_LINK' });
+      const created =
+        parsed.data.type === 'UPLOAD'
+          ? await addVideo(
+              profile.id,
+              { type: 'UPLOAD', title: parsed.data.title, consentAccepted: true },
+              parsed.data.file,
+            )
+          : await addVideo(profile.id, {
+              type: 'EXTERNAL_LINK',
+              title: parsed.data.title,
+              url: parsed.data.url,
+              consentAccepted: true,
+            });
       onChanged({ ...profile, videos: [...profile.videos, created] });
       setForm(EMPTY_VIDEO_FORM);
     } catch (cause: unknown) {
@@ -163,6 +187,33 @@ export const VideosSection = ({ profile, onChanged }: VideosSectionProps) => {
             aria-labelledby="add-video-title"
           >
             <h3 id="add-video-title">Ajouter une vidéo</h3>
+
+            <fieldset>
+              <legend className="field__label">Type de vidéo</legend>
+              <div className="choice-group">
+                <label className={`choice${form.type === 'EXTERNAL_LINK' ? ' choice--selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="video-type"
+                    value="EXTERNAL_LINK"
+                    checked={form.type === 'EXTERNAL_LINK'}
+                    onChange={() => updateType('EXTERNAL_LINK')}
+                  />
+                  Lien YouTube ou Vimeo
+                </label>
+                <label className={`choice${form.type === 'UPLOAD' ? ' choice--selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="video-type"
+                    value="UPLOAD"
+                    checked={form.type === 'UPLOAD'}
+                    onChange={() => updateType('UPLOAD')}
+                  />
+                  Déposer un fichier
+                </label>
+              </div>
+            </fieldset>
+
             <div className="form-grid">
               <FormField id="video-title" label="Titre" error={errors.title}>
                 <input
@@ -173,15 +224,31 @@ export const VideosSection = ({ profile, onChanged }: VideosSectionProps) => {
                   required
                 />
               </FormField>
-              <FormField id="video-url" label="Lien YouTube ou Vimeo" error={errors.url}>
-                <input
-                  type="url"
-                  placeholder="https://youtu.be/…"
-                  value={form.url}
-                  onChange={update('url')}
-                  required
-                />
-              </FormField>
+              {form.type === 'EXTERNAL_LINK' ? (
+                <FormField key="url" id="video-url" label="Lien YouTube ou Vimeo" error={errors.url}>
+                  <input
+                    type="url"
+                    placeholder="https://youtu.be/…"
+                    value={form.url}
+                    onChange={update('url')}
+                    required
+                  />
+                </FormField>
+              ) : (
+                <FormField
+                  key="file"
+                  id="video-file"
+                  label="Fichier vidéo (mp4, webm ou mov — 100 Mo max)"
+                  error={errors.file}
+                >
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    onChange={updateFile}
+                    required
+                  />
+                </FormField>
+              )}
             </div>
 
             <label className="checkbox checkbox--boxed">

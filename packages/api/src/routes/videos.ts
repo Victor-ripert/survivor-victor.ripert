@@ -2,6 +2,7 @@ import { UserRole } from '@prisma/client';
 import { Router } from 'express';
 import { addVideo, deleteVideo, listVideos } from '../controllers/video.controller.js';
 import { optionalAuth, requireAuth, requireRole } from '../middleware/auth.js';
+import { parseUploadedVideo } from '../middleware/video-upload.js';
 
 /**
  * Mounted at the bare `/api` prefix in `app.ts`, not `/api/videos`: its routes
@@ -13,5 +14,7 @@ export const videosRouter = Router();
 const applicantOnly = [requireAuth, requireRole(UserRole.APPLICANT)];
 
 videosRouter.get('/profiles/:profileId/videos', optionalAuth, listVideos);
-videosRouter.post('/profiles/:profileId/videos', applicantOnly, addVideo);
+// Auth runs before multer touches the body, so an unauthenticated or
+// wrong-role request is rejected without the server ever reading the file.
+videosRouter.post('/profiles/:profileId/videos', applicantOnly, parseUploadedVideo, addVideo);
 videosRouter.delete('/videos/:videoId', applicantOnly, deleteVideo);

@@ -1484,14 +1484,17 @@ paths:
       tags: [Videos]
       summary: Add video to profile (applicant only)
       description: >-
-        `EXTERNAL_LINK` (YouTube/Vimeo) is the shipped path: the link is
-        normalised to its embed form and the new video is `PENDING` until an
-        administrator approves it (brief §7.9.2). Publishing is the consent act
-        of brief §7.1 — `consentAccepted` must be `true`, and the API logs the
-        moment and the version of the consent text with the video. `UPLOAD`
-        answers `501 not_implemented`: the size and content-type checks exist
-        in `video.service.ts`, but no route parses a multipart body yet; the
-        `413`/`422` responses describe the contract once that lands.
+        Two request shapes for the two values of `type`. `EXTERNAL_LINK`
+        (YouTube/Vimeo) is a JSON body: the link is normalised to its embed
+        form and the new video is `PENDING` until an administrator approves
+        it (brief §7.9.2). `UPLOAD` is `multipart/form-data`: the same fields
+        as text parts, plus `file` — the server sniffs the file's actual
+        bytes (never its extension or client-supplied MIME type) to accept
+        mp4, webm or mov, and stores it through the configured `VIDEO_PROVIDER`
+        (`local` by default — served back under `/uploads/`). Publishing is
+        the consent act of brief §7.1 either way — `consentAccepted` must be
+        `true`, and the API logs the moment and the version of the consent
+        text with the video.
       parameters:
         - name: profileId
           in: path
@@ -1513,7 +1516,7 @@ paths:
                   maxLength: 500
                 type:
                   type: string
-                  enum: [EXTERNAL_LINK, UPLOAD]
+                  enum: [EXTERNAL_LINK]
                 url:
                   type: string
                   format: uri
@@ -1525,6 +1528,31 @@ paths:
                   enum: [true]
                   description: The candidate accepted the consent text (`VIDEO_CONSENT_TEXT` in @profils-actifs/shared).
               required: [title, type, url, consentAccepted]
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 120
+                description:
+                  type: string
+                  maxLength: 500
+                type:
+                  type: string
+                  enum: [UPLOAD]
+                duration:
+                  type: integer
+                  description: Seconds
+                consentAccepted:
+                  type: boolean
+                  enum: [true]
+                  description: The candidate accepted the consent text (`VIDEO_CONSENT_TEXT` in @profils-actifs/shared).
+                file:
+                  type: string
+                  format: binary
+                  description: mp4, webm or mov, up to 100MB (`MAX_VIDEO_SIZE`).
+              required: [title, type, consentAccepted, file]
       responses:
         '201':
           description: Video created
@@ -1569,7 +1597,7 @@ paths:
                 notFound:
                   $ref: '#/components/examples/ProfileNotFound'
         '413':
-          description: '`type: UPLOAD` only, once wired up — file exceeds the 100MB cap'
+          description: '`type: UPLOAD` only — file exceeds the 100MB cap (`MAX_VIDEO_SIZE`)'
           content:
             application/json:
               schema:
@@ -1579,9 +1607,9 @@ paths:
                   $ref: '#/components/examples/UploadTooLarge'
         '422':
           description: >-
-            `type: UPLOAD` only, once wired up — the file's actual content
-            isn't a recognized video format, checked from the file's bytes,
-            not its extension or client-supplied MIME type
+            `type: UPLOAD` only — the file's actual content isn't a
+            recognized video format, checked from the file's bytes, not its
+            extension or client-supplied MIME type
           content:
             application/json:
               schema:
@@ -1589,12 +1617,6 @@ paths:
               examples:
                 unrecognizedVideoFile:
                   $ref: '#/components/examples/UnrecognizedVideoFile'
-        '501':
-          description: '`type: UPLOAD` — answered with `error: not_implemented`; use `EXTERNAL_LINK`'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /videos/{videoId}:
     delete:

@@ -121,10 +121,12 @@ Consequence: don't reorganise `api/src` or `web/src` into layer-first buckets, a
 `packages/api/src/app.ts` is the honest inventory of the backend: auth, profiles (feed, public
 page, own profile, skills), videos, skills catalogue, certification (public and admin),
 interactions, notifications, recruiter, admin (dashboard, profile and video moderation), health
-and the Swagger UI at `/api/docs` are all mounted. Direct video upload (`type: UPLOAD`) is the one
-documented capability that still answers `501 not_implemented`: the size and content-type checks
-exist in `video.service.ts`, but no route parses a multipart body — the demonstrator ships iframe
-embedding only.
+and the Swagger UI at `/api/docs` are all mounted. Direct video upload (`type: UPLOAD`) is wired
+end to end: `middleware/video-upload.ts` (multer, memory storage) parses the multipart body ahead
+of `video.controller.ts#addVideo`, which feeds it to `video.service.ts#addUploadedVideo` — the same
+size and content-type checks that always lived in `video.service.ts`, now actually reachable over
+HTTP, storing through the `local` `VideoProvider` and served back under `/uploads/`. iframe embedding
+(`type: EXTERNAL_LINK`) remains the other, independent path.
 
 Two mount orderings in `app.ts` are load-bearing: `/api/health` and `/api/docs` are mounted
 **before** `apiRateLimiter` (a probe on a timer, or four static files per documentation page load,

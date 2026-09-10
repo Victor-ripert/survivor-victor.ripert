@@ -44,7 +44,7 @@ export const payloadTooLarge = (message: string): HttpError =>
   new HttpError(413, 'payload_too_large', message);
 
 /** A capability the contract documents but this server does not provide yet
- *  (direct video upload) — answered honestly rather than with a misleading 400. */
+ *  — answered honestly rather than with a misleading 400. */
 export const notImplemented = (message: string): HttpError =>
   new HttpError(501, 'not_implemented', message);
 

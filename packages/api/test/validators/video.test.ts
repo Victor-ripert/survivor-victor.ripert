@@ -44,3 +44,42 @@ describe('addVideoSchema', () => {
     expect(addVideoSchema.safeParse({ ...valid, duration: -5 }).success).toBe(false);
   });
 });
+
+describe('addVideoSchema — type: UPLOAD', () => {
+  // multipart/form-data has no url field at all — the file itself is the
+  // content, parsed separately into req.file by middleware/video-upload.ts.
+  const validUpload = { title: 'Vidéo déposée', type: 'UPLOAD', consentAccepted: true };
+
+  it('accepts a payload with no url', () => {
+    expect(addVideoSchema.safeParse(validUpload).success).toBe(true);
+  });
+
+  // multer parses every multipart field as a string; the schema coerces it
+  // back rather than the controller pre-converting the body.
+  it('coerces the string form multer hands back for duration and consentAccepted', () => {
+    const parsed = addVideoSchema.safeParse({
+      ...validUpload,
+      duration: '90',
+      consentAccepted: 'true',
+    });
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.duration).toBe(90);
+    expect(parsed.success && parsed.data.consentAccepted).toBe(true);
+  });
+
+  it('rejects consentAccepted sent as the string "false"', () => {
+    expect(addVideoSchema.safeParse({ ...validUpload, consentAccepted: 'false' }).success).toBe(
+      false,
+    );
+  });
+
+  it('rejects a duration that does not parse as a number', () => {
+    expect(addVideoSchema.safeParse({ ...validUpload, duration: 'abc' }).success).toBe(false);
+  });
+
+  it('rejects a missing title', () => {
+    const { title: _title, ...withoutTitle } = validUpload;
+    expect(addVideoSchema.safeParse(withoutTitle).success).toBe(false);
+  });
+});

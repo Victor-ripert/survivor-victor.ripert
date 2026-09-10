@@ -120,3 +120,61 @@ Si un ticket futur branche une route multipart sur `addUploadedVideo`,
 chacune des quatre sections ci-dessus doit être réécrite avec une preuve
 exercée (capture, code de retour, essai réel contre l'API) — « non exercé »
 cesse d'être une réponse valable dès que le chemin existe.
+
+---
+
+## Addendum — 10 septembre 2026 (le chemin existe désormais)
+
+Le corps du document ci-dessus décrit l'état du produit jusqu'au
+9 septembre inclus et n'est pas réécrit — il reste la trace de ce qui a été
+livré et pourquoi, pendant la période où c'était vrai. À partir d'aujourd'hui,
+`POST /profiles/{id}/videos` accepte `type: 'UPLOAD'` en
+`multipart/form-data` : `middleware/video-upload.ts` (multer, stockage
+mémoire) parse le corps et alimente `addUploadedVideo`, qui n'a pas changé de
+comportement. Les quatre points du §8.5 ont chacun une preuve exercée,
+contre l'API réelle plutôt qu'en isolation :
+
+**1. Plafond de taille (100 Mo).** `packages/api/test/video-upload.test.ts`
+— *« refuses a file over MAX_VIDEO_SIZE with 413, at the HTTP boundary »* —
+envoie un corps de `env.MAX_VIDEO_SIZE + 1` octets et observe un vrai
+`413 payload_too_large` en retour HTTP. multer applique sa propre limite
+(`limits.fileSize`, configurée sur `env.MAX_VIDEO_SIZE`) avant que
+`assertUploadSizeWithinLimit` ne s'exécute ; `packages/api/test/error-
+handler.test.ts` couvre séparément la traduction de l'erreur multer
+(`MulterError` → `413`/`400`, selon le code) dans `middleware/error-
+handler.ts`.
+
+**2. Vérification du type de fichier par le contenu.**
+`video-upload.test.ts` — *« refuses a file whose content isn't a recognized
+video format, by its bytes »* — envoie un fichier nommé et déclaré `.mp4`
+dont le contenu réel est du texte brut, et observe `422
+unprocessable_entity`. `detectVideoContentType` n'a pas changé ; ce qui est
+nouveau est la preuve qu'une route HTTP l'atteint réellement.
+
+**3. Répertoire de stockage (`UPLOAD_DIR`).** Le même fichier de test — le
+test « stores a real upload to disk and serves it back under /uploads/ » —
+envoie un `.mp4` valide, vérifie que la réponse est `201`, que le fichier
+existe réellement sur disque à l'emplacement attendu
+(`existsSync(absolutePath)`), et qu'un `GET` sur l'URL retournée répond
+`200` (servi par le montage statique de `app.ts`). Vérifié aussi à la main,
+navigateur réel : capture disponible sur demande, séquence connexion →
+dépôt d'un fichier `.mp4` réel → lecture via l'élément vidéo HTML natif →
+suppression → fichier disparu du disque, contre une instance isolée de
+l'API et du frontend (aucune donnée de démonstration modifiée).
+
+**4. Envoi interrompu.** Toujours non applicable au sens strict — aucun
+test ne coupe une connexion en cours d'envoi — mais le comportement en cas
+d'échec après stockage *est* désormais exercé : `video-upload.test.ts`
+supprime la vidéo déposée via `DELETE /videos/{id}` et vérifie que le
+fichier disparaît du disque, et `packages/api/test/services/
+video.service.test.ts` (préexistant) couvre le cas symétrique — une ligne
+en base qui prédate la migration V2. Le cas précis « l'écriture disque
+réussit, l'insertion en base échoue ensuite » (`addUploadedVideo`'s
+`catch`/`provider.delete()`) reste non exercé par un test automatisé : le
+provoquer proprement contre la base partagée de la suite d'intégration
+exigerait une panne construite plutôt qu'un scénario réaliste, et n'a pas
+été jugé proportionné pour cette clôture.
+
+Aucun des choix documentés plus haut (embed-only par défaut, `VideoProvider`
+en abstraction, refus d'un stockage objet géré) n'a changé : ce qui change
+est que le chemin `UPLOAD`, déjà écrit, est maintenant celui qui répond.

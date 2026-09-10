@@ -64,7 +64,10 @@ interaction ni favori, son tableau de bord et sa sélection sont vides.
 ## Ce qui reste volontairement hors de la démonstration
 
 - Le dépôt direct de vidéo répond `501 not_implemented` : la démonstration passe par l'intégration
-  YouTube/Vimeo, comme le prévoit la note vidéo (MA-10).
+  YouTube/Vimeo, comme le prévoit la note vidéo (MA-10). **Écart clos depuis le 10 septembre** : une
+  route multipart branche désormais `type: 'UPLOAD'` sur `addUploadedVideo` (`middleware/video-
+  upload.ts`), preuve exercée dans `docs/livrables/note-upload-video.md`. Ce document décrivait la
+  démonstration du 3 septembre telle qu'elle a eu lieu — non réécrite au-delà de cette ligne.
 - Le parcours 16-18 (AD-9) s'arrête à l'exclusion du fil public ; la vidéo d'un mineur validée par la
   modération est visible des recruteurs connectés.
 - Aucune condition générale n'est publiée : relecture juridique en cours (§7.6).

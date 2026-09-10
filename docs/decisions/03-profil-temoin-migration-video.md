@@ -13,6 +13,31 @@ fonctionnait avant la migration fonctionne encore après (V6). Dans l'ordre d'ex
 chantier, V3 a tourné avant que ce document existe — l'écart est assumé, pas caché : voir
 « Ce que cet écart change » plus bas.
 
+## Rendu caduc le 10 septembre par FP-4 — le témoin doit être re-choisi
+
+**Ce document décrit un état du jeu de données qui n'existe plus.** Le 10 septembre, la fermeture
+de FP-4 (les clips musicaux commerciaux du jeu de démonstration) a converti les neuf vidéos
+`EXTERNAL_LINK` des fixtures nommées en vidéos hébergées par nous — Bastien Colin compris. Son
+« Ma manière de gérer un litige » est désormais une vidéo `UPLOAD`, ce qui retire au témoin
+exactement la propriété pour laquelle il avait été choisi (voir « `EXTERNAL_LINK`, pas `UPLOAD`,
+et c'est délibéré » plus bas).
+
+**Ce que cela ne casse pas.** Le chemin `EXTERNAL_LINK` du backfill reste exercé, et plus largement
+qu'avant : les 487 profils générés par `generated-applicants.ts` sont tous des liens externes, et
+c'est sur eux que `db:migrate-video-providers` a le plus de lignes à reprendre.
+
+**Ce qu'il reste à faire**, avant de rejouer V6 : re-choisir un témoin `EXTERNAL_LINK` parmi les
+profils générés, ou assumer un témoin `UPLOAD` et le dire — et refaire la preuve
+`docs/preuves/V6-regression-temoin-post-migration.txt`, qui est de toute façon à rejouer contre le
+commit gelé. **Arbitrage domaine B.**
+
+**Les deux identifiants du tableau ci-dessous ne sont pas stables non plus** : ce sont des `cuid`
+produits par la base, relevés le 8 septembre sur une instance locale. Tout `db:seed` sur une base
+vide en produit d'autres. L'adresse électronique est la seule référence durable, et le tableau le
+disait déjà.
+
+---
+
 ## Le profil retenu
 
 **Bastien Colin** — `bastien.colin@example.fr`

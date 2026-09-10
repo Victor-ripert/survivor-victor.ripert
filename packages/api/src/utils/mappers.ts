@@ -1,7 +1,6 @@
 import { ModerationAction, type Prisma, type Video as PrismaVideo } from '@prisma/client';
-import type { Video, Profile } from '@profils-actifs/shared';
-import { publishedVideoFilter } from '../services/visibility.js';
 import type { Video, Profile, VideoProviderStatus } from '@profils-actifs/shared';
+import { publishedVideoFilter } from '../services/visibility.js';
 
 /**
  * The latest moderation decision rides along with every video so the owner's
@@ -94,7 +93,7 @@ export function toProfileDto(profile: ProfileWithRelations): Profile {
       skillName: profileSkill.skill.name,
       level: profileSkill.level,
     })),
-    videos: profile.videos.map(toVideoDto),
+    videos: profile.videos.map((video) => toVideoDto(video)),
     certificationStatus: profile.certificationStatus,
     certificationScore: profile.certificationScore ?? undefined,
     certificationBadge: profile.certificationBadge ?? undefined,

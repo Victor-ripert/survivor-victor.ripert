@@ -7,7 +7,12 @@ import {
 } from '@profils-actifs/shared';
 import { prisma } from '../config/prisma.js';
 import { notFound } from '../utils/http-error.js';
-import { profileInclude, publicProfileInclude, toProfileDto } from '../utils/mappers.js';
+import {
+  profileInclude,
+  publicProfileInclude,
+  toProfileDto,
+  type ProfileWithRelations,
+} from '../utils/mappers.js';
 import type { PaginationQuery } from '../validators/common.js';
 import type { AddSkillInput, UpsertProfileInput } from '../validators/profile.js';
 import { findOrCreateSkill } from './skills.service.js';

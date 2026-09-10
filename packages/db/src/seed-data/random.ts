@@ -57,12 +57,13 @@ export function shuffled<T>(rng: Rng, items: readonly T[]): T[] {
 const ALPHANUMERIC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
 /** An 11-character string shaped like a YouTube video id — not a real,
- *  resolvable video. `normalizeExternalVideoUrl` only checks the URL's
- *  shape, so this is enough to exercise it for real without depending on
- *  any actual YouTube content staying online. */
+ *  resolvable video, so never embed it as is: `generated-applicants.ts` only
+ *  uses it to choose among real ones (`fixtureFor`), which keeps its eleven
+ *  draws in the stream. */
 export const randomYoutubeId = (rng: Rng): string =>
   Array.from({ length: 11 }, () => pick(rng, ALPHANUMERIC.split(''))).join('');
 
-/** Vimeo ids are purely numeric — see `normalizeExternalVideoUrl`. */
+/** Shaped like a Vimeo id (purely numeric) and, like `randomYoutubeId`, only
+ *  ever used to choose among real ones. */
 export const randomVimeoId = (rng: Rng): string =>
   String(intBetween(rng, 100_000_000, 999_999_999));

@@ -18,8 +18,9 @@ Mesuré sur `main` (`bc5f86d`), pas déclaré :
 | `npm run build`           | **était rouge depuis `f7873ec` (8 septembre, 11h28)** — réparé, voir ci-dessous |
 | `npm run lint`            | vert                                                                            |
 | `npm run format:check`    | `VideoPlayer.tsx` non formaté — reformaté                                       |
-| `npm run test`            | 299 API + 102 web + 18 partagés = **419 tests verts**                           |
+| `npm run test`            | 306 API + 102 web + 18 partagés = **426 tests verts**                           |
 | Parcours des quatre rôles | visiteur, candidat, recruteur, administrateur — vérifiés bout en bout           |
+| Tris du catalogue         | six, chacun parcouru deux fois sur 464 profils — séquences identiques           |
 
 **Ce que la construction cassée cachait.** `utils/mappers.ts` portait un import
 dupliqué (`Video`, `Profile` importés deux fois) et `profile.service.ts`
@@ -121,12 +122,13 @@ rejouable, porte sa date et le commit contre lequel elle a été produite. **Si 
 commit en tête d'une transcription n'est pas celui de `main`, la preuve est
 périmée et se rejoue.**
 
-**Relevé du 10 septembre : 18 transcriptions sur 19 sont périmées par cette
-règle** — elles portent des commits allant de `f29c7a6` à `dc14b0c`, quand
-`main` est à `bc5f86d`. Seule `EW-3-erreurs-http.txt` a été rejouée. Les rejouer
-toutes contre le commit qui part en revue est la dernière étape avant le gel :
-c'est mécanique, mais une preuve périmée est une preuve qui ne prouve rien, et
-la règle ci-dessus est la nôtre.
+**Relevé du 10 septembre : les 19 transcriptions portent un commit antérieur à
+la tête courante.** C'est la règle qui veut ça, et c'est pourquoi le rejeu est
+la **dernière** étape avant le gel, pas une étape parmi d'autres : rejouer une
+preuve puis committer par-dessus la re-périme aussitôt. `EW-9` (les deux
+parcours et leur comparaison) a été rejouée le 10 septembre, avec un §5 nouveau
+qui reprend les deux parcours pour chacun des six tris ; elle sera rejouée une
+dernière fois, comme les dix-huit autres, contre le commit qui part en revue.
 
 | Preuve                                            | Fichier                                                                                              | Produite par                                     |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
@@ -243,12 +245,25 @@ close. Ce qui reste tient en cinq points, dans cet ordre.
    eux la CI reste rouge et n'émet aucun artefact.
 2. **Vérifier que la CI est verte sur `main`** et récupérer l'artefact de build
    qu'elle publie — c'est la pièce JT-0.
-3. **Rejouer les 18 transcriptions périmées** contre le commit gelé
+3. **Rejouer les 19 transcriptions** contre le commit gelé, en dernier
    (`schema-conforme.sh`, `index-catalogue.sh`, `video-inaccessible.sh`,
    `sonde-sante.sh`, `tri-deterministe.sh`, `profils-contrat.sh`,
    `pagination-hors-bornes.sh`, puis les captures `.mts` qui demandent un
    navigateur).
 4. **Refaire la capture Swagger UI** si le contrat a bougé.
+
+**FP-5 est refermée le 10 septembre** : la note sur les critères est relue ligne
+à ligne contre le code, re-datée du 11, et elle dit désormais explicitement que
+l'interface n'expose ni plus ni autre chose que l'API — vérifié contrôle par
+contrôle.
+
+**Le §2.2 de la note de classement est refermé** : la disponibilité, que le
+courriel du 8 septembre nommait parmi les critères professionnels et qui
+n'existait pas au modèle, est ajoutée (`Profile.availability`, migration
+`20260910123717_add_profile_availability`). Le catalogue offre maintenant six
+tris — date, statut de certification, score, secteur, localisation,
+disponibilité — chacun terminé sur `id`, aucun ne référençant une table
+d'interactions.
 
 **FP-4 est refermée le 10 septembre.** Les dix fixtures nommées portent
 désormais une vidéo que nous hébergeons, sous-titrée, dont le contenu nomme la

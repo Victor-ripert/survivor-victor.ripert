@@ -96,10 +96,10 @@ catalogue() {
 # passed in whole, so the same function serves the default ordering, an
 # explicit `sort=recent`, and the interrupted walk further down.
 parcourir() {
-  local requete="$1" page=1 pages corps
+  local requete="$1" limite="${2:-$LIMITE}" page=1 pages corps
 
   while :; do
-    corps="$(catalogue "$requete&page=$page&limit=$LIMITE")"
+    corps="$(catalogue "$requete&page=$page&limit=$limite")"
     pages="$(printf '%s' "$corps" | jq -r '.pagination.pages')"
 
     printf '%s' "$corps" | jq -r '.data[].id'
@@ -120,6 +120,49 @@ parcourir() {
 parcourir "" >"$TEMPORAIRE/passe-1"
 parcourir "" >"$TEMPORAIRE/passe-2"
 parcourir "sort=recent" >"$TEMPORAIRE/passe-explicite"
+
+# ---------------------------------------------------------------------------
+# Le même parcours, deux fois, pour chacun des tris proposés
+# ---------------------------------------------------------------------------
+#
+# Le courriel du 8 septembre demande la démonstration sur le catalogue ; elle
+# ne vaut que si elle porte sur *tous* les ordres offerts, pas seulement sur
+# celui par défaut. La liste des tris est lue dans le contrat publié plutôt
+# que recopiée ici : un tri ajouté à `openapi.yaml` sans clé de départage
+# entre dans cette boucle tout seul, et en sort en échec.
+TRIS="$(
+  sed -n 's/^ *enum: \[\(recent[^]]*\)\]$/\1/p' "$RACINE/packages/api/openapi.yaml" |
+    head -1 | tr -d ' ' | tr ',' ' '
+)"
+
+if [ -z "$TRIS" ]; then
+  echo "Impossible de lire la liste des tris dans openapi.yaml." >&2
+  exit 1
+fi
+
+# Plus large que $LIMITE : douze parcours complets à trois profils par page
+# feraient deux mille requêtes pour la même démonstration. Vingt est le
+# plafond que le serveur applique de toute façon, et vingt-et-quelques pages
+# traversent largement assez de bornes.
+LIMITE_TRIS=20
+TRIS_RESULTAT=""
+
+for tri in $TRIS; do
+  parcourir "sort=$tri" "$LIMITE_TRIS" >"$TEMPORAIRE/tri-$tri-1"
+  parcourir "sort=$tri" "$LIMITE_TRIS" >"$TEMPORAIRE/tri-$tri-2"
+
+  lignes="$(wc -l <"$TEMPORAIRE/tri-$tri-1" | tr -d ' ')"
+  uniques="$(sort -u "$TEMPORAIRE/tri-$tri-1" | wc -l | tr -d ' ')"
+
+  if diff -q "$TEMPORAIRE/tri-$tri-1" "$TEMPORAIRE/tri-$tri-2" >/dev/null; then
+    identiques="identiques"
+  else
+    identiques="DIFFÉRENTES"
+  fi
+
+  TRIS_RESULTAT="$TRIS_RESULTAT$tri|$identiques|$lignes|$uniques
+"
+done
 
 TOTAL_API="$(catalogue "page=1&limit=$LIMITE" | jq -r '.pagination.total')"
 PAGES_API="$(catalogue "page=1&limit=$LIMITE" | jq -r '.pagination.pages')"
@@ -376,6 +419,29 @@ SELECT to_char("updatedAt", 'YYYY-MM-DD"T"HH24:MI:SS.US') FROM "Profile" WHERE i
 SQL
 )"
 journal "    (valeur d'origine : $CIBLE_HORODATAGE)"
+
+journal ""
+journal "=============================================================================="
+journal "5. Chacun des tris proposés, parcouru deux fois"
+journal "------------------------------------------------------------------------------"
+journal "La démonstration du §3 porte sur l'ordre par défaut. Elle est reprise ici"
+journal "pour chaque valeur de \`sort\` que le contrat publie, à $LIMITE_TRIS profils par"
+journal "page. Un tri dont les deux parcours divergeraient, ou qui rendrait un"
+journal "identifiant deux fois, apparaîtrait dans ce tableau."
+journal ""
+journal "    tri              deux parcours    rendus  distincts"
+printf '%s' "$TRIS_RESULTAT" | while IFS='|' read -r tri etat lignes uniques; do
+  [ -n "$tri" ] || continue
+  printf '    %-16s %-16s %6s  %9s\n' "$tri" "$etat" "$lignes" "$uniques" >>"$SORTIE"
+done
+journal ""
+constat 'tris vérifiés' "$(printf '%s' "$TRIS_RESULTAT" | grep -c '|')"
+constat 'tris dont les deux parcours divergent' \
+  "$(printf '%s' "$TRIS_RESULTAT" | grep -c 'DIFFÉRENTES' || true)"
+journal ""
+journal "Chacun se termine sur \`id\`, ce que deux tests unitaires tiennent en"
+journal "itérant CATALOGUE_SORTS plutôt qu'une liste écrite à la main"
+journal "(packages/api/src/services/catalogue.filters.test.ts)."
 
 journal ""
 journal "=============================================================================="

@@ -97,6 +97,7 @@ export function toProfileDto(profile: ProfileWithRelations): Profile {
     certificationStatus: profile.certificationStatus,
     certificationScore: profile.certificationScore ?? undefined,
     certificationBadge: profile.certificationBadge ?? undefined,
+    availability: profile.availability ?? undefined,
     moderationStatus: profile.moderationStatus,
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString(),

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { CatalogueProfile } from '@profils-actifs/shared';
+import { AVAILABILITY_LABELS, type CatalogueProfile } from '@profils-actifs/shared';
 import { CertificationBadge } from './CertificationBadge.js';
 import { Icon } from './Icon.js';
 import { VideoPlayer } from './VideoPlayer.js';
@@ -64,6 +64,12 @@ export const ProfileCard = ({
         <span>{profile.sector}</span>
         <span aria-hidden="true">·</span>
         <span>{profile.location}</span>
+        {profile.availability && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>Disponible : {AVAILABILITY_LABELS[profile.availability]}</span>
+          </>
+        )}
         {profile.videoCount > 0 && (
           <>
             <span aria-hidden="true">·</span>

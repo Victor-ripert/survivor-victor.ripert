@@ -16,6 +16,7 @@ const toFilters = (query: CatalogueQueryInput): CatalogueFilters => ({
   certifiedOnly: query.certifiedOnly,
   minScore: query.minScore,
   hasVideo: query.hasVideo,
+  availability: query.availability,
 });
 
 export const getCatalogue = async (req: Request, res: Response): Promise<void> => {

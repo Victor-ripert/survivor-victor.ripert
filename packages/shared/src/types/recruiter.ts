@@ -1,4 +1,5 @@
 import type { CertificationStatus, InteractionType, SkillLevel, UserRole } from './domain.js';
+import type { AvailabilityStatus } from './profile.js';
 
 /** One catalogue row. Deliberately carries no email: recruiters reach an
  *  applicant through `POST /interactions/{recipientId}`, which keeps the
@@ -14,6 +15,8 @@ export interface CatalogueProfile {
   certificationStatus: CertificationStatus;
   certificationScore: number | null;
   certificationBadge: string | null;
+  /** `null` when the candidate has not declared one — never coerced to a value. */
+  availability: AvailabilityStatus | null;
   skills: CatalogueSkill[];
   videoCount: number;
   previewVideo: CataloguePreviewVideo | null;
@@ -35,14 +38,23 @@ export interface CataloguePreviewVideo {
 }
 
 /**
- * Orderings a recruiter may ask for. Each one rests on a criterion the
- * candidate declared about their work — freshness, certification, sector,
- * location — and none on anything resembling an audience measurement.
+ * Orderings a recruiter may ask for, one per professional criterion named in
+ * the 8 September letter: date (`recent`), certification (`certification` by
+ * status, `score` by result), sector, location, availability. Every one rests
+ * on something the candidate declared about their work, and none on anything
+ * resembling an audience measurement.
  *
  * `name` was withdrawn on 2026-09-08; the reasoning is in
- * docs/livrables/note-algorithme-de-classement.md §3.1.
+ * docs/livrables/note-algorithme-de-classement.md §2.1.
  */
-export const CATALOGUE_SORTS = ['recent', 'score', 'sector', 'location'] as const;
+export const CATALOGUE_SORTS = [
+  'recent',
+  'certification',
+  'score',
+  'sector',
+  'location',
+  'availability',
+] as const;
 export type CatalogueSort = (typeof CATALOGUE_SORTS)[number];
 
 /** The ordering applied when the caller asks for none. Declared once so the
@@ -60,6 +72,7 @@ export interface CatalogueQuery {
   certifiedOnly?: boolean;
   minScore?: number;
   hasVideo?: boolean;
+  availability?: AvailabilityStatus;
   favoritesOnly?: boolean;
   sort?: CatalogueSort;
 }
@@ -75,6 +88,9 @@ export interface CatalogueFacets {
   sectors: FacetValue[];
   locations: FacetValue[];
   skills: FacetValue[];
+  /** Declared availabilities that actually occur, soonest first. Profiles that
+   *  declared none are not a facet value — they are the remainder. */
+  availabilities: FacetValue[];
 }
 
 export interface InteractionCounterpart {

@@ -73,6 +73,14 @@ components:
           maximum: 100
         certificationBadge:
           type: string
+        availability:
+          type: string
+          description: >-
+            Availability the candidate declared. Absent when they declared
+            none, which `sort=availability` ranks last: "not stated" is not
+            "available immediately". The enum is ordered soonest-first, and
+            that order is the ordering `sort=availability` applies.
+          enum: [IMMEDIATE, WITHIN_ONE_MONTH, WITHIN_THREE_MONTHS, LATER]
         moderationStatus:
           type: string
           description: >-
@@ -545,6 +553,15 @@ components:
         certificationBadge:
           type: string
           nullable: true
+        availability:
+          type: string
+          nullable: true
+          description: >-
+            Availability the candidate declared. Absent when they declared
+            none, which `sort=availability` ranks last: "not stated" is not
+            "available immediately". The enum is ordered soonest-first, and
+            that order is the ordering `sort=availability` applies.
+          enum: [IMMEDIATE, WITHIN_ONE_MONTH, WITHIN_THREE_MONTHS, LATER]
         skills:
           type: array
           items:
@@ -615,7 +632,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FacetValue'
-      required: [sectors, locations, skills]
+        availabilities:
+          type: array
+          description: >-
+            Declared availabilities that match at least one visible profile,
+            in enum order rather than by count — this list is a scale, and
+            ranking it by popularity would misread it. Profiles that declared
+            none are not a value here; they are the remainder.
+          items:
+            $ref: '#/components/schemas/FacetValue'
+      required: [sectors, locations, skills, availabilities]
 
     InteractionCounterpart:
       type: object
@@ -1220,6 +1246,13 @@ paths:
                   type: string
                 sector:
                   type: string
+                availability:
+                  type: string
+                  nullable: true
+                  description: >-
+                    Sending `null` clears a previously declared availability;
+                    omitting the key leaves the stored value untouched.
+                  enum: [IMMEDIATE, WITHIN_ONE_MONTH, WITHIN_THREE_MONTHS, LATER]
               required: [location, sector]
       responses:
         '200':
@@ -2022,6 +2055,14 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: availability
+          in: query
+          description: >-
+            Exact match on the availability the candidate declared. A profile
+            that declared none never matches, whichever value is asked for.
+          schema:
+            type: string
+            enum: [IMMEDIATE, WITHIN_ONE_MONTH, WITHIN_THREE_MONTHS, LATER]
         - name: favoritesOnly
           in: query
           description: Restricts the result to the caller's shortlist.
@@ -2030,13 +2071,16 @@ paths:
         - name: sort
           in: query
           description: >-
-            Ordering, drawn from professional criteria only — freshness of the
-            profile, certification score, declared sector, declared location.
-            `name` was withdrawn on 2026-09-08; see
+            Ordering, drawn from professional criteria only, one per criterion
+            named in the 8 September letter: date (`recent`), certification
+            status (`certification`) and score (`score`), declared sector,
+            declared location, declared availability. Every ordering ends on
+            the profile id, so it is total and two walks of the catalogue
+            return the same sequence. `name` was withdrawn on 2026-09-08; see
             docs/livrables/note-algorithme-de-classement.md.
           schema:
             type: string
-            enum: [recent, score, sector, location]
+            enum: [recent, certification, score, sector, location, availability]
             default: recent
       responses:
         '200':
@@ -2084,7 +2128,7 @@ paths:
           description: Same ordering vocabulary as `GET /recruiter/catalogue`.
           schema:
             type: string
-            enum: [recent, score, sector, location]
+            enum: [recent, certification, score, sector, location, availability]
             default: recent
       responses:
         '200':

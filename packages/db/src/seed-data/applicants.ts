@@ -1,4 +1,9 @@
-import { CertificationStatus, ModerationStatus, SkillLevel } from '@prisma/client';
+import {
+  AvailabilityStatus,
+  CertificationStatus,
+  ModerationStatus,
+  SkillLevel,
+} from '@prisma/client';
 
 export interface ApplicantSeed {
   firstName: string;
@@ -17,6 +22,10 @@ export interface ApplicantSeed {
    *  whose score and badge disagree would make the catalogue lie. */
   certificationScore?: number;
   certificationBadge?: string;
+  /** Omitted on purpose for some fixtures: a catalogue where every profile has
+   *  declared an availability never exercises `sort=availability`'s NULLS LAST
+   *  branch, which is where the "not stated is not available" rule lives. */
+  availability?: AvailabilityStatus;
   moderationStatus: ModerationStatus;
   videos: VideoSeed[];
 }
@@ -90,6 +99,7 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 93,
     certificationBadge: 'Certifié JEB Expert',
+    availability: AvailabilityStatus.IMMEDIATE,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [
       uploadedVideo(
@@ -115,6 +125,7 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 74,
     certificationBadge: 'Certifié JEB Confirmé',
+    availability: AvailabilityStatus.WITHIN_ONE_MONTH,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [
       uploadedVideo(
@@ -141,6 +152,7 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 68,
     certificationBadge: 'Certifié JEB',
+    availability: AvailabilityStatus.WITHIN_THREE_MONTHS,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [
       uploadedVideo(
@@ -165,6 +177,7 @@ export const applicants: ApplicantSeed[] = [
       ['TypeScript', SkillLevel.ADVANCED],
     ],
     certificationStatus: CertificationStatus.IN_PROGRESS,
+    availability: AvailabilityStatus.IMMEDIATE,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [
       uploadedVideo(
@@ -190,6 +203,7 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 57,
     certificationBadge: 'Certifié JEB',
+    availability: AvailabilityStatus.WITHIN_ONE_MONTH,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [],
   },
@@ -203,6 +217,7 @@ export const applicants: ApplicantSeed[] = [
     sector: 'Logistique',
     skills: [['Logistique', SkillLevel.ADVANCED]],
     certificationStatus: CertificationStatus.PENDING,
+    availability: AvailabilityStatus.IMMEDIATE,
     moderationStatus: ModerationStatus.PENDING,
     videos: [
       uploadedVideo(
@@ -228,6 +243,7 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 81,
     certificationBadge: 'Certifié JEB Confirmé',
+    availability: AvailabilityStatus.WITHIN_THREE_MONTHS,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [
       uploadedVideo(
@@ -253,6 +269,7 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 63,
     certificationBadge: 'Certifié JEB',
+    availability: AvailabilityStatus.LATER,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [
       uploadedVideo(
@@ -292,6 +309,7 @@ export const applicants: ApplicantSeed[] = [
       ['Anglais', SkillLevel.INTERMEDIATE],
     ],
     certificationStatus: CertificationStatus.PENDING,
+    availability: AvailabilityStatus.WITHIN_ONE_MONTH,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [
       uploadedVideo(
@@ -317,6 +335,7 @@ export const applicants: ApplicantSeed[] = [
     certificationStatus: CertificationStatus.COMPLETED,
     certificationScore: 79,
     certificationBadge: 'Certifié JEB Confirmé',
+    availability: AvailabilityStatus.IMMEDIATE,
     moderationStatus: ModerationStatus.APPROVED,
     // The one fixture ProfilsActifs hosts itself, and the only one that can
     // therefore carry a caption track our own player displays — subtitles are
@@ -354,6 +373,7 @@ export const applicants: ApplicantSeed[] = [
     sector: 'Restauration',
     skills: [['Cuisine', SkillLevel.BEGINNER]],
     certificationStatus: CertificationStatus.PENDING,
+    availability: AvailabilityStatus.LATER,
     moderationStatus: ModerationStatus.APPROVED,
     videos: [
       uploadedVideo(

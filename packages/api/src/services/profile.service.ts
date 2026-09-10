@@ -102,6 +102,10 @@ export const upsertOwnProfile = async (
     bio: clearable(input.bio),
     location: input.location,
     sector: input.sector,
+    // Already `null` when the candidate cleared it and `undefined` when the
+    // key was absent, so `clearable` — which reads a blank string as a
+    // clear — would be the wrong helper here.
+    availability: input.availability,
   };
 
   const upsert = () =>

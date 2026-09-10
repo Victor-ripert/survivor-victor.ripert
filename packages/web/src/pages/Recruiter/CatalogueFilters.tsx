@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { CatalogueFacets, CatalogueQuery, FacetValue } from '@profils-actifs/shared';
+import {
+  AVAILABILITY_LABELS,
+  AVAILABILITY_STATUSES,
+  type AvailabilityStatus,
+  type CatalogueFacets,
+  type CatalogueQuery,
+  type FacetValue,
+} from '@profils-actifs/shared';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { countActiveFilters } from './catalogue-params.js';
 
@@ -13,6 +20,9 @@ interface CatalogueFiltersProps {
   onChange: (patch: Partial<CatalogueQuery>) => void;
   onReset: () => void;
 }
+
+const isAvailability = (value: string): value is AvailabilityStatus =>
+  (AVAILABILITY_STATUSES as readonly string[]).includes(value);
 
 const facetOptions = (values: FacetValue[]) =>
   values.map((entry) => (
@@ -86,6 +96,29 @@ export const CatalogueFilters = ({ query, facets, onChange, onReset }: Catalogue
         >
           <option value="">Toutes les villes</option>
           {facets && facetOptions(facets.locations)}
+        </select>
+      </div>
+
+      <div className="filters__group">
+        <label className="field__label" htmlFor="filter-availability">
+          Disponibilité
+        </label>
+        <select
+          id="filter-availability"
+          value={query.availability ?? ''}
+          onChange={(event) =>
+            onChange({
+              availability: isAvailability(event.target.value) ? event.target.value : undefined,
+            })
+          }
+        >
+          <option value="">Toutes les disponibilités</option>
+          {facets?.availabilities.map((entry) => (
+            <option key={entry.value} value={entry.value}>
+              {isAvailability(entry.value) ? AVAILABILITY_LABELS[entry.value] : entry.value} (
+              {entry.count})
+            </option>
+          ))}
         </select>
       </div>
 

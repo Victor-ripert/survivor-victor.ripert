@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { Profile } from '@profils-actifs/shared';
+import { AVAILABILITY_LABELS, type Profile } from '@profils-actifs/shared';
 import { CertificationBadge } from './CertificationBadge.js';
 import { VideoPlayer } from './VideoPlayer.js';
 
@@ -46,6 +46,12 @@ export const PublicProfileCard = ({
           <span>{profile.sector}</span>
           <span aria-hidden="true">·</span>
           <span>{profile.location}</span>
+          {profile.availability && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>Disponible : {AVAILABILITY_LABELS[profile.availability]}</span>
+            </>
+          )}
         </p>
 
         <CertificationBadge

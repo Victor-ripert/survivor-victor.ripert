@@ -14,9 +14,11 @@ import { CatalogueFilters } from './CatalogueFilters.js';
 
 const SORT_LABELS: Record<CatalogueSort, string> = {
   recent: 'Profils récents',
+  certification: 'Statut de certification',
   score: 'Score de certification',
   sector: 'Secteur (A-Z)',
   location: 'Ville (A-Z)',
+  availability: 'Disponibilité (au plus tôt)',
 };
 
 export const CataloguePage = () => {

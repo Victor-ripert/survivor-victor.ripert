@@ -1,5 +1,6 @@
 import { InteractionType, Prisma } from '@prisma/client';
 import {
+  AVAILABILITY_STATUSES,
   buildPaginationMeta,
   resolvePageRequest,
   type CatalogueFacets,
@@ -30,6 +31,7 @@ const catalogueSelect = {
   certificationStatus: true,
   certificationScore: true,
   certificationBadge: true,
+  availability: true,
   updatedAt: true,
   user: { select: { firstName: true, lastName: true } },
   skills: {
@@ -63,6 +65,7 @@ const toCatalogueProfile = (
   certificationStatus: row.certificationStatus,
   certificationScore: row.certificationScore,
   certificationBadge: row.certificationBadge,
+  availability: row.availability,
   skills: row.skills.map((entry) => ({
     id: entry.skill.id,
     name: entry.skill.name,
@@ -196,7 +199,7 @@ const toFacetValues = (rows: { value: string | null; count: number }[]): FacetVa
  * never offers a dropdown entry that returns nothing.
  */
 export const getCatalogueFacets = async (): Promise<CatalogueFacets> => {
-  const [sectors, locations, skills] = await Promise.all([
+  const [sectors, locations, skills, availabilities] = await Promise.all([
     prisma.profile.groupBy({
       by: ['sector'],
       where: visibleProfileFilter,
@@ -220,6 +223,11 @@ export const getCatalogueFacets = async (): Promise<CatalogueFacets> => {
       orderBy: { profiles: { _count: 'desc' } },
       take: MAX_FACET_VALUES,
     }),
+    prisma.profile.groupBy({
+      by: ['availability'],
+      where: visibleProfileFilter,
+      _count: { _all: true },
+    }),
   ]);
 
   return {
@@ -228,5 +236,14 @@ export const getCatalogueFacets = async (): Promise<CatalogueFacets> => {
       locations.map((row) => ({ value: row.location, count: row._count._all })),
     ),
     skills: toFacetValues(skills.map((row) => ({ value: row.name, count: row._count.profiles }))),
+    // Ordered by the enum rather than by count, unlike the three facets above:
+    // this list is a scale, and showing "Sous 3 mois" before "Immédiate"
+    // because more candidates picked it would misread it as a ranking.
+    // Profiles that declared nothing are not a value here — they are what is
+    // left when none of these is selected.
+    availabilities: AVAILABILITY_STATUSES.flatMap((status) => {
+      const count = availabilities.find((row) => row.availability === status)?._count._all ?? 0;
+      return count > 0 ? [{ value: status, count }] : [];
+    }),
   };
 };

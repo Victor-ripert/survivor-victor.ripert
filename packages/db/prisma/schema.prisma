@@ -106,6 +106,18 @@ enum CertificationStatus {
   REJECTED
 }
 
+/// Declared soonest-first on purpose: PostgreSQL orders an enum by declaration
+/// order, so `ORDER BY availability ASC` is the professional ordering the
+/// recruiter catalogue's `sort=availability` needs, with no CASE expression and
+/// no rank column to keep in step. See
+/// docs/livrables/note-algorithme-de-classement.md §2.
+enum AvailabilityStatus {
+  IMMEDIATE
+  WITHIN_ONE_MONTH
+  WITHIN_THREE_MONTHS
+  LATER
+}
+
 enum ModerationStatus {
   PENDING
   APPROVED
@@ -128,6 +140,12 @@ model Profile {
   certificationStatus CertificationStatus @default(PENDING)
   certificationScore  Int? // 0-100, set when an attempt completes
   certificationBadge  String? // resolved from CertificationLevel at scoring time
+
+  /// Nullable on purpose: a profile created before this column existed has not
+  /// declared anything, and defaulting it would put a claim in the candidate's
+  /// mouth. `sort=availability` therefore ranks NULLs last — "not stated" is
+  /// not "available immediately".
+  availability AvailabilityStatus?
 
   moderationStatus ModerationStatus @default(PENDING)
   moderationLogs   ModerationLog[]
@@ -153,6 +171,11 @@ model Profile {
   // a later move to keyset pagination would seek on. See
   // docs/livrables/note-algorithme-de-classement.md.
   @@index([updatedAt(sort: Desc), id])
+  // `sort=availability`, column for column: `ORDER BY availability ASC,
+  // "updatedAt" DESC, id ASC`. Postgres sorts NULLs last for ASC by default,
+  // which is exactly the ordering the note describes, so the index answers the
+  // paging query without a sort step.
+  @@index([availability, updatedAt(sort: Desc), id])
 }
 
 enum VideoType {

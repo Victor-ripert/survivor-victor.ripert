@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  AVAILABILITY_STATUSES,
   PROFILE_BIO_MAX_LENGTH,
   PROFILE_FIELD_MAX_LENGTH,
   PROFILE_HEADLINE_MAX_LENGTH,
@@ -18,6 +19,12 @@ export const upsertProfileSchema = z.object({
   bio: optionalText(PROFILE_BIO_MAX_LENGTH).optional(),
   location: printableText(PROFILE_FIELD_MAX_LENGTH, 'Localisation requise'),
   sector: printableText(PROFILE_FIELD_MAX_LENGTH, 'Secteur requis'),
+  /** `null` clears a declared availability; omitting the key leaves it
+   *  alone, like `headline` and `bio` above. */
+  availability: z
+    .enum(AVAILABILITY_STATUSES, { error: 'Disponibilité invalide' })
+    .nullable()
+    .optional(),
 });
 
 export type UpsertProfileInput = z.infer<typeof upsertProfileSchema>;
